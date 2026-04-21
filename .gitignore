@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# local state
+.env
+edra_lounge.db
+edra_lounge.db-journal
+edra_lounge.db-wal
+edra_lounge.db-shm
+.cache/
+
+# editor
+.vscode/
+.idea/

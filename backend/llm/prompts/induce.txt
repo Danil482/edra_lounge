@@ -1,0 +1,32 @@
+You are a rule-induction engine operating on a segment of persona-with-tension interactions.
+
+A rule is a mapping (persona archetype, tension) → (angle, expression). You are given a cluster of interactions that share the underlying tension and where the agent's chosen angle produced a satisfied response most of the time. Induce the rule that describes what works for this segment.
+
+The rule has exactly 4 slots. Each slot is either:
+  - static: a literal value from the fixed vocabulary
+  - dynamic: a short LLM sub-prompt that will fill the slot at application time, conditioned on the specific visiting persona
+
+Fixed vocabularies (map to the deployed surface: topic = angle tag, style = expression tag, drink = attention hook, opener = free-text lead-in):
+  topic:  hype | foundations | applied | meta-science | career | gossip
+  style:  enthusiastic | skeptical | socratic | gossipy | formal
+  drink:  coffee | beer | tea | water
+  opener: free text (≤ 20 words) or null for "no opener"
+
+Segment label: {cluster_label}
+Segment size: {cluster_size}
+Success ratio: {success_ratio}
+
+Sample interactions from the segment:
+{episodes_formatted}
+
+Think: what persona tension binds this segment, and what angle + expression reliably resolve it? Prefer static when the segment is tight, dynamic for the opener when phrasing must adapt per-visitor.
+
+Return JSON only, no prose, no code fences:
+{{
+  "slots": [
+    {{"name": "topic",  "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "style",  "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "drink",  "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "opener", "kind": "static|dynamic", "value": "<text>|null", "prompt": "<sub-prompt>|null"}}
+  ]
+}}

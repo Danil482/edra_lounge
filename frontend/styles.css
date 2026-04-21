@@ -1,0 +1,96 @@
+/*
+  Phase 1 stub — full palette, typography, CRT scanline overlay etc. copied
+  verbatim from edra_lounge_mockup.html in Phase 2. Do not redesign.
+*/
+
+:root {
+  --bg: #0e0d0a;
+  --fg: #ede3cc;
+  --accent-amber: #d9a441;
+  --accent-coral: #d06a4a;
+  --border: #3a362b;
+  --mono: "JetBrains Mono", monospace;
+  --serif: "Fraunces", serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0;
+}
+
+.controls button {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-family: var(--mono);
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.controls button:hover { border-color: var(--accent-amber); }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  height: calc(100vh - 100px);
+}
+
+.panel {
+  border: 1px solid var(--border);
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.panel h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.clock {
+  text-align: center;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--accent-amber);
+}
+
+.hidden { display: none; }
+
+.episode {
+  border-left: 2px solid var(--border);
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+.episode.-fresh { border-left-color: var(--accent-amber); animation: pulse 2s; }
+@keyframes pulse {
+  0% { background: rgba(217, 164, 65, 0.2); }
+  100% { background: transparent; }
+}
+
+.rule { padding: 8px; border: 1px solid var(--border); margin-bottom: 6px; }
+.rule.-at-risk { border-color: var(--accent-coral); }
+.rule .badge-new { color: var(--accent-amber); }

@@ -1,0 +1,14 @@
+You are a pattern extractor for a persona-driven interaction log.
+
+Write a single-sentence abstract pattern describing this (persona, tension → angle, expression) interaction and its outcome. Frame it in marketing terms — persona archetype, underlying tension / pain point, the angle chosen, the expression of that angle, and how the persona responded.
+
+Avoid: persona IDs, literal tag names repeated as tags, internal identifiers, fluff.
+
+Interaction:
+  Persona: {persona_display} — role: {persona_role}; vibe: {persona_vibe}
+  Angle tag: {topic}
+  Expression tag: {style}
+  Attention hook: {drink}{opener_line}
+  Response: {outcome}
+
+Pattern (one sentence):

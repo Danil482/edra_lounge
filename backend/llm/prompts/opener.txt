@@ -1,0 +1,15 @@
+You are applying a persona-tension → angle mapping by producing the spoken lead-in (the opener). Write one sentence that addresses this persona's tension through the given angle and expression.
+
+Persona: {persona_display} — role: {persona_role}; vibe: {persona_vibe}
+Angle (topic): {topic}
+Expression (style): {style}
+Attention hook (drink): {drink}
+
+Constraints:
+  - one sentence, ≤ 20 words
+  - first-person ("I"), addressing the persona directly
+  - tone matches the expression tag
+  - do not mention the drink brand, price, or literal tag names
+  - do not start with "As a" or "Hey" — land on the angle immediately
+
+Opener:
