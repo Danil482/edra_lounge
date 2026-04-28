@@ -125,11 +125,14 @@
       <button class="btn-op" id="op-segment">+ Segment</button>
       <button class="btn-op" id="op-expert">Expert · On</button>
     </div>
-    <div class="live-row" id="live-row" style="display:none;">
-      <input type="text" id="live-url" class="live-input" placeholder="LinkedIn URL — paste & start"/>
-      <button class="btn-op" id="op-live-start">Start Live</button>
-      <span class="live-status" id="live-status"></span>
-    </div>
+  </div>
+
+  <!-- ═══════════════ LIVE BAR (persistent, only visible in live mode) ═══════════════ -->
+  <div class="live-bar" id="live-row" style="display:none;">
+    <span class="live-bar-label">LIVE</span>
+    <input type="text" id="live-url" class="live-input" placeholder="paste a LinkedIn URL and press Start"/>
+    <button class="btn-op" id="op-live-start">Start Live</button>
+    <span class="live-status" id="live-status"></span>
   </div>
 
   <!-- ═══════════════ FALLBACK DIALOG ═══════════════ -->

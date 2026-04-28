@@ -565,7 +565,8 @@ async function bootSources() {
 
   // Live URL form is only useful when LinkedIn is the active source.
   const row = $('#live-row');
-  if (row) row.style.display = state.liveMode ? '' : 'none';
+  if (row) row.style.display = state.liveMode ? 'flex' : 'none';
+  document.body.classList.toggle('live-on', state.liveMode);
 }
 
 function setLiveStatus(msg, kind) {
