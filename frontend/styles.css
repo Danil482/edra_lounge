@@ -271,7 +271,8 @@ body {
   position: absolute;
   left: 8%;
   right: 8%;
-  bottom: 110px;
+  /* Stack above choices (which sit at bottom: 110, ~84px tall + 20px gap). */
+  bottom: 220px;
   padding: 36px 52px 40px;
   background: rgba(10, 10, 10, 0.94);
   border-top: 4px solid var(--defy-red);
@@ -281,6 +282,7 @@ body {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   min-height: 184px;
+  z-index: 5;
 }
 
 /* speaker plate — top-left */
@@ -371,7 +373,10 @@ body {
   position: absolute;
   left: 12%;
   right: 12%;
-  bottom: 60px;
+  /* Sit above the gauge (height: 92, bottom: 0) with an 18px breathing
+     gap. Previously this was bottom: 60, which placed the buttons partly
+     under the gauge AND partly inside the textbox's bottom border. */
+  bottom: 110px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
@@ -1266,41 +1271,58 @@ body.expert-off .refl-proposal {
 .reflection.-hidden { display: none; }
 
 /* ──────────────────────────────────────────────────────────────────
-   Live bar (Phase 3) — persistent strip at the very top of the stage,
-   only shown when LIVE_MODE=true. Independent of the hover top-panel
-   so the operator always has somewhere to paste a LinkedIn URL.
+   Live-visit modal (Phase 3) — opens on click of the "Start Live"
+   operator button (only present when LIVE_MODE=true). Centered overlay
+   so it doesn't compete for layout space with the rest of the booth.
    ──────────────────────────────────────────────────────────────── */
-.live-bar {
+.live-dialog {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 950;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.78);
   display: flex;
-  gap: 0.8rem;
   align-items: center;
-  background: var(--black);
-  border-bottom: 1px solid var(--defy-red);
-  padding: 0.55rem 1.4rem;
-  font-family: var(--f-body);
+  justify-content: center;
+  z-index: 1000;
 }
-.live-bar-label {
+.live-dialog.-hidden { display: none; }
+.live-card {
+  background: var(--black);
+  border: 1px solid var(--defy-red);
+  padding: 2rem 2.4rem;
+  width: 32rem;
+  max-width: calc(100vw - 4rem);
+  font-family: var(--f-body);
+  color: var(--warm-white);
+}
+.live-card-eyebrow {
   font-weight: 700;
   font-size: 0.7rem;
   letter-spacing: 0.32em;
   color: var(--defy-red);
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--defy-red);
+  margin-bottom: 0.8rem;
+}
+.live-card-title {
+  font-family: var(--f-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.8rem;
+}
+.live-card-body {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--cream-dim);
+  margin-bottom: 1.2rem;
 }
 .live-input {
-  flex: 1 1 auto;
+  width: 100%;
   background: transparent;
   border: 1px solid var(--cream-line);
   color: var(--warm-white);
   font-family: var(--f-body);
-  font-size: 0.9rem;
-  padding: 0.45rem 0.7rem;
+  font-size: 0.95rem;
+  padding: 0.55rem 0.7rem;
   letter-spacing: 0.02em;
+  margin-bottom: 0.8rem;
 }
 .live-input::placeholder {
   color: var(--cream-faint);
@@ -1310,24 +1332,20 @@ body.expert-off .refl-proposal {
   border-color: var(--defy-red);
 }
 .live-status {
+  display: block;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--cream-dim);
-  min-width: 10rem;
-  text-align: right;
+  margin-bottom: 1rem;
+  min-height: 1rem;
 }
 .live-status.-error { color: var(--defy-red); }
 .live-status.-ok    { color: var(--warm-white); }
-
-/* When live-mode is active, JS adds .live-on to body. Push the hover
-   top-panel + its edge trigger down so the persistent live bar at the
-   top of the stage doesn't overlap them. */
-body.live-on .panel-top {
-  top: 44px;
-}
-body.live-on .edge-handle.edge-top {
-  top: 44px;
+.live-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
 }
 
 /* Wi-Fi fallback dialog — shown when ProfileSourceUnavailable bubbles up */

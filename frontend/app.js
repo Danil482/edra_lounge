@@ -563,10 +563,11 @@ async function bootSources() {
       .join('');
   }
 
-  // Live URL form is only useful when LinkedIn is the active source.
-  const row = $('#live-row');
-  if (row) row.style.display = state.liveMode ? 'flex' : 'none';
-  document.body.classList.toggle('live-on', state.liveMode);
+  // "Start Live" operator button is only useful when LinkedIn is the
+  // active source. The dialog itself stays in the DOM (hidden) either way
+  // so the fallback flow can still re-use its input.
+  const toggle = $('#op-live-toggle');
+  if (toggle) toggle.style.display = state.liveMode ? '' : 'none';
 }
 
 function setLiveStatus(msg, kind) {
@@ -603,6 +604,7 @@ async function handleLiveStart() {
     if (/\b503\b/.test(msg) || /unavailable/i.test(msg)) {
       setLiveStatus('LinkedIn unavailable — falling back', 'error');
       state.pendingLiveUrl = url;
+      hideLiveDialog();
       showFallback(`Wanted to fetch ${url}, but the source is unavailable. Pick a synthetic archetype to continue:`);
     } else if (/\b404\b/.test(msg) || /not found/i.test(msg)) {
       setLiveStatus('profile not found', 'error');
@@ -642,10 +644,44 @@ async function handleFallbackGo() {
   }
 }
 
-$('#op-live-start')?.addEventListener('click', handleLiveStart);
-$('#live-url')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') handleLiveStart();
+function showLiveDialog() {
+  const dlg = $('#live-dialog');
+  if (!dlg) return;
+  dlg.classList.remove('-hidden');
+  setLiveStatus('', null);
+  const input = $('#live-url');
+  if (input) {
+    setTimeout(() => input.focus(), 0);
+  }
+}
+
+function hideLiveDialog() {
+  const dlg = $('#live-dialog');
+  if (dlg) dlg.classList.add('-hidden');
+}
+
+$('#op-live-toggle')?.addEventListener('click', showLiveDialog);
+$('#op-live-cancel')?.addEventListener('click', hideLiveDialog);
+$('#op-live-start')?.addEventListener('click', async () => {
+  await handleLiveStart();
+  // If start succeeded (no error in status), close the dialog.
+  const status = $('#live-status');
+  if (status && !status.classList.contains('-error')) {
+    hideLiveDialog();
+  }
 });
+$('#live-url')?.addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    await handleLiveStart();
+    const status = $('#live-status');
+    if (status && !status.classList.contains('-error')) {
+      hideLiveDialog();
+    }
+  } else if (e.key === 'Escape') {
+    hideLiveDialog();
+  }
+});
+
 $('#fallback-go')?.addEventListener('click', handleFallbackGo);
 $('#fallback-cancel')?.addEventListener('click', () => {
   hideFallback();
