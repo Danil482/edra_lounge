@@ -43,10 +43,12 @@ Doctoral-proposal с реальными Pipedrive-данными живёт в *
 ## Status
 
 - 2026-04-21: репо отчленили от EDRA, Phase 1 skeleton (café vocab) сделан
-- 2026-04-28: автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_pitch_mockup.html` в репо. См. [[current priorities]] и [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
+- 2026-04-28 (утро): автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_pitch_mockup.html` в репо. См. [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]]
+- 2026-04-28 (день): **Phase 1B → 2 → 3 завершены за одну сессию**. Booth работает в синтетике и live(mock); 62/62 теста зелёных. См. [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]]. Открытые задачи Phase 4 — в [[current priorities]]
 
 ## Navigation
 
-- [[current priorities]] — план реализации (Phase 1A → 1B → 2 → 3)
+- [[current priorities]] — статус фаз + Phase 4 follow-ups + tech debt
+- [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]] — implementation сессия Phase 1B/2/3 + UI iteration
 - [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]] — пивот-сессия, что выкидываем / что оставляем
 - [[../sessions/2026-04-21 Pivot to Lounge demo, skeleton shipped]] — историческая сессия с café-каркасом (vocab устарел, инфраструктура жива)
