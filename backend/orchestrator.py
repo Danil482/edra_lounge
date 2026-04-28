@@ -26,6 +26,7 @@ from collections import deque
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -42,6 +43,10 @@ if TYPE_CHECKING:
     pass
 
 log = logging.getLogger(__name__)
+
+# Connection-style failures from the LLM client are expected in offline-only
+# booth runs; we log them as one-liners so the demo log stays readable.
+_LLM_OFFLINE_EXCEPTIONS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout)
 
 
 class Orchestrator:
@@ -327,6 +332,13 @@ class Orchestrator:
                     cluster_episodes=cluster_eps,
                     existing_rule_ids=existing_ids,
                 )
+            except _LLM_OFFLINE_EXCEPTIONS as e:
+                log.warning(
+                    "induction LLM unavailable (%s) for cluster=%s; using mode-of-slots fallback",
+                    e.__class__.__name__,
+                    cluster.id,
+                )
+                rule = _fallback_induce(cluster, cluster_eps, existing_ids)
             except Exception:  # noqa: BLE001
                 log.exception("LLM induction failed for cluster=%s; using fallback", cluster.id)
                 rule = _fallback_induce(cluster, cluster_eps, existing_ids)

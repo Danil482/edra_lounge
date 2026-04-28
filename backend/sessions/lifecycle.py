@@ -23,6 +23,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend import schemas
@@ -46,6 +47,11 @@ from backend.simulator import preferences
 
 
 log = logging.getLogger(__name__)
+
+# Same set of "expected when Ollama is offline" exceptions as in pitch.generate.
+# Logged as a one-line warning instead of a full traceback so the demo log
+# stays scannable; unexpected exceptions still go through log.exception.
+_LLM_OFFLINE_EXCEPTIONS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout)
 
 
 # ── Public errors ────────────────────────────────────────────────────────
@@ -310,6 +316,8 @@ async def _summarise(sess: Session) -> str:
         text = text.strip().strip('"')
         if text:
             return text
+    except _LLM_OFFLINE_EXCEPTIONS as e:
+        log.warning("summary LLM unavailable (%s); using structural fallback", e.__class__.__name__)
     except Exception:  # noqa: BLE001
         log.exception("summary LLM failed; using structural fallback")
     return _fallback_summary(sess)

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import logging
 
+import httpx
+
 from backend import schemas
 from backend.llm import client as llm
 from backend.pitch import strategy as strategy_mod
@@ -21,6 +23,11 @@ from backend.pitch import templates
 
 
 log = logging.getLogger(__name__)
+
+# Expected when Ollama is offline (booth running synthetic-only). We log a
+# one-liner instead of a full traceback so the demo log stays readable;
+# unexpected exceptions still get the full stack via log.exception below.
+_LLM_OFFLINE_EXCEPTIONS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout)
 
 OPENER_LLM_PATHS = ("hybrid", "improvise")  # surface for tests / introspection
 
@@ -121,6 +128,8 @@ async def _opener_via_llm(
         text = text.strip().strip('"').strip()
         if text:
             return text
+    except _LLM_OFFLINE_EXCEPTIONS as e:
+        log.warning("opener LLM unavailable (%s); using template fallback", e.__class__.__name__)
     except Exception:  # noqa: BLE001
         log.exception("opener LLM call failed; falling back to template")
     return templates.render_opener(profile, strat)
