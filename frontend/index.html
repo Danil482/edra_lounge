@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EDRA / Defy. — Pitch Floor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,800;0,900;1,400;1,500;1,700;1,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ═══════════════ BACKGROUND ═══════════════ -->
+  <div class="bg"></div>
+  <div class="bokeh">
+    <div class="bokeh-dot -l"></div><div class="bokeh-dot -m"></div>
+    <div class="bokeh-dot -s"></div><div class="bokeh-dot -m"></div>
+    <div class="bokeh-dot -l"></div><div class="bokeh-dot -m"></div>
+    <div class="bokeh-dot -s"></div><div class="bokeh-dot -s"></div>
+    <div class="bokeh-dot -m"></div><div class="bokeh-dot -s"></div>
+    <div class="bokeh-dot -s"></div><div class="bokeh-dot -s"></div>
+  </div>
+  <div class="grain"></div>
+
+  <!-- ═══════════════ DEFY WORDMARK ═══════════════ -->
+  <div class="defy-mark">
+    <span class="defy-word">Defy</span>
+    <span class="defy-square"></span>
+  </div>
+
+  <!-- ═══════════════ AGENT SLOT ═══════════════ -->
+  <div class="agent-slot">
+    <div class="agent-slot-placeholder">
+      <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--defy-red);">
+        <circle cx="32" cy="22" r="14"/>
+        <path d="M 8 80 Q 8 50 32 44 Q 56 50 56 80"/>
+        <path d="M 24 22 Q 24 24 26 24"/>
+        <path d="M 38 22 Q 38 24 40 24"/>
+        <path d="M 28 32 Q 32 34 36 32"/>
+      </svg>
+      <div class="placeholder-label">Agent Portrait</div>
+      <div class="placeholder-detail">Documentary B&amp;W or monochrome editorial illustration with single red accent. 720×1080, six emotions.</div>
+      <div class="placeholder-current" id="agent-emotion">current — neutral</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TEXTBOX ═══════════════ -->
+  <div class="textbox">
+    <div class="speaker">
+      <span class="speaker-name" id="speaker-name">Edra</span>
+      <span class="speaker-square"></span>
+    </div>
+    <div class="thought" id="thought-block">
+      <span id="thought-text">— waiting for the first visitor —</span>
+      <span class="thought-tag" id="thought-tag" style="display:none;"></span>
+    </div>
+    <div class="utterance -waiting" id="utterance">
+      <span id="utterance-text"></span>
+    </div>
+    <div class="continue-square -typing" id="continue-marker"></div>
+  </div>
+
+  <!-- ═══════════════ CHOICES ═══════════════ -->
+  <div class="choices" id="choices">
+    <button class="choice -positive -disabled" data-choice="positive" disabled>
+      <span class="choice-ix">A</span>
+      <span>Tell me more.</span>
+    </button>
+    <button class="choice -skeptical -disabled" data-choice="skeptical" disabled>
+      <span class="choice-ix">B</span>
+      <span>Skeptical, why Defy?</span>
+    </button>
+    <button class="choice -negative -disabled" data-choice="negative" disabled>
+      <span class="choice-ix">C</span>
+      <span>Not interested.</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════ INTEREST GAUGE ═══════════════ -->
+  <div class="gauge">
+    <div class="gauge-side -left">
+      <span class="gauge-label">Interest</span>
+      <span class="gauge-end -low">— Rejected</span>
+    </div>
+    <div class="gauge-track-wrap">
+      <div class="gauge-value-wrap">
+        <span class="gauge-value" id="gauge-value">0</span>
+      </div>
+      <div class="gauge-track" id="gauge-track">
+        <div class="gauge-cell" data-cell="-5"></div>
+        <div class="gauge-cell" data-cell="-4"></div>
+        <div class="gauge-cell" data-cell="-3"></div>
+        <div class="gauge-cell" data-cell="-2"></div>
+        <div class="gauge-cell" data-cell="-1"></div>
+        <div class="gauge-cell -mid" data-cell="0"></div>
+        <div class="gauge-cell" data-cell="1"></div>
+        <div class="gauge-cell" data-cell="2"></div>
+        <div class="gauge-cell" data-cell="3"></div>
+        <div class="gauge-cell" data-cell="4"></div>
+        <div class="gauge-cell" data-cell="5"></div>
+      </div>
+    </div>
+    <div class="gauge-side -right">
+      <span class="gauge-label">+5 Accepted</span>
+      <span class="gauge-end">Collaboration —</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HOVER PANELS ═══════════════ -->
+
+  <!-- TOP -->
+  <div class="edge-handle edge-top panel-trigger -top"></div>
+  <div class="panel panel-top">
+    <div class="top-stats">
+      <div class="top-stat"><div class="top-stat-num" id="stat-day">Day 01</div><div class="top-stat-lab">Simulated Time</div></div>
+      <div class="top-stat"><div class="top-stat-num" id="stat-episodes">0</div><div class="top-stat-lab">Episodes</div></div>
+      <div class="top-stat"><div class="top-stat-num -red" id="stat-rules">0</div><div class="top-stat-lab">Rules</div></div>
+      <div class="top-stat"><div class="top-stat-num -red" id="stat-revising">0</div><div class="top-stat-lab">Revising</div></div>
+      <div class="top-stat"><div class="top-stat-num" id="stat-specialists">0</div><div class="top-stat-lab">Specialists</div></div>
+    </div>
+    <div class="top-controls">
+      <button class="btn-op -danger" id="op-drift">AI Bubble Pops</button>
+      <button class="btn-op" id="op-segment">+ Segment</button>
+      <button class="btn-op" id="op-expert">Expert · On</button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="edge-handle edge-right panel-trigger -right"></div>
+  <div class="panel panel-right">
+    <div class="section-num">SUBJECT</div>
+    <div class="panel-title">
+      <span class="panel-title-square"></span>
+      <span id="visitor-title">The Visitor</span>
+    </div>
+    <div class="panel-meta" id="visitor-meta">— no active session —</div>
+
+    <div class="profile-portrait">
+      <span class="ph-icon">◇</span>
+      <span class="ph-label">Visitor Portrait</span>
+      <span class="ph-detail" id="visitor-portrait-detail">Live LinkedIn fetch, monochrome treatment.</span>
+    </div>
+
+    <div class="subject-name" id="visitor-name">—</div>
+    <div class="subject-role" id="visitor-role">—</div>
+
+    <div class="archetype">
+      <div class="archetype-lab">Classified Archetype</div>
+      <div class="archetype-val" id="visitor-archetype">—</div>
+    </div>
+
+    <div class="fields">
+      <div class="field-k">Cluster</div>      <div class="field-v -red" id="visitor-cluster">—</div>
+      <div class="field-k">Seniority</div>    <div class="field-v" id="visitor-seniority">—</div>
+      <div class="field-k">Domain</div>       <div class="field-v" id="visitor-domain">—</div>
+      <div class="field-k">Source</div>       <div class="field-v" id="visitor-source">—</div>
+      <div class="field-k">Embedding</div>    <div class="field-v" id="visitor-embedding">—</div>
+    </div>
+
+    <div class="posts">
+      <div class="posts-lab">Recent Signals</div>
+      <div id="visitor-signals">
+        <div class="post-snip">— none —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEFT -->
+  <div class="edge-handle edge-left panel-trigger -left"></div>
+  <div class="panel panel-left">
+    <div class="section-num">RULEBOOK</div>
+    <div class="panel-title">
+      <span class="panel-title-square"></span>
+      Active Rules
+    </div>
+    <div class="panel-meta" id="rulebook-meta">— no rules induced yet —</div>
+
+    <div class="rules-list" id="rules-list">
+      <div class="rules-empty">— no rules induced yet —</div>
+    </div>
+
+    <div class="reflection -hidden" id="reflection-block">
+      <div class="refl-title">
+        <span class="refl-title-square"></span>
+        <span id="refl-title-text">— · Revising</span>
+      </div>
+      <div class="refl-text -streaming" id="refl-text"></div>
+      <div class="refl-proposal" id="refl-proposal" style="display:none;">
+        <span class="refl-proposal-head">Proposed</span>
+        <div id="refl-changes"></div>
+      </div>
+      <div class="refl-actions">
+        <button class="btn-sm -go" id="refl-accept">Accept</button>
+        <button class="btn-sm -edit" id="refl-edit">Edit</button>
+        <button class="btn-sm -no" id="refl-keep">Keep</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

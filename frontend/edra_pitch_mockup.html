@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EDRA / Defy. — Pitch Floor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,800;0,900;1,400;1,500;1,700;1,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+
+/* ════════════════════════════════════════════════════════════════
+   EDRA × Defy. — Pitch Floor
+   
+   Built strictly under Defy. Brand Guidelines V2.0:
+   - Wordmark: "Defy." with red square punctuation
+   - Display: Playfair Display 900 / 800
+   - Body: DM Sans 400 / 500 / 700
+   - Palette: black, warm white, cream, Defy Red + supporting greys
+   - 50% black · 40% warm white/cream · 10% Defy Red ratio
+   - No mono fonts (not in brand spec)
+   - No rounded corners, no shadows, no gradients
+   
+   Booth demo is HERO treatment: dark surface, light type.
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Defy palette — primary */
+  --defy-red:     #CC0000;
+  --black:        #0A0A0A;
+  --warm-white:   #F9F9F7;
+  --cream:        #F3F1EC;
+  
+  /* Defy palette — supporting */
+  --charcoal:     #2D2D2D;
+  --mid-grey:     #777777;
+  --border-grey:  #E8E6E1;
+  --red-dark:     #990000;
+
+  /* derived (only opacity variants of primary, allowed by brand for layered states) */
+  --cream-dim:    rgba(243, 241, 236, 0.65);
+  --cream-faint:  rgba(243, 241, 236, 0.4);
+  --cream-line:   rgba(243, 241, 236, 0.18);
+  
+  /* fonts — strictly two families per brand */
+  --f-display:    'Playfair Display', Georgia, serif;
+  --f-body:       'DM Sans', 'Helvetica Neue', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.85;          /* per brand: body breathes */
+  overflow: hidden;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE
+   ═══════════════════════════════════════════════════════════════ */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ─── BACKGROUND: dark hero with subtle window haze ─── */
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background: var(--black);
+}
+
+.bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* the only gradients allowed: very subtle ambient haze suggesting windows */
+  background:
+    radial-gradient(ellipse 380px 460px at 18% 36%, rgba(249, 249, 247, 0.05), transparent 70%),
+    radial-gradient(ellipse 320px 400px at 78% 32%, rgba(249, 249, 247, 0.04), transparent 70%);
+  pointer-events: none;
+}
+
+.bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* window mullion silhouettes — pure black overlays, sharp lines */
+  background:
+    linear-gradient(90deg,
+      transparent 11%, rgba(0,0,0,0.7) 11.2%, transparent 11.4%,
+      transparent 24%, rgba(0,0,0,0.5) 24.2%, transparent 24.4%,
+      transparent 76%, rgba(0,0,0,0.5) 76.2%, transparent 76.4%,
+      transparent 89%, rgba(0,0,0,0.7) 89.2%, transparent 89.4%
+    ),
+    linear-gradient(0deg,
+      transparent 38%, rgba(0,0,0,0.4) 38.3%, transparent 38.6%
+    );
+  pointer-events: none;
+}
+
+/* film grain — strict monochrome */
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(243, 241, 236, 0.018) 0px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(243, 241, 236, 0.015) 0px, transparent 1px),
+    radial-gradient(circle at 50% 90%, rgba(243, 241, 236, 0.012) 0px, transparent 1px);
+  background-size: 3px 3px, 5px 5px, 7px 7px;
+}
+
+/* monochrome warm-white "bokeh" — extremely subtle haze dots, brand-allowed atmospheric */
+.bokeh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.bokeh-dot {
+  position: absolute;
+  background: var(--warm-white);
+  filter: blur(14px);
+  animation: float 14s ease-in-out infinite;
+}
+.bokeh-dot.-l { width: 60px; height: 60px; opacity: 0.06; }
+.bokeh-dot.-m { width: 36px; height: 36px; opacity: 0.04; filter: blur(10px); }
+.bokeh-dot.-s { width: 18px; height: 18px; opacity: 0.05; filter: blur(6px); }
+
+.bokeh-dot:nth-child(1)  { top: 14%; left: 12%; animation-delay: 0s; }
+.bokeh-dot:nth-child(2)  { top: 22%; left: 22%; animation-delay: -2s; }
+.bokeh-dot:nth-child(3)  { top: 28%; left: 14%; animation-delay: -4s; }
+.bokeh-dot:nth-child(4)  { top: 8%;  left: 28%; animation-delay: -6s; }
+.bokeh-dot:nth-child(5)  { top: 16%; left: 76%; animation-delay: -1s; }
+.bokeh-dot:nth-child(6)  { top: 24%; left: 84%; animation-delay: -3s; }
+.bokeh-dot:nth-child(7)  { top: 32%; left: 92%; animation-delay: -5s; }
+.bokeh-dot:nth-child(8)  { top: 11%; left: 88%; animation-delay: -7s; }
+.bokeh-dot:nth-child(9)  { top: 18%; left: 48%; animation-delay: -8s; }
+.bokeh-dot:nth-child(10) { top: 42%; left: 38%; animation-delay: -10s; }
+.bokeh-dot:nth-child(11) { top: 6%;  left: 42%; animation-delay: -3s; }
+.bokeh-dot:nth-child(12) { top: 12%; left: 62%; animation-delay: -6s; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(8px, -10px); }
+  66% { transform: translate(-6px, 5px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DEFY WORDMARK — top-left, exactly as specified in brand guidelines
+   "Defy" in Playfair Display Black 900 + red square punctuation
+   ═══════════════════════════════════════════════════════════════ */
+
+.defy-mark {
+  position: absolute;
+  top: 36px;
+  left: 48px;
+  z-index: 25;
+  display: flex;
+  align-items: baseline;
+  line-height: 1;
+}
+.defy-word {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 36px;
+  color: var(--warm-white);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.defy-square {
+  width: 11px;
+  height: 11px;
+  background: var(--defy-red);
+  flex-shrink: 0;
+  margin-left: 3px;
+  margin-bottom: 3px;          /* aligns with baseline of "Defy" */
+  align-self: flex-end;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AGENT SLOT — placeholder for external PNG
+   Brand: documentary B&W or high-contrast monochrome with single red accent
+   ═══════════════════════════════════════════════════════════════ */
+
+.agent-slot {
+  position: absolute;
+  bottom: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 64%;
+  aspect-ratio: 0.7;
+  pointer-events: none;
+  animation: idleBreathe 5s ease-in-out infinite;
+}
+@keyframes idleBreathe {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}
+
+.agent-slot-placeholder {
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--defy-red);
+  background: rgba(204, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px;
+  text-align: center;
+  position: relative;
+}
+.agent-slot-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px dotted rgba(204, 0, 0, 0.18);
+  pointer-events: none;
+}
+/* signature red square corner — brand element */
+.agent-slot-placeholder::after {
+  content: '';
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 18px; height: 18px;
+  background: var(--defy-red);
+}
+.agent-slot-placeholder svg {
+  width: 28%;
+  height: auto;
+  opacity: 0.55;
+}
+
+.placeholder-label {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  line-height: 1;
+}
+.placeholder-detail {
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--cream-dim);
+  line-height: 1.4;
+  max-width: 220px;
+}
+.placeholder-current {
+  margin-top: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--defy-red);
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VN TEXTBOX — editorial broadsheet style
+   ═══════════════════════════════════════════════════════════════ */
+
+.textbox {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 110px;
+  padding: 36px 52px 40px;
+  background: rgba(10, 10, 10, 0.94);
+  border-top: 4px solid var(--defy-red);
+  border-bottom: 1px solid var(--cream-line);
+  border-left: 1px solid var(--cream-line);
+  border-right: 1px solid var(--cream-line);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  min-height: 184px;
+}
+
+/* speaker plate — top-left */
+.speaker {
+  position: absolute;
+  top: -20px;
+  left: 36px;
+  background: var(--black);
+  border: 1px solid var(--defy-red);
+  border-top: 4px solid var(--defy-red);
+  padding: 14px 24px 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.speaker-name {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--warm-white);
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+.speaker-square {
+  width: 8px;
+  height: 8px;
+  background: var(--defy-red);
+}
+
+/* internal thought line */
+.thought {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--cream-dim);
+  margin-bottom: 18px;
+  padding-left: 20px;
+  border-left: 3px solid var(--defy-red);
+}
+.thought-tag {
+  font-family: var(--f-body);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  margin-left: 12px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+/* spoken line — Playfair Display hero typography */
+.utterance {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.4;
+  color: var(--warm-white);
+  letter-spacing: -0.3px;
+  min-height: 84px;
+}
+.utterance-em {
+  color: var(--defy-red);
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* "click to continue" — solid red square per brand */
+.continue-square {
+  position: absolute;
+  bottom: 20px;
+  right: 36px;
+  width: 14px;
+  height: 14px;
+  background: var(--defy-red);
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* visitor choice buttons — editorial */
+.choices {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 60px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  z-index: 10;
+  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* when right panel opens, push choices and textbox left so they don't get covered */
+.stage:has(.panel-trigger.-right:hover) .choices,
+.stage:has(.panel-right:hover) .choices {
+  right: calc(12% + 368px);
+}
+.stage:has(.panel-trigger.-right:hover) .textbox,
+.stage:has(.panel-right:hover) .textbox {
+  right: calc(8% + 368px);
+}
+
+/* same for left panel: push choices and textbox right */
+.stage:has(.panel-trigger.-left:hover) .choices,
+.stage:has(.panel-left:hover) .choices {
+  left: calc(12% + 408px);
+}
+.stage:has(.panel-trigger.-left:hover) .textbox,
+.stage:has(.panel-left:hover) .textbox {
+  left: calc(8% + 408px);
+}
+
+.textbox {
+  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.choice {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-style: italic;
+  font-size: 20px;
+  background: var(--black);
+  color: var(--warm-white);
+  border: 1px solid var(--warm-white);
+  padding: 18px 24px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.choice-ix {
+  font-family: var(--f-body);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  flex-shrink: 0;
+}
+.choice:hover {
+  background: var(--warm-white);
+  color: var(--black);
+}
+.choice:hover .choice-ix { color: var(--defy-red); }
+.choice.-positive:hover  { background: var(--warm-white); color: var(--black); }
+.choice.-skeptical:hover { background: var(--charcoal); color: var(--warm-white); border-color: var(--warm-white); }
+.choice.-negative:hover  { background: var(--defy-red); color: var(--warm-white); border-color: var(--defy-red); }
+.choice.-negative:hover .choice-ix { color: var(--warm-white); }
+
+/* ═══════════════════════════════════════════════════════════════
+   INTEREST GAUGE — editorial bar with red accents
+   ═══════════════════════════════════════════════════════════════ */
+
+.gauge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 92px;
+  background: var(--black);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 32px;
+  padding: 16px 60px 18px;
+  border-top: 1px solid var(--warm-white);
+}
+
+.gauge-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gauge-side.-left  { align-items: flex-start; }
+.gauge-side.-right { align-items: flex-end; }
+
+.gauge-label {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  line-height: 1;
+}
+.gauge-end {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--cream-dim);
+  line-height: 1;
+}
+.gauge-end.-low { color: var(--defy-red); }
+
+.gauge-track-wrap { position: relative; }
+.gauge-track {
+  display: grid;
+  grid-template-columns: repeat(11, 30px);
+  gap: 4px;
+  align-items: center;
+}
+.gauge-cell {
+  height: 18px;
+  background: transparent;
+  border: 1px solid var(--mid-grey);
+  position: relative;
+  transition: all 0.3s ease;
+}
+.gauge-cell.-mid {
+  border-color: var(--warm-white);
+  border-width: 2px;
+  height: 28px;
+  background: var(--charcoal);
+}
+.gauge-cell.-mid::after {
+  content: '0';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--warm-white);
+}
+.gauge-cell.-on {
+  background: var(--warm-white);
+  border-color: var(--warm-white);
+}
+.gauge-cell.-on.-warm,
+.gauge-cell.-on.-hot {
+  background: var(--defy-red);
+  border-color: var(--defy-red);
+}
+
+.gauge-value-wrap {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  text-align: center;
+  pointer-events: none;
+}
+.gauge-value {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--defy-red);
+  letter-spacing: -1px;
+}
+.gauge-value::before { content: '+'; }
+
+/* ═══════════════════════════════════════════════════════════════
+   HOVER PANELS — editorial, no shadows
+   ═══════════════════════════════════════════════════════════════ */
+
+.edge-handle {
+  position: absolute;
+  z-index: 20;
+  background: var(--black);
+  border-style: solid;
+  border-color: var(--mid-grey);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+}
+.edge-handle:hover { color: var(--defy-red); border-color: var(--defy-red); }
+
+.edge-top {
+  top: 0; left: 0; right: 0;
+  height: 28px;
+  border-width: 0 0 1px 0;
+  letter-spacing: 6px;
+  padding-left: 180px;     /* clear the wordmark */
+  padding-right: 280px;    /* clear the EDRA mark */
+}
+.edge-top::after { content: '▼  EDRA · DAY 03  ·  47 EPISODES  ·  5 RULES  ▼'; }
+
+.edge-right {
+  top: 28px; bottom: 92px;
+  right: 0;
+  width: 32px;
+  border-width: 0 0 0 1px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 18px 0;
+  letter-spacing: 6px;
+}
+.edge-right::after { content: '◀  SUBJECT №47  ·  MAYA LIANG  ·  HOVER'; }
+
+.edge-left {
+  top: 28px; bottom: 92px;
+  left: 0;
+  width: 32px;
+  border-width: 0 1px 0 0;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  padding: 18px 0;
+  letter-spacing: 6px;
+}
+.edge-left::after { content: '◀  RULEBOOK  ·  R.07 FIRING  ·  R.12 REVISING'; }
+
+.panel {
+  position: absolute;
+  z-index: 30;
+  background: var(--black);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  pointer-events: none;
+  opacity: 0;
+}
+.panel-trigger:hover ~ .panel,
+.panel:hover {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.panel-right {
+  top: 28px; bottom: 92px;
+  right: 0;
+  width: 400px;
+  border-left: 1px solid var(--warm-white);
+  transform: translateX(calc(100% - 32px));
+  padding: 32px 36px;
+}
+.panel-trigger.-right:hover ~ .panel-right,
+.panel-right:hover {
+  transform: translateX(0);
+}
+
+.panel-left {
+  top: 28px; bottom: 92px;
+  left: 0;
+  width: 440px;
+  border-right: 1px solid var(--warm-white);
+  transform: translateX(calc(-100% + 32px));
+  padding: 32px 36px;
+}
+.panel-trigger.-left:hover ~ .panel-left,
+.panel-left:hover {
+  transform: translateX(0);
+}
+
+.panel-top {
+  top: 0;
+  left: 0; right: 0;
+  height: 110px;
+  border-bottom: 1px solid var(--warm-white);
+  transform: translateY(calc(-100% + 28px));
+  padding: 22px 48px 22px 200px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 32px;
+}
+.panel-trigger.-top:hover ~ .panel-top,
+.panel-top:hover {
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PANEL CONTENTS — editorial layout
+   ═══════════════════════════════════════════════════════════════ */
+
+/* section eyebrow — small red bold uppercase, per brand */
+.section-num {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.panel-title {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 38px;
+  letter-spacing: -0.5px;
+  color: var(--warm-white);
+  line-height: 1.05;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.panel-title-square {
+  width: 12px;
+  height: 12px;
+  background: var(--defy-red);
+  flex-shrink: 0;
+}
+
+.panel-meta {
+  font-family: var(--f-body);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--mid-grey);
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--cream-line);
+  line-height: 1.5;
+}
+
+/* PROFILE PANEL */
+.profile-portrait {
+  width: 100%;
+  aspect-ratio: 1.05;
+  background: var(--charcoal);
+  position: relative;
+  margin-bottom: 22px;
+  border: 1px solid var(--warm-white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+/* signature red square corner */
+.profile-portrait::after {
+  content: '';
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 14px; height: 14px;
+  background: var(--defy-red);
+}
+.ph-icon {
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-size: 36px;
+  color: var(--mid-grey);
+  line-height: 1;
+}
+.ph-label {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+}
+.ph-detail {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--cream-dim);
+  line-height: 1.4;
+  max-width: 220px;
+}
+
+.subject-name {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  color: var(--warm-white);
+}
+.subject-role {
+  font-family: var(--f-body);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--cream-dim);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.archetype {
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: var(--charcoal);
+  border-left: 3px solid var(--defy-red);
+}
+.archetype-lab {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  margin-bottom: 6px;
+  line-height: 1;
+}
+.archetype-val {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--warm-white);
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+}
+
+/* fields list */
+.fields {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 10px 16px;
+}
+.field-k {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  padding-top: 3px;
+  line-height: 1.3;
+}
+.field-v {
+  font-family: var(--f-body);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--warm-white);
+  line-height: 1.4;
+}
+.field-v.-red { color: var(--defy-red); font-weight: 700; }
+
+/* posts */
+.posts {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--cream-line);
+}
+.posts-lab {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.post-snip {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--cream-dim);
+  border-left: 3px solid var(--warm-white);
+  padding: 4px 0 4px 16px;
+  margin-bottom: 12px;
+}
+.post-when {
+  display: block;
+  font-family: var(--f-body);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  margin-top: 8px;
+  line-height: 1;
+}
+
+/* RULEBOOK PANEL */
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rule {
+  background: var(--charcoal);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 4px 18px;
+  position: relative;
+  border-left: 2px solid var(--mid-grey);
+}
+.rule.-fresh {
+  border-left-color: var(--defy-red);
+}
+.rule.-fresh::before {
+  content: 'NEW';
+  position: absolute;
+  top: 8px; right: 12px;
+  background: var(--defy-red);
+  color: var(--warm-white);
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 4px;
+  padding: 3px 8px;
+  line-height: 1;
+}
+.rule.-revising {
+  border-left-color: var(--defy-red);
+  animation: pulseRevise 1.6s ease-in-out infinite;
+}
+@keyframes pulseRevise {
+  50% { background: rgba(204, 0, 0, 0.10); }
+}
+.rule.-deprecated { 
+  opacity: 0.4; 
+  border-left-color: var(--mid-grey); 
+}
+.rule.-deprecated .rule-num { text-decoration: line-through; }
+
+.rule-num {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 0.9;
+  letter-spacing: -1.5px;
+  color: var(--warm-white);
+  align-self: center;
+}
+.rule.-fresh .rule-num    { color: var(--defy-red); }
+.rule.-revising .rule-num { color: var(--defy-red); }
+
+.rule-body {
+  font-family: var(--f-body);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--cream-dim);
+  align-self: center;
+}
+.rule-body .if {
+  color: var(--mid-grey);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+.rule-body .then {
+  color: var(--defy-red);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+.rule-body .clu {
+  font-weight: 700;
+  color: var(--warm-white);
+  font-size: 13px;
+}
+.rule-body .clu em {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--cream-dim);
+  font-size: 14px;
+}
+.rule-body .slot {
+  background: var(--black);
+  padding: 1px 6px;
+  color: var(--warm-white);
+  font-weight: 500;
+  border: 1px solid var(--mid-grey);
+}
+.rule-body .dyn {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--defy-red);
+}
+
+.rule-cs {
+  align-self: center;
+  text-align: right;
+  width: 60px;
+}
+.cs-hist {
+  height: 32px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 1.5px;
+  align-items: end;
+  margin-bottom: 6px;
+}
+.cs-bar {
+  background: var(--mid-grey);
+  min-height: 3px;
+  opacity: 0.4;
+}
+.cs-bar.-active {
+  background: var(--warm-white);
+  opacity: 1;
+}
+.rule.-revising .cs-bar.-active { background: var(--defy-red); }
+.rule.-fresh .cs-bar.-active    { background: var(--defy-red); }
+
+.cs-num {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--warm-white);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.cs-num small {
+  font-family: var(--f-body);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--mid-grey);
+}
+.rule.-revising .cs-num { color: var(--defy-red); }
+.rule.-fresh .cs-num { color: var(--defy-red); }
+
+/* reflection */
+.reflection {
+  margin-top: 24px;
+  padding: 22px 22px;
+  background: var(--charcoal);
+  border-top: 4px solid var(--defy-red);
+  position: relative;
+}
+
+.refl-title {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--defy-red);
+  margin-bottom: 14px;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1;
+}
+.refl-title-square {
+  width: 12px;
+  height: 12px;
+  background: var(--defy-red);
+  flex-shrink: 0;
+  animation: warnBlink 1.4s steps(2) infinite;
+}
+@keyframes warnBlink { 50% { opacity: 0.4; } }
+
+.refl-text {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--cream-dim);
+  margin-bottom: 14px;
+}
+.refl-text.-streaming::after {
+  content: '▌';
+  color: var(--defy-red);
+  animation: cursor 1s step-start infinite;
+  font-style: normal;
+}
+@keyframes cursor { 50% { opacity: 0; } }
+
+.refl-proposal {
+  font-family: var(--f-body);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--black);
+  padding: 14px 16px;
+  border: 1px solid var(--warm-white);
+  margin-top: 12px;
+}
+.refl-proposal-head {
+  display: block;
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.refl-change b {
+  color: var(--warm-white);
+  background: var(--defy-red);
+  padding: 1px 6px;
+  font-weight: 700;
+}
+.refl-change s {
+  color: var(--mid-grey);
+}
+
+.refl-actions {
+  display: flex;
+  gap: 0;
+  margin-top: 16px;
+  border: 1px solid var(--warm-white);
+}
+.btn-sm {
+  flex: 1;
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 11px 8px;
+  background: var(--black);
+  color: var(--warm-white);
+  border: none;
+  border-right: 1px solid var(--warm-white);
+  cursor: pointer;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  transition: all 0.12s;
+  text-align: center;
+  line-height: 1;
+}
+.btn-sm:last-child { border-right: none; }
+.btn-sm.-go:hover { background: var(--warm-white); color: var(--black); }
+.btn-sm.-edit:hover { background: var(--charcoal); }
+.btn-sm.-no:hover { background: var(--defy-red); color: var(--warm-white); }
+
+/* TOP PANEL */
+.top-stats {
+  display: flex;
+  gap: 56px;
+  align-items: baseline;
+}
+.top-stat { text-align: left; }
+.top-stat-num {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--warm-white);
+}
+.top-stat-num.-red { color: var(--defy-red); }
+.top-stat-lab {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  margin-top: 6px;
+  line-height: 1;
+}
+
+.top-controls {
+  display: flex;
+  gap: 0;
+  align-items: center;
+  border: 1px solid var(--warm-white);
+}
+.btn-op {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 13px 22px;
+  background: var(--black);
+  color: var(--warm-white);
+  border: none;
+  border-right: 1px solid var(--warm-white);
+  cursor: pointer;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+.btn-op:last-child { border-right: none; }
+.btn-op:hover { background: var(--warm-white); color: var(--black); }
+.btn-op.-danger:hover { background: var(--defy-red); color: var(--warm-white); }
+
+/* mockup note */
+.mockup-note {
+  position: fixed;
+  bottom: 100px;
+  right: 16px;
+  background: var(--black);
+  border: 1px solid var(--defy-red);
+  padding: 8px 14px;
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  z-index: 1000;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mockup-note::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--defy-red);
+}
+
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--mid-grey); }
+
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ═══════════════ BACKGROUND ═══════════════ -->
+  <div class="bg"></div>
+  <div class="bokeh">
+    <div class="bokeh-dot -l"></div><div class="bokeh-dot -m"></div>
+    <div class="bokeh-dot -s"></div><div class="bokeh-dot -m"></div>
+    <div class="bokeh-dot -l"></div><div class="bokeh-dot -m"></div>
+    <div class="bokeh-dot -s"></div><div class="bokeh-dot -s"></div>
+    <div class="bokeh-dot -m"></div><div class="bokeh-dot -s"></div>
+    <div class="bokeh-dot -s"></div><div class="bokeh-dot -s"></div>
+  </div>
+  <div class="grain"></div>
+
+  <!-- ═══════════════ DEFY WORDMARK ═══════════════ -->
+  <div class="defy-mark">
+    <span class="defy-word">Defy</span>
+    <span class="defy-square"></span>
+  </div>
+
+  <!-- top-right product lockup removed for clarity -->
+
+
+  <!-- ═══════════════ AGENT SLOT ═══════════════
+       PRODUCTION:
+       Replace placeholder with monochrome editorial illustration or
+       documentary B&W photography. Single small Defy Red accent only
+       (e.g. red lipstick, red lapel pin, red collar detail).
+       NOT bright anime. NOT colorful. NOT staged corporate.
+       Specs: 720×1080, transparent PNG, half-body, 6 emotion variants.
+  -->
+  <div class="agent-slot">
+    <div class="agent-slot-placeholder">
+      <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--defy-red);">
+        <circle cx="32" cy="22" r="14"/>
+        <path d="M 8 80 Q 8 50 32 44 Q 56 50 56 80"/>
+        <path d="M 24 22 Q 24 24 26 24"/>
+        <path d="M 38 22 Q 38 24 40 24"/>
+        <path d="M 28 32 Q 32 34 36 32"/>
+      </svg>
+      <div class="placeholder-label">Agent Portrait</div>
+      <div class="placeholder-detail">Documentary B&W or monochrome editorial illustration with single red accent. 720×1080, six emotions.</div>
+      <div class="placeholder-current">current — neutral</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TEXTBOX ═══════════════ -->
+  <div class="textbox">
+    <div class="speaker">
+      <span class="speaker-name">Edra</span>
+      <span class="speaker-square"></span>
+    </div>
+    <div class="thought">
+      Profile maps cleanly to cluster #3. R.07 says: open with a question that references their own recent post — not a compliment, a challenge.
+      <span class="thought-tag">R.07 · Hybrid</span>
+    </div>
+    <div class="utterance">
+      Your post on negative results in production — were you imagining a venue for that, or just <span class="utterance-em">naming a gap</span>? We've been trying to publish ours and the pattern of which conferences accept them is bizarrely skewed.
+    </div>
+    <div class="continue-square"></div>
+  </div>
+
+  <!-- ═══════════════ CHOICES ═══════════════ -->
+  <div class="choices">
+    <button class="choice -positive">
+      <span class="choice-ix">A</span>
+      <span>Tell me more.</span>
+    </button>
+    <button class="choice -skeptical">
+      <span class="choice-ix">B</span>
+      <span>Skeptical, why Defy?</span>
+    </button>
+    <button class="choice -negative">
+      <span class="choice-ix">C</span>
+      <span>Not interested.</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════ INTEREST GAUGE ═══════════════ -->
+  <div class="gauge">
+    <div class="gauge-side -left">
+      <span class="gauge-label">Interest</span>
+      <span class="gauge-end -low">— Rejected</span>
+    </div>
+    <div class="gauge-track-wrap">
+      <div class="gauge-value-wrap">
+        <span class="gauge-value">3</span>
+      </div>
+      <div class="gauge-track">
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell -mid"></div>
+        <div class="gauge-cell -on"></div>
+        <div class="gauge-cell -on -warm"></div>
+        <div class="gauge-cell -on -hot"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+      </div>
+    </div>
+    <div class="gauge-side -right">
+      <span class="gauge-label">+5 Accepted</span>
+      <span class="gauge-end">Collaboration —</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HOVER PANELS ═══════════════ -->
+
+  <!-- TOP -->
+  <div class="edge-handle edge-top panel-trigger -top"></div>
+  <div class="panel panel-top">
+    <div class="top-stats">
+      <div class="top-stat"><div class="top-stat-num">Day 03</div><div class="top-stat-lab">Simulated Time</div></div>
+      <div class="top-stat"><div class="top-stat-num">47</div><div class="top-stat-lab">Episodes</div></div>
+      <div class="top-stat"><div class="top-stat-num -red">5</div><div class="top-stat-lab">Rules</div></div>
+      <div class="top-stat"><div class="top-stat-num -red">1</div><div class="top-stat-lab">Revising</div></div>
+      <div class="top-stat"><div class="top-stat-num">2</div><div class="top-stat-lab">Specialists</div></div>
+    </div>
+    <div class="top-controls">
+      <button class="btn-op -danger">AI Bubble Pops</button>
+      <button class="btn-op">+ Segment</button>
+      <button class="btn-op">Expert · Off</button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="edge-handle edge-right panel-trigger -right"></div>
+  <div class="panel panel-right">
+    <div class="section-num">SUBJECT №47</div>
+    <div class="panel-title">
+      <span class="panel-title-square"></span>
+      The Visitor
+    </div>
+    <div class="panel-meta">Live · LinkedIn · classified day 3</div>
+
+    <div class="profile-portrait">
+      <span class="ph-icon">◇</span>
+      <span class="ph-label">Visitor Portrait</span>
+      <span class="ph-detail">Live LinkedIn fetch, monochrome treatment.</span>
+    </div>
+
+    <div class="subject-name">Maya Liang</div>
+    <div class="subject-role">Postdoctoral researcher · Computer Vision · ETH Zürich</div>
+
+    <div class="archetype">
+      <div class="archetype-lab">Classified Archetype</div>
+      <div class="archetype-val">Rising Postdoc / Applied-Lean</div>
+    </div>
+
+    <div class="fields">
+      <div class="field-k">Cluster</div>      <div class="field-v -red">#03 · n=12</div>
+      <div class="field-k">Seniority</div>    <div class="field-v">Mid-career, 2.1 years</div>
+      <div class="field-k">Domain</div>       <div class="field-v">CV · self-supervised</div>
+      <div class="field-k">Posts / 30d</div>  <div class="field-v">7 · skeptical-pragmatic</div>
+      <div class="field-k">Embedding</div>    <div class="field-v">d=384 · norm 0.92</div>
+    </div>
+
+    <div class="posts">
+      <div class="posts-lab">Recent Posts</div>
+      <div class="post-snip">
+        "Three years of self-supervised pretraining and we still hand-label the eval sets. Tell me again why this scales."
+        <span class="post-when">12 Days Ago · 38 Reactions</span>
+      </div>
+      <div class="post-snip">
+        "Genuinely curious which industry partners are open to publishing negative results from production deployments."
+        <span class="post-when">8 Days Ago · 21 Reactions</span>
+      </div>
+    </div>
+
+    <div class="posts">
+      <div class="posts-lab">Closest in Cluster Space</div>
+      <div class="fields" style="margin-top:0;">
+        <div class="field-k">01</div><div class="field-v">Prof. R. Jain · UC Irvine — <span style="color:var(--defy-red);font-weight:700;">0.81</span></div>
+        <div class="field-k">02</div><div class="field-v">Dr. S. Mahmood · Mila — <span style="color:var(--defy-red);font-weight:700;">0.74</span></div>
+        <div class="field-k">03</div><div class="field-v">S. Ferreira · DeepMind — <span style="color:var(--defy-red);font-weight:700;">0.69</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEFT -->
+  <div class="edge-handle edge-left panel-trigger -left"></div>
+  <div class="panel panel-left">
+    <div class="section-num">RULEBOOK</div>
+    <div class="panel-title">
+      <span class="panel-title-square"></span>
+      Active Rules
+    </div>
+    <div class="panel-meta">5 active · 1 deprecated · 1 revising · induced from 47 episodes</div>
+
+    <div class="rules-list">
+      <div class="rule -fresh">
+        <div class="rule-num">13</div>
+        <div class="rule-body">
+          <span class="if">If</span><span class="clu">cluster #5 <em>founders</em></span><br>
+          <span class="then">Then</span>framing <span class="slot">skeptical-respect</span> · tone <span class="slot">direct</span> · opener <span class="slot">shared-context</span> · words <span class="slot">medium</span> · ask <span class="slot">chat</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+          </div>
+          <div class="cs-num">88<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-num">07</div>
+        <div class="rule-body">
+          <span class="if">If</span><span class="clu">cluster #3 <em>postdocs</em></span><br>
+          <span class="then">Then</span>framing <span class="slot">knowledge-share</span> · tone <span class="slot">socratic</span> · opener <span class="slot">question</span> · words <span class="slot">medium</span> · ask <span class="slot">co-author</span>
+          <span class="dyn">+ Opener via LLM (refs visitor's last post)</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar"></div>
+          </div>
+          <div class="cs-num">81<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-num">03</div>
+        <div class="rule-body">
+          <span class="if">If</span><span class="clu">cluster #2 <em>senior profs</em></span><br>
+          <span class="then">Then</span>framing <span class="slot">strategic-alignment</span> · tone <span class="slot">formal</span> · opener <span class="slot">credential-anchor</span> · words <span class="slot">long</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar"></div><div class="cs-bar"></div>
+          </div>
+          <div class="cs-num">64<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule -revising">
+        <div class="rule-num">12</div>
+        <div class="rule-body">
+          <span class="if">If</span><span class="clu">cluster #5 <em>tech-founders</em></span><br>
+          <span class="then">Then</span>framing <span class="slot">applied-curiosity</span> · tone <span class="slot">playful</span> · opener <span class="slot">shared-context</span> · words <span class="slot">short</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar"></div><div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+          </div>
+          <div class="cs-num">31<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule -deprecated">
+        <div class="rule-num">05</div>
+        <div class="rule-body">
+          <span class="if">If</span><span class="clu">cluster #5 <em>(replaced by R.13)</em></span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-num" style="opacity:0.4;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reflection">
+      <div class="refl-title">
+        <span class="refl-title-square"></span>
+        R.12 · Revising
+      </div>
+      <div class="refl-text -streaming">
+        Three founders rejected the playful + applied-curiosity combo within twelve minutes. All three had recent posts mentioning "post-hype reality" or "actual revenue, not pilots". The cluster's tone preference appears to have shifted from playful exploration to skeptical seriousness
+      </div>
+      <div class="refl-proposal">
+        <span class="refl-proposal-head">Proposed: R.12 → R.13</span>
+        <div class="refl-change">Tone: <s>playful</s> → <b>direct</b></div>
+        <div class="refl-change">Framing: <s>applied-curiosity</s> → <b>skeptical-respect</b></div>
+      </div>
+      <div class="refl-actions">
+        <button class="btn-sm -go">Accept</button>
+        <button class="btn-sm -edit">Edit</button>
+        <button class="btn-sm -no">Keep</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="mockup-note">Defy. Brand · v4</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PRODUCTION NOTES — Defy. Brand V2.0 aligned
+     ═══════════════════════════════════════════════════════════════
+     
+     CHANGES FROM PREVIOUS:
+     - Wordmark switched to "Defy" + red square (was "DEFY" all caps)
+     - Display font: Playfair Display 900/800 (was Bodoni Moda)
+     - Body font: DM Sans 400/500/700 (was Inter)
+     - All IBM Plex Mono REMOVED — replaced with DM Sans Bold uppercase
+       letter-spaced 4-5px per brand spec
+     - Greys explicitly named: --mid-grey #777, --border-grey #E8E6E1
+       (was opacity-only)
+     - All text-transform values use brand-specified caps treatment
+     - Continue marker is solid red square (was ▼ arrow)
+     - All accents use exactly Defy Red #CC0000
+     
+     AGENT PNG GENERATION:
+     
+     The agent illustration MUST be brand-aligned monochrome.
+     
+     Master prompt for NovelAI / Midjourney:
+     ----
+     Editorial portrait illustration, half-body, female AI research
+     liaison, short or shoulder-length dark hair, calm composed
+     expression, professional dark suit jacket over cream blouse,
+     BLACK AND WHITE illustration with single small RED ACCENT
+     (red lipstick OR red lapel pin OR red collar detail — pick one,
+     keep consistent), high-contrast monochrome, documentary
+     photography reference, transparent background, looking forward,
+     no decorations, premium consultancy aesthetic, Financial Times
+     portrait style, NOT anime, NOT cartoon, NOT colorful illustration,
+     ar 720:1080
+     ----
+     
+     For each emotion, modify ONLY the expression line:
+       neutral:       "calm neutral expression, mouth closed, composed"
+       pleased:       "warm gentle smile, eyes slightly narrowed"
+       thoughtful:    "lips slightly parted, eyes looking up-left"
+       concerned:     "brows slightly furrowed, lips pressed thin"
+       confident:     "confident half-smile, direct gaze, slight chin lift"
+       disappointed:  "soft sad expression, eyes downcast, lips closed flat"
+     
+     EMOTION MAPPING:
+       +4 to +5  →  confident
+       +1 to +3  →  pleased
+       0         →  neutral
+       -1 to -2  →  thoughtful
+       -3 to -4  →  concerned
+       -5        →  disappointed
+     
+     ALTERNATIVE: skip illustration entirely, use a documentary B&W
+     headshot of a real person. Per brand: "Photography (if any) must
+     be documentary-style, authentic, high-contrast black-and-white only".
+     
+     ═══════════════════════════════════════════════════════════════ -->
+
+</body>
+</html>

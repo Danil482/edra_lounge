@@ -7,7 +7,7 @@ date: 2026-04-28
 
 Контекст пивота → [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]]
 
-Каркас от 2026-04-21 был построен под café-метафору (Persona/Offer/topic/style/drink). Автор переписал TASK.md и зафиксировал финальный мокап `frontend/edra_design_mockup.html`. Тема — VN-сцена с research-outreach pitch для DEFY.group. Скелет надо реструктурировать (vocabulary swap), а не строить с нуля — научная начинка (clustering → induction → CS → reflection → factory) остаётся.
+Каркас от 2026-04-21 был построен под café-метафору (Persona/Offer/topic/style/drink). Автор переписал TASK.md и зафиксировал финальный мокап `frontend/edra_pitch_mockup.html`. Тема — VN-сцена с research-outreach pitch для DEFY.group. Скелет надо реструктурировать (vocabulary swap), а не строить с нуля — научная начинка (clustering → induction → CS → reflection → factory) остаётся.
 
 ## Phase 1A — Vocabulary swap (срочно, ~2 дня)
 
@@ -65,7 +65,7 @@ date: 2026-04-28
 
 ## Phase 2 — VN frontend (~3 дня)
 
-- [ ] **Port mockup verbatim** — копировать CSS из `frontend/edra_design_mockup.html` в `frontend/styles.css` без правок. HTML-структуру сохранить, превратить в шаблон с data-bindings через JS.
+- [ ] **Port mockup verbatim** — копировать CSS из `frontend/edra_pitch_mockup.html` в `frontend/styles.css` без правок. HTML-структуру сохранить, превратить в шаблон с data-bindings через JS.
 - [ ] **app.js** — polling каждые 1000ms `GET /state`, SSE-подписка на `/reflections/stream/{id}` когда `active_revision != null`
 - [ ] **VN typewriter effect** — символ-за-символом ~30cps, ▼ marker по завершении печати
 - [ ] **Interest gauge animation** — CSS transform smooth (TASK.md §10), не stepped. Mapping cell.-on / .-warm / .-hot по знаку и величине
@@ -91,7 +91,7 @@ date: 2026-04-28
 ## Acceptance gates (TASK.md §14, выровнено)
 
 - [ ] `make demo` <30s
-- [ ] UI === мокап (layout, fonts Archivo Black / Cormorant Garamond / IBM Plex Mono, palette night/amber/rose/teal)
+- [ ] UI === мокап (layout, fonts Playfair Display / DM Sans, palette black `#0A0A0A` · warm-white `#F9F9F7` · cream `#F3F1EC` · Defy Red `#CC0000` — 50/40/10 ratio per Defy Brand Guidelines V2.0)
 - [ ] 5-минутный сценарий §9 разворачивается unattended на свежем seed=42
 - [ ] AI Bubble Pops → CS-drop → revision <60s
 - [ ] +Segment → factory spawn ≤3 эпизода
@@ -122,6 +122,6 @@ date: 2026-04-28
 - Preference matrix 6×6×5×4 — заменить на 5 affinity dicts + sparse combo_bonuses
 - Drift swap-функции — пересобрать под framing/tone слоты
 - 5 промптов — переписать
-- Frontend stubs — выкинуть, портировать `edra_design_mockup.html`
+- Frontend stubs — выкинуть, портировать `edra_pitch_mockup.html`
 
 Что переживает: `llm/client.py`, `orchestrator.py` (структура), `db.py`, `config.py`, тест-каркас, формула CS, HDBSCAN-pipeline.

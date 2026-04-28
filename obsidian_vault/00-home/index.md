@@ -8,7 +8,7 @@ date: 2026-04-28
 Booth demo + research artifact для **EDRA** (Experience-Driven Rule Adaptation). Тематический wrapper — visual-novel сцена с anime-агентом, представляющим research-collaboration от **DEFY.group**. Бывший рабочий заголовок "Lounge / Café Manager" устарел на 2026-04-28 — см. [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
 
 Spec: [`../../TASK.md`](../../TASK.md) (живой документ, переписан 2026-04-28)
-Mockup: [`../../frontend/edra_design_mockup.html`](../../frontend/edra_design_mockup.html) (финальный, портируется verbatim)
+Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mockup.html) (финальный, портируется verbatim)
 
 ## Архитектура (2 слоя)
 
@@ -43,7 +43,7 @@ Doctoral-proposal с реальными Pipedrive-данными живёт в *
 ## Status
 
 - 2026-04-21: репо отчленили от EDRA, Phase 1 skeleton (café vocab) сделан
-- 2026-04-28: автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_design_mockup.html` в репо. См. [[current priorities]] и [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
+- 2026-04-28: автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_pitch_mockup.html` в репо. См. [[current priorities]] и [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
 
 ## Navigation
 
