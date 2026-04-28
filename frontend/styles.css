@@ -1264,3 +1264,85 @@ body.expert-off .refl-proposal {
 
 /* Reflection block hidden by default until active_revision fires. */
 .reflection.-hidden { display: none; }
+
+/* ──────────────────────────────────────────────────────────────────
+   Live-mode form (Phase 3) — only shown when LIVE_MODE=true
+   ──────────────────────────────────────────────────────────────── */
+.live-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--cream-line);
+}
+.live-input {
+  flex: 1 1 auto;
+  background: transparent;
+  border: 1px solid var(--cream-line);
+  color: var(--warm-white);
+  font-family: var(--f-body);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  letter-spacing: 0.02em;
+}
+.live-input:focus {
+  outline: none;
+  border-color: var(--defy-red);
+}
+.live-status {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  min-width: 8rem;
+}
+.live-status.-error { color: var(--defy-red); }
+.live-status.-ok    { color: var(--warm-white); }
+
+/* Wi-Fi fallback dialog — shown when ProfileSourceUnavailable bubbles up */
+.fallback-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.fallback-dialog.-hidden { display: none; }
+.fallback-card {
+  background: var(--black);
+  border: 1px solid var(--defy-red);
+  padding: 2rem 2.4rem;
+  max-width: 28rem;
+  font-family: var(--f-body);
+  color: var(--warm-white);
+}
+.fallback-title {
+  font-family: var(--f-display);
+  font-size: 1.4rem;
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.01em;
+}
+.fallback-body {
+  font-size: 0.92rem;
+  margin-bottom: 1.4rem;
+  line-height: 1.6;
+  color: var(--cream-dim);
+}
+.fallback-select {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--cream-line);
+  color: var(--warm-white);
+  font-family: var(--f-body);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 1.2rem;
+}
+.fallback-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}

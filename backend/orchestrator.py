@@ -147,6 +147,7 @@ class Orchestrator:
         while True:
             try:
                 await self._evaluate_factory()
+                await self._purge_expired_profiles()
             except asyncio.CancelledError:
                 raise
             except Exception:  # noqa: BLE001
@@ -171,7 +172,22 @@ class Orchestrator:
     # ── visit advancement ────────────────────────────────────────────────
 
     async def advance_one_visit(self) -> schemas.Episode | None:
-        """Advance the game clock by one visit and run a synthetic session."""
+        """Advance the game clock by one visit and run a synthetic session.
+
+        In live mode (`profile_source.source_kind != "synthetic"`) the tick
+        loop is a no-op: the booth waits for real LinkedIn visitors to come
+        in via `/sessions/start`, rather than auto-playing synthetic visits.
+        Synthetic mode keeps its self-playing behaviour for the 5-minute
+        unattended demo scenario.
+        """
+        if self.profile_source is None:
+            return None
+        if self.profile_source.source_kind != "synthetic":
+            # Live mode — operator drives sessions via the HTTP API. Don't
+            # consume queued visits or fire scheduled drift; both belong to
+            # the synthetic demo timeline.
+            return None
+
         if self._injected_archetypes:
             archetype_id = self._injected_archetypes.pop(0)
             visit = schedule_mod.Visit(
@@ -187,15 +203,6 @@ class Orchestrator:
             return None
 
         self._maybe_fire_scheduled_drift()
-
-        if self.profile_source is None:
-            log.debug(
-                "tick: day=%d time=%s archetype=%s (no profile_source — skip)",
-                visit.day,
-                visit.time,
-                visit.archetype_id,
-            )
-            return None
 
         # Lazy import — keeps this module out of any potential cycle and lets
         # tests construct an Orchestrator without dragging the sessions module.
@@ -392,6 +399,20 @@ class Orchestrator:
                     cs,
                     rev.id,
                 )
+
+    async def _purge_expired_profiles(self) -> None:
+        """Drop live ProfileRow PII once it ages past `ttl_seconds`.
+
+        Synthetic profiles carry no PII and stay forever. Live profiles
+        (LinkedIn) are stamped with `ttl_seconds=3600` at fetch time, so the
+        privacy purge is a simple `now - fetched_at >= ttl` filter against
+        non-synthetic rows. Runs piggy-back on the factory loop's 30s
+        cadence so live PII is gone within a minute of TTL expiry.
+        """
+        async with self.session_factory() as session:
+            purged = await memory_store.purge_expired_live_profiles(session)
+            if purged:
+                log.info("privacy purge: removed %d expired live profile(s)", len(purged))
 
     async def _evaluate_factory(self) -> None:
         """Per cluster with no active rule and no agent → spawn AgentRow."""

@@ -1,5 +1,6 @@
 """Multi-turn pitch session HTTP surface (TASK.md §8).
 
+  GET  /sessions/sources       → { active_kind, synthetic_archetypes[] }
   POST /sessions/start         body: { source_kind, identifier }
                                → { session_id, profile_id, classified_cluster_id,
                                    applicable_rule_id, first_step }
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend import schemas
 from backend.db import get_session
 from backend.profile_source import ProfileNotFound, ProfileSourceUnavailable
+from backend.profile_source.synthetic import SyntheticProfileSource
 from backend.sessions import lifecycle
 
 
@@ -65,7 +67,31 @@ class EndOut(BaseModel):
     outcome: schemas.OUTCOME
 
 
+class SourcesOut(BaseModel):
+    active_kind: str
+    live_mode: bool
+    synthetic_archetypes: list[str]
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────
+
+
+@router.get("/sources", response_model=SourcesOut)
+async def sources(request: Request):
+    """Surface active ProfileSource kind + synthetic fallback archetype list.
+
+    The frontend hits this on boot to decide whether to show the live-URL form
+    and which archetype options to offer in the Wi-Fi-fallback dialog. The
+    fallback list is read from `archetypes.yaml` directly so it stays accurate
+    even when the active source is LinkedIn (which can't list synthetic ids).
+    """
+    profile_source = request.app.state.profile_source
+    fallback = SyntheticProfileSource()
+    return SourcesOut(
+        active_kind=profile_source.source_kind,
+        live_mode=profile_source.source_kind != "synthetic",
+        synthetic_archetypes=fallback.list_ids(include_spawnable=True),
+    )
 
 @router.post("/start", response_model=StartOut)
 async def start(

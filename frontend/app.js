@@ -24,6 +24,9 @@ const state = {
   eventSource: null,
   currentSessionId: null,
   spawnIdx: 0,
+  liveMode: false,
+  syntheticArchetypes: [],
+  pendingLiveUrl: null,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -539,7 +542,117 @@ function escapeHTML(s) {
   }[c]));
 }
 
+// ── Live-mode form + Wi-Fi fallback ──────────────────────────────────
+
+async function bootSources() {
+  let sources;
+  try {
+    sources = await getJSON('/sessions/sources');
+  } catch (e) {
+    console.warn('sources failed', e);
+    return;
+  }
+  state.liveMode = !!sources.live_mode;
+  state.syntheticArchetypes = sources.synthetic_archetypes || [];
+
+  // Populate fallback dropdown.
+  const sel = $('#fallback-select');
+  if (sel) {
+    sel.innerHTML = state.syntheticArchetypes
+      .map(a => `<option value="${escapeHTML(a)}">${escapeHTML(a)}</option>`)
+      .join('');
+  }
+
+  // Live URL form is only useful when LinkedIn is the active source.
+  const row = $('#live-row');
+  if (row) row.style.display = state.liveMode ? '' : 'none';
+}
+
+function setLiveStatus(msg, kind) {
+  const el = $('#live-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.classList.remove('-error', '-ok');
+  if (kind === 'error') el.classList.add('-error');
+  if (kind === 'ok') el.classList.add('-ok');
+}
+
+async function startSession(sourceKind, identifier) {
+  return await postJSON('/sessions/start', {
+    source_kind: sourceKind,
+    identifier: identifier,
+  });
+}
+
+async function handleLiveStart() {
+  const input = $('#live-url');
+  const url = (input?.value || '').trim();
+  if (!url) {
+    setLiveStatus('paste a LinkedIn URL', 'error');
+    return;
+  }
+  setLiveStatus('fetching…', 'ok');
+  try {
+    await startSession('linkedin_rapidapi', url);
+    setLiveStatus('session live', 'ok');
+    if (input) input.value = '';
+    await poll();
+  } catch (e) {
+    const msg = String(e.message || e);
+    if (/\b503\b/.test(msg) || /unavailable/i.test(msg)) {
+      setLiveStatus('LinkedIn unavailable — falling back', 'error');
+      state.pendingLiveUrl = url;
+      showFallback(`Wanted to fetch ${url}, but the source is unavailable. Pick a synthetic archetype to continue:`);
+    } else if (/\b404\b/.test(msg) || /not found/i.test(msg)) {
+      setLiveStatus('profile not found', 'error');
+    } else {
+      setLiveStatus('error: ' + msg.slice(0, 60), 'error');
+    }
+  }
+}
+
+function showFallback(body) {
+  const dlg = $('#fallback-dialog');
+  if (!dlg) return;
+  if (body) setText('#fallback-body', body);
+  dlg.classList.remove('-hidden');
+}
+
+function hideFallback() {
+  const dlg = $('#fallback-dialog');
+  if (dlg) dlg.classList.add('-hidden');
+}
+
+async function handleFallbackGo() {
+  const sel = $('#fallback-select');
+  const archetype = sel?.value;
+  if (!archetype) {
+    hideFallback();
+    return;
+  }
+  hideFallback();
+  setLiveStatus('starting synthetic ' + archetype, 'ok');
+  try {
+    await startSession('synthetic', archetype);
+    setLiveStatus('synthetic visit live', 'ok');
+    await poll();
+  } catch (e) {
+    setLiveStatus('synthetic start failed: ' + String(e.message || e).slice(0, 60), 'error');
+  }
+}
+
+$('#op-live-start')?.addEventListener('click', handleLiveStart);
+$('#live-url')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleLiveStart();
+});
+$('#fallback-go')?.addEventListener('click', handleFallbackGo);
+$('#fallback-cancel')?.addEventListener('click', () => {
+  hideFallback();
+  setLiveStatus('cancelled', 'error');
+});
+
 // ── Boot ─────────────────────────────────────────────────────────────
 
+bootSources();
 poll();
 setInterval(poll, POLL_MS);

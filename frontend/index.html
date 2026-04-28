@@ -125,6 +125,26 @@
       <button class="btn-op" id="op-segment">+ Segment</button>
       <button class="btn-op" id="op-expert">Expert · On</button>
     </div>
+    <div class="live-row" id="live-row" style="display:none;">
+      <input type="text" id="live-url" class="live-input" placeholder="LinkedIn URL — paste & start"/>
+      <button class="btn-op" id="op-live-start">Start Live</button>
+      <span class="live-status" id="live-status"></span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FALLBACK DIALOG ═══════════════ -->
+  <div class="fallback-dialog -hidden" id="fallback-dialog">
+    <div class="fallback-card">
+      <div class="fallback-title">LinkedIn fetch unavailable</div>
+      <div class="fallback-body" id="fallback-body">
+        Wi-Fi or RapidAPI is offline. Pick a synthetic archetype to continue the demo.
+      </div>
+      <select class="fallback-select" id="fallback-select"></select>
+      <div class="fallback-actions">
+        <button class="btn-sm -go" id="fallback-go">Use synthetic</button>
+        <button class="btn-sm -no" id="fallback-cancel">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- RIGHT -->

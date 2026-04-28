@@ -80,6 +80,49 @@ async def list_profiles(session: AsyncSession) -> list[schemas.Profile]:
     return [_profile_from_row(r) for r in result.scalars()]
 
 
+async def purge_expired_live_profiles(
+    session: AsyncSession,
+    *,
+    now: datetime | None = None,
+    synthetic_kind: str = "synthetic",
+) -> list[str]:
+    """Delete non-synthetic ProfileRows older than their TTL window.
+
+    Privacy task per TASK.md acceptance §14: PII fetched from external
+    sources (e.g. LinkedIn) must not linger in SQLite. A row is purgeable iff
+      - source_kind != 'synthetic'
+      - ttl_seconds is set (default 3600 for live profiles)
+      - (now - fetched_at) >= ttl_seconds
+
+    Synthetic rows are left untouched — they carry no PII and are referenced
+    by historical episodes for the demo run.
+
+    Returns the list of purged profile_ids for logging.
+    """
+    cutoff_now = now or datetime.utcnow()
+    stmt = select(models.ProfileRow).where(
+        models.ProfileRow.source_kind != synthetic_kind,
+        models.ProfileRow.ttl_seconds.is_not(None),
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+
+    expired_ids: list[str] = []
+    for row in rows:
+        ttl = row.ttl_seconds
+        if ttl is None:
+            continue
+        age = (cutoff_now - row.fetched_at).total_seconds()
+        if age >= ttl:
+            expired_ids.append(row.id)
+
+    if expired_ids:
+        await session.execute(
+            delete(models.ProfileRow).where(models.ProfileRow.id.in_(expired_ids))
+        )
+        await session.commit()
+    return expired_ids
+
+
 # ── Episodes ──────────────────────────────────────────────────────────────
 
 def _episode_from_row(row: models.EpisodeRow) -> schemas.Episode:
