@@ -1,156 +1,234 @@
-"""Preference matrix — the hidden ground-truth the simulator samples from.
+"""Hidden ground-truth preference function — TASK.md §5.2.
 
-TASK.md §5.2: do NOT make these random. Each persona has a distinct sweet spot
-so cluster-specific rules emerge cleanly. Invariant enforced by
-tests/test_preferences.py: every persona's top-3 preferred offer is unique.
+Each archetype has affinity tables over the 5 PitchStrategy slots plus a sparse
+list of combo bonuses. The whole table lives in `archetypes.yaml` for editing;
+this module loads it lazily and exposes a deterministic, no-LLM scoring path.
 
-Outcome mapping:
-    score ≥ 0.7            → "satisfied"
-    0.3 ≤ score < 0.7      → "neutral"
-    score < 0.3            → "rejected"
+Score formula (TASK.md §5.2):
 
-Score composition (§5.2):
-    score = 0.25 * topic_affinity[p][t]
-          + 0.25 * style_affinity[p][s]
-          + 0.15 * drink_affinity[p][d]
-          + 0.35 * combo_bonus[p][(t, s, d)]   # sparse, hand-crafted peaks
+    base = 0.25 * framing_aff
+         + 0.25 * tone_aff
+         + 0.20 * opener_aff
+         + 0.15 * word_target_aff
+         + 0.15 * ask_size_aff
+    base += sum(applicable combo_bonuses)
+    base -= 0.10 * len(history)         # interest fatigue
+    interest_delta = discretise(base)   # int in [-2, +2]
+
+Drift functions in `drift.py` mutate the in-memory affinity tables; call
+`reset()` to drop the cache and re-read the YAML.
+
+Reproducibility: this module is the sole determinant of synthetic visitor
+reactions. No randomness, no LLM, no I/O at evaluation time.
 """
 
 from __future__ import annotations
 
-import numpy as np
+import itertools
+from pathlib import Path
+from typing import Iterable
+
+import yaml
 
 from backend import schemas
 
 
-PERSONA_IDS: list[str] = [
-    "persona_phd_nlp",
-    "persona_postdoc_cv",
-    "persona_tech_founder",
-    "persona_senior_prof",
-    "persona_industry_pm",
-    "persona_vc_investor",
-]
-
-TOPICS: list[str] = ["hype", "foundations", "applied", "meta-science", "career", "gossip"]
-STYLES: list[str] = ["enthusiastic", "skeptical", "socratic", "gossipy", "formal"]
-DRINKS: list[str] = ["coffee", "beer", "tea", "water"]
+DEFAULT_ARCHETYPES_PATH = Path(__file__).parent.parent / "data" / "archetypes.yaml"
 
 
-# ── Topic affinity (TASK.md §5.2 verbatim) ────────────────────────────────
+# ── Slot vocabularies ─────────────────────────────────────────────────────
 
-topic_affinity: dict[str, dict[str, float]] = {
-    "persona_phd_nlp":      {"foundations": 0.95, "applied": 0.40, "hype": 0.10, "meta-science": 0.70, "career": 0.50, "gossip": 0.20},
-    "persona_tech_founder": {"foundations": 0.50, "applied": 0.95, "hype": 0.85, "meta-science": 0.30, "career": 0.60, "gossip": 0.40},
-    "persona_postdoc_cv":   {"foundations": 0.60, "applied": 0.70, "hype": 0.80, "meta-science": 0.50, "career": 0.90, "gossip": 0.30},
-    "persona_senior_prof":  {"foundations": 0.70, "applied": 0.40, "hype": 0.20, "meta-science": 0.95, "career": 0.30, "gossip": 0.10},
-    "persona_industry_pm":  {"foundations": 0.30, "applied": 0.90, "hype": 0.60, "meta-science": 0.40, "career": 0.50, "gossip": 0.30},
-    "persona_vc_investor":  {"foundations": 0.20, "applied": 0.85, "hype": 0.95, "meta-science": 0.20, "career": 0.40, "gossip": 0.60},
-}
-
-
-# ── Style / drink affinity (TODO(author-tune) — keep unique top-3 invariant) ─
-
-style_affinity: dict[str, dict[str, float]] = {
-    "persona_phd_nlp":      {"socratic": 0.90, "formal": 0.70, "skeptical": 0.75, "enthusiastic": 0.30, "gossipy": 0.10},
-    "persona_tech_founder": {"enthusiastic": 0.95, "socratic": 0.40, "formal": 0.30, "skeptical": 0.35, "gossipy": 0.55},
-    "persona_postdoc_cv":   {"enthusiastic": 0.70, "socratic": 0.65, "gossipy": 0.75, "formal": 0.50, "skeptical": 0.40},
-    "persona_senior_prof":  {"formal": 0.95, "socratic": 0.80, "skeptical": 0.70, "enthusiastic": 0.20, "gossipy": 0.15},
-    "persona_industry_pm":  {"formal": 0.70, "skeptical": 0.75, "socratic": 0.60, "enthusiastic": 0.50, "gossipy": 0.40},
-    "persona_vc_investor":  {"gossipy": 0.90, "enthusiastic": 0.85, "formal": 0.50, "skeptical": 0.35, "socratic": 0.30},
-}
-
-drink_affinity: dict[str, dict[str, float]] = {
-    "persona_phd_nlp":      {"coffee": 0.85, "tea": 0.70, "water": 0.60, "beer": 0.20},
-    "persona_tech_founder": {"coffee": 0.80, "beer": 0.75, "water": 0.40, "tea": 0.30},
-    "persona_postdoc_cv":   {"coffee": 0.90, "tea": 0.50, "beer": 0.55, "water": 0.40},
-    "persona_senior_prof":  {"tea": 0.95, "water": 0.60, "coffee": 0.50, "beer": 0.15},
-    "persona_industry_pm":  {"coffee": 0.75, "water": 0.70, "tea": 0.45, "beer": 0.50},
-    "persona_vc_investor":  {"beer": 0.85, "coffee": 0.70, "water": 0.30, "tea": 0.25},
-}
+FRAMINGS: tuple[str, ...] = (
+    "strategic-alignment",
+    "peer-collaboration",
+    "knowledge-share",
+    "applied-curiosity",
+    "skeptical-respect",
+    "follow-up-comment",
+)
+TONES: tuple[str, ...] = ("formal", "warm", "socratic", "direct", "playful")
+OPENER_TYPES: tuple[str, ...] = (
+    "question",
+    "reference-to-signal",
+    "shared-context",
+    "credential-anchor",
+    "cold",
+)
+WORD_TARGETS: tuple[str, ...] = ("short", "medium", "long")
+ASK_SIZES: tuple[str, ...] = ("chat", "co-author", "intro", "trial", "none")
 
 
-# ── Combo bonus (sparse hand-crafted sweet spots; one unique peak per persona) ─
-# Keys are (topic, style, drink). All unlisted combos → bonus=0.
-# TODO(author-tune): verify each persona's peak is unique and gives score ≥ 0.85.
+# ── Lazy archetype-preferences cache ──────────────────────────────────────
 
-combo_bonus: dict[str, dict[tuple[str, str, str], float]] = {
-    "persona_phd_nlp": {
-        ("foundations", "socratic", "coffee"): 1.00,
-        ("foundations", "skeptical", "tea"): 0.70,
-    },
-    "persona_tech_founder": {
-        ("applied", "enthusiastic", "coffee"): 1.00,
-        ("hype", "enthusiastic", "beer"): 0.75,
-    },
-    "persona_postdoc_cv": {
-        ("career", "gossipy", "coffee"): 1.00,
-        ("hype", "enthusiastic", "coffee"): 0.70,
-    },
-    "persona_senior_prof": {
-        ("meta-science", "formal", "tea"): 1.00,
-        ("foundations", "socratic", "tea"): 0.70,
-    },
-    "persona_industry_pm": {
-        ("applied", "skeptical", "coffee"): 1.00,
-        ("applied", "formal", "water"): 0.70,
-    },
-    "persona_vc_investor": {
-        ("hype", "gossipy", "beer"): 1.00,
-        ("applied", "enthusiastic", "beer"): 0.70,
-    },
-}
+# Shape: { archetype_id -> {
+#     "framing_affinity":     {value: float, ...},
+#     "tone_affinity":        {value: float, ...},
+#     "opener_affinity":      {value: float, ...},
+#     "word_target_affinity": {value: float, ...},
+#     "ask_size_affinity":    {value: float, ...},
+#     "combo_bonuses":        [{"if": {slot: value, ...}, "bonus": float}, ...],
+# } }
+_PREFERENCES: dict[str, dict] | None = None
 
 
-# ── Matrix construction ───────────────────────────────────────────────────
-
-def build_matrix() -> np.ndarray:
-    """Returns shape (6, 6, 5, 4) — personas × topics × styles × drinks."""
-    M = np.zeros((len(PERSONA_IDS), len(TOPICS), len(STYLES), len(DRINKS)))
-    for pi, p in enumerate(PERSONA_IDS):
-        for ti, t in enumerate(TOPICS):
-            for si, s in enumerate(STYLES):
-                for di, d in enumerate(DRINKS):
-                    score = (
-                        0.25 * topic_affinity[p][t]
-                        + 0.25 * style_affinity[p][s]
-                        + 0.15 * drink_affinity[p][d]
-                        + 0.35 * combo_bonus.get(p, {}).get((t, s, d), 0.0)
-                    )
-                    M[pi, ti, si, di] = score
-    return M
-
-
-_MATRIX: np.ndarray | None = None
-
-
-def matrix() -> np.ndarray:
-    global _MATRIX
-    if _MATRIX is None:
-        _MATRIX = build_matrix()
-    return _MATRIX
+def _load(path: Path | None = None) -> dict[str, dict]:
+    global _PREFERENCES
+    if _PREFERENCES is None:
+        path = path or DEFAULT_ARCHETYPES_PATH
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        archetypes = data.get("archetypes") or {}
+        out: dict[str, dict] = {}
+        for aid, spec in archetypes.items():
+            prefs = spec.get("preferences") or {}
+            out[aid] = {
+                "framing_affinity": dict(prefs.get("framing_affinity") or {}),
+                "tone_affinity": dict(prefs.get("tone_affinity") or {}),
+                "opener_affinity": dict(prefs.get("opener_affinity") or {}),
+                "word_target_affinity": dict(prefs.get("word_target_affinity") or {}),
+                "ask_size_affinity": dict(prefs.get("ask_size_affinity") or {}),
+                "combo_bonuses": [
+                    {"if": dict(rule.get("if") or {}), "bonus": float(rule.get("bonus", 0.0))}
+                    for rule in (prefs.get("combo_bonuses") or [])
+                ],
+                "spawnable": bool(spec.get("spawnable", False)),
+            }
+        _PREFERENCES = out
+    return _PREFERENCES
 
 
-def reset_matrix() -> None:
-    """Called after a drift event mutates the affinity tables."""
-    global _MATRIX
-    _MATRIX = None
+def reset() -> None:
+    """Drop the cache so the next call reloads from disk.
+
+    Drift handlers mutate the cached tables in place — call this only when you
+    want to re-read the YAML from scratch.
+    """
+    global _PREFERENCES
+    _PREFERENCES = None
 
 
-# ── Sampling ──────────────────────────────────────────────────────────────
-
-def score_offer(persona_id: str, offer: schemas.Offer) -> float:
-    M = matrix()
-    pi = PERSONA_IDS.index(persona_id)
-    ti = TOPICS.index(offer.topic)
-    si = STYLES.index(offer.style)
-    di = DRINKS.index(offer.drink)
-    return float(M[pi, ti, si, di])
+def archetype_ids(*, include_spawnable: bool = True) -> list[str]:
+    prefs = _load()
+    return [
+        aid for aid, spec in prefs.items()
+        if include_spawnable or not spec.get("spawnable", False)
+    ]
 
 
-def outcome_from_score(score: float) -> schemas.OUTCOME:
-    if score >= 0.7:
-        return "satisfied"
-    if score >= 0.3:
-        return "neutral"
-    return "rejected"
+def affinity_table(archetype_id: str, slot: str) -> dict[str, float]:
+    """Direct mutable handle to the affinity dict for the given slot.
+
+    Drift functions call this to mutate values in place (and avoid silently
+    creating new keys that the score formula would then ignore).
+    """
+    prefs = _load()
+    if archetype_id not in prefs:
+        raise KeyError(f"unknown archetype: {archetype_id}")
+    key = f"{slot}_affinity"
+    if key not in prefs[archetype_id]:
+        raise KeyError(f"unknown slot for {archetype_id}: {slot}")
+    return prefs[archetype_id][key]
+
+
+# ── Score + discretisation ────────────────────────────────────────────────
+
+def _combo_match(rule_if: dict[str, str], strategy_dict: dict[str, str]) -> bool:
+    return all(strategy_dict.get(k) == v for k, v in rule_if.items())
+
+
+def _strategy_to_dict(strategy: schemas.PitchStrategy) -> dict[str, str]:
+    return {
+        "framing": strategy.framing,
+        "tone": strategy.tone,
+        "opener_type": strategy.opener_type,
+        "word_target": strategy.word_target,
+        "ask_size": strategy.ask_size,
+    }
+
+
+def score(archetype_id: str, strategy: schemas.PitchStrategy) -> float:
+    """Raw weighted affinity sum + combo bonuses. No fatigue, no discretisation."""
+    prefs = _load()
+    if archetype_id not in prefs:
+        raise KeyError(f"unknown archetype: {archetype_id}")
+    spec = prefs[archetype_id]
+
+    base = (
+        0.25 * spec["framing_affinity"].get(strategy.framing, 0.0)
+        + 0.25 * spec["tone_affinity"].get(strategy.tone, 0.0)
+        + 0.20 * spec["opener_affinity"].get(strategy.opener_type, 0.0)
+        + 0.15 * spec["word_target_affinity"].get(strategy.word_target, 0.0)
+        + 0.15 * spec["ask_size_affinity"].get(strategy.ask_size, 0.0)
+    )
+    sd = _strategy_to_dict(strategy)
+    for rule in spec["combo_bonuses"]:
+        if _combo_match(rule["if"], sd):
+            base += rule["bonus"]
+    return base
+
+
+def discretise(score_value: float) -> int:
+    """Map a continuous score in roughly [0, 1.5] to an interest_delta in [-2, +2].
+
+    Bands chosen so that:
+      - Top combo with bonus (~1.3-1.5) lands at +2.
+      - Top affinity slot vector without bonus (~0.85-0.95) lands at +1.
+      - Mediocre combos (0.40-0.70) sit at 0.
+      - Anti-affinity combos (<0.40) drop to negative.
+    """
+    if score_value >= 0.95:
+        return 2
+    if score_value >= 0.70:
+        return 1
+    if score_value >= 0.40:
+        return 0
+    if score_value >= 0.15:
+        return -1
+    return -2
+
+
+def preference(
+    archetype_id: str,
+    strategy: schemas.PitchStrategy,
+    history: list[schemas.DialogueStep] | None = None,
+) -> int:
+    """Predicted interest_delta for the given (archetype, pitch, history) triple.
+
+    Pure function. Same inputs always produce the same output.
+    """
+    base = score(archetype_id, strategy)
+    h = history or []
+    base -= 0.10 * len(h)
+    return discretise(base)
+
+
+# ── Visitor-choice prediction (synthetic mode only) ───────────────────────
+
+def visitor_choice_from_delta(delta: int) -> schemas.VISITOR_CHOICE:
+    """Map an interest_delta to the choice the synthetic visitor would click."""
+    if delta >= 1:
+        return "positive"
+    if delta <= -1:
+        return "negative"
+    return "skeptical"
+
+
+# ── Enumeration helper for the unique-top-K invariant test ────────────────
+
+def all_strategies() -> Iterable[schemas.PitchStrategy]:
+    """Generate every legal PitchStrategy. 6×5×5×3×5 = 2250 combos."""
+    for f, t, o, w, a in itertools.product(
+        FRAMINGS, TONES, OPENER_TYPES, WORD_TARGETS, ASK_SIZES
+    ):
+        yield schemas.PitchStrategy(
+            framing=f,
+            tone=t,
+            opener_type=o,
+            word_target=w,
+            ask_size=a,
+        )
+
+
+def top_k_strategies(archetype_id: str, k: int = 3) -> list[schemas.PitchStrategy]:
+    scored = [(score(archetype_id, s), s) for s in all_strategies()]
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [s for _, s in scored[:k]]

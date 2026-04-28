@@ -1,0 +1,458 @@
+# Seeded archetypes — TASK.md §5.1 + §5.2.
+#
+# Six default + two spawnable. Each archetype has:
+#   - profile:    full Profile fields (name, role, domain, seniority, headline,
+#                 archetype_summary, recent_signals)
+#   - preferences: per-slot affinity dicts + sparse combo_bonuses
+#   - spawnable:   bool (default false). True = excluded from default rotation;
+#                  appears only after operator clicks "👤+ New Segment" or
+#                  POST /simulator/inject_archetype.
+#
+# Affinity values in [0, 1]. Combo bonuses are added on top of the weighted
+# affinity sum. Score formula and weights live in backend/simulator/preferences.py
+# per TASK.md §5.2.
+#
+# Invariant (verified by tests/test_preferences.py): every archetype's top-K
+# pitch combinations are unique to that archetype.
+
+archetypes:
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 1. depth-seeking PhD — quiet, foundations-first, allergic to corporate-speak
+  # ────────────────────────────────────────────────────────────────────────
+  arch_phd_nlp_introvert:
+    label: depth-seeking PhD
+    spawnable: false
+    profile:
+      name: Anya Volkova
+      role: PhD student
+      domain: NLP
+      seniority: early
+      headline: PhD student in compositional generalisation, second year, EPFL.
+      archetype_summary: >-
+        Quiet doctoral student in natural language processing. Cares about formal
+        foundations and reproducibility; suspicious of hype and of pitches that
+        skip the mechanism. Will engage at length if the opener names something
+        specific from her work and treats her as a peer rather than a recruit.
+      recent_signals:
+        - "Wrote a thread on why parsing benchmarks plateaued and what would actually move the needle."
+        - "Asked a panel why no one publishes failure modes of fine-tuning eval sets."
+        - "Reposted a paper on negative results in compositional generalisation, no comment."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.20
+        peer-collaboration:    0.90
+        knowledge-share:       0.95
+        applied-curiosity:     0.50
+        skeptical-respect:     0.70
+        follow-up-comment:     0.60
+      tone_affinity:
+        formal:    0.60
+        warm:      0.70
+        socratic:  0.95
+        direct:    0.40
+        playful:   0.20
+      opener_affinity:
+        question:             0.90
+        reference-to-signal:  0.85
+        shared-context:       0.70
+        credential-anchor:    0.50
+        cold:                 0.10
+      word_target_affinity:
+        short:   0.40
+        medium:  0.85
+        long:    0.60
+      ask_size_affinity:
+        chat:       0.70
+        co-author:  0.95
+        intro:      0.50
+        trial:      0.30
+        none:       0.60
+      combo_bonuses:
+        - if: { framing: knowledge-share, tone: socratic, opener_type: question }
+          bonus: 0.40
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 2. rising postdoc — networking-aware, applied-leaning, hunting visibility
+  # ────────────────────────────────────────────────────────────────────────
+  arch_postdoc_cv_ambitious:
+    label: rising postdoc
+    spawnable: false
+    profile:
+      name: Maya Liang
+      role: Postdoc
+      domain: CV
+      seniority: mid
+      headline: Postdoc in self-supervised vision, ETH Zürich, on the faculty market.
+      archetype_summary: >-
+        Computer-vision postdoc actively building visibility for faculty
+        applications and industry leads. Reads every arXiv trending list. Reacts
+        well to references that anchor her existing public work and to framings
+        that connect her research to a concrete ask she can name in a CV.
+      recent_signals:
+        - "Three years of self-supervised pretraining and we still hand-label the eval sets."
+        - "Genuinely curious which industry partners are open to publishing negative results from production deployments."
+        - "Submitted to NeurIPS, decision in two weeks, cross fingers."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.90
+        peer-collaboration:    0.75
+        knowledge-share:       0.60
+        applied-curiosity:     0.85
+        skeptical-respect:     0.30
+        follow-up-comment:     0.50
+      tone_affinity:
+        formal:    0.60
+        warm:      0.85
+        socratic:  0.55
+        direct:    0.70
+        playful:   0.30
+      opener_affinity:
+        question:             0.60
+        reference-to-signal:  0.90
+        shared-context:       0.75
+        credential-anchor:    0.85
+        cold:                 0.20
+      word_target_affinity:
+        short:   0.65
+        medium:  0.85
+        long:    0.40
+      ask_size_affinity:
+        chat:       0.50
+        co-author:  0.90
+        intro:      0.85
+        trial:      0.70
+        none:       0.20
+      combo_bonuses:
+        - if: { framing: strategic-alignment, tone: warm, opener_type: reference-to-signal }
+          bonus: 0.45
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 3. applied-AI founder — hype-tolerant, short attention, wants traction proof
+  # ────────────────────────────────────────────────────────────────────────
+  arch_tech_founder_applied:
+    label: applied-AI founder
+    spawnable: false
+    profile:
+      name: Diego Ramirez
+      role: Founder
+      domain: applied-AI
+      seniority: mid
+      headline: Founder of a Series-A applied-AI startup, ex-PM, two years in.
+      archetype_summary: >-
+        Early-stage founder building an applied-AI product. Hype-tolerant when
+        it correlates with shipping; impatient with meta-science tangents. Wants
+        a tight pitch and a proof-shaped ask he can answer this quarter.
+        Allergic to long-form formal openers.
+      recent_signals:
+        - "Shipped v0.3 last night, churn down 14 points, still not profitable but the slope is right."
+        - "Looking for one research collaborator who's published on calibration for LLM agents — DM me."
+        - "Tired of conference talks that end with 'future work'."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.70
+        peer-collaboration:    0.45
+        knowledge-share:       0.35
+        applied-curiosity:     0.95
+        skeptical-respect:     0.30
+        follow-up-comment:     0.50
+      tone_affinity:
+        formal:    0.20
+        warm:      0.55
+        socratic:  0.40
+        direct:    0.85
+        playful:   0.90
+      opener_affinity:
+        question:             0.60
+        reference-to-signal:  0.75
+        shared-context:       0.90
+        credential-anchor:    0.50
+        cold:                 0.30
+      word_target_affinity:
+        short:   0.95
+        medium:  0.55
+        long:    0.20
+      ask_size_affinity:
+        chat:       0.70
+        co-author:  0.40
+        intro:      0.60
+        trial:      0.95
+        none:       0.30
+      combo_bonuses:
+        - if: { framing: applied-curiosity, tone: playful, opener_type: shared-context, ask_size: trial }
+          bonus: 0.50
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 4. established prof — meta-aware, formal, has seen every cycle
+  # ────────────────────────────────────────────────────────────────────────
+  arch_senior_prof_meta:
+    label: established prof
+    spawnable: false
+    profile:
+      name: Hideo Tanaka
+      role: Full professor
+      domain: any
+      seniority: senior
+      headline: Full professor, mid-career, senate-aligned, two-time program chair.
+      archetype_summary: >-
+        Senior academic who has lived through several hype cycles. Reads new
+        framings against historical analogues; prefers credentialed openers and
+        formal register; will engage seriously with skeptical-respect framings
+        that earn the right to ask without flattery.
+      recent_signals:
+        - "Plenary on why the field's evaluation methodology hasn't kept up with the model size."
+        - "Editorial: in defence of slow review."
+        - "Co-organising the 2027 retrospective workshop on LLM hype cycles."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.70
+        peer-collaboration:    0.90
+        knowledge-share:       0.80
+        applied-curiosity:     0.30
+        skeptical-respect:     0.95
+        follow-up-comment:     0.55
+      tone_affinity:
+        formal:    0.95
+        warm:      0.50
+        socratic:  0.85
+        direct:    0.55
+        playful:   0.10
+      opener_affinity:
+        question:             0.70
+        reference-to-signal:  0.65
+        shared-context:       0.55
+        credential-anchor:    0.95
+        cold:                 0.20
+      word_target_affinity:
+        short:   0.30
+        medium:  0.65
+        long:    0.85
+      ask_size_affinity:
+        chat:       0.85
+        co-author:  0.70
+        intro:      0.40
+        trial:      0.20
+        none:       0.65
+      combo_bonuses:
+        - if: { framing: skeptical-respect, tone: formal, opener_type: credential-anchor, word_target: long }
+          bonus: 0.45
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 5. MLOps PM — pragmatic, business-first, short attention
+  # ────────────────────────────────────────────────────────────────────────
+  arch_industry_pm_pragmatic:
+    label: MLOps PM
+    spawnable: false
+    profile:
+      name: Priya Subramanian
+      role: PM
+      domain: MLOps
+      seniority: mid
+      headline: PM, MLOps platform team, mid-sized AI infrastructure company.
+      archetype_summary: >-
+        Product manager from a mid-sized AI company. Wants the business angle in
+        the first sentence, not philosophy. Rewards concise, applied openers and
+        tight asks; will close the conversation politely but quickly if the
+        framing wanders into meta-science.
+      recent_signals:
+        - "Q2 review: inference cost down 22%, still arguing about the eval suite."
+        - "Anyone here actually deployed retrieval-augmented agents at scale?"
+        - "Hiring an ML platform engineer; ping me."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.90
+        peer-collaboration:    0.55
+        knowledge-share:       0.40
+        applied-curiosity:     0.80
+        skeptical-respect:     0.50
+        follow-up-comment:     0.65
+      tone_affinity:
+        formal:    0.75
+        warm:      0.65
+        socratic:  0.45
+        direct:    0.95
+        playful:   0.30
+      opener_affinity:
+        question:             0.55
+        reference-to-signal:  0.75
+        shared-context:       0.85
+        credential-anchor:    0.65
+        cold:                 0.40
+      word_target_affinity:
+        short:   0.90
+        medium:  0.60
+        long:    0.20
+      ask_size_affinity:
+        chat:       0.55
+        co-author:  0.30
+        intro:      0.80
+        trial:      0.85
+        none:       0.40
+      combo_bonuses:
+        - if: { framing: strategic-alignment, tone: direct, opener_type: shared-context, word_target: short }
+          bonus: 0.45
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 6. skeptical engineer — wants mechanism, allergic to credential-anchoring
+  # ────────────────────────────────────────────────────────────────────────
+  arch_research_engineer_skeptic:
+    label: skeptical engineer
+    spawnable: false
+    profile:
+      name: Kasia Nowak
+      role: Research engineer
+      domain: systems
+      seniority: mid
+      headline: Research engineer, distributed systems × ML, ex-DeepMind, ex-Meta.
+      archetype_summary: >-
+        Research engineer who reads the methods section before the abstract.
+        Distrusts strategic-alignment framings as marketing; will engage when
+        the opener concedes a real limitation and asks an honest question. Tone
+        must be direct or socratic; warmth is wasted on her.
+      recent_signals:
+        - "I will not be reading any paper that claims state-of-the-art on a benchmark with three samples."
+        - "Asked the keynote speaker which of his throughput numbers were measured vs simulated."
+        - "Honest question: does anyone actually use these benchmarks for purchasing decisions?"
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.20
+        peer-collaboration:    0.60
+        knowledge-share:       0.75
+        applied-curiosity:     0.55
+        skeptical-respect:     0.95
+        follow-up-comment:     0.70
+      tone_affinity:
+        formal:    0.65
+        warm:      0.45
+        socratic:  0.85
+        direct:    0.90
+        playful:   0.20
+      opener_affinity:
+        question:             0.95
+        reference-to-signal:  0.80
+        shared-context:       0.60
+        credential-anchor:    0.40
+        cold:                 0.25
+      word_target_affinity:
+        short:   0.75
+        medium:  0.85
+        long:    0.40
+      ask_size_affinity:
+        chat:       0.85
+        co-author:  0.55
+        intro:      0.65
+        trial:      0.40
+        none:       0.55
+      combo_bonuses:
+        - if: { framing: skeptical-respect, tone: direct, opener_type: question, ask_size: chat }
+          bonus: 0.45
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 7. VC investor (spawnable) — status-aware, deal-flow scanner
+  # ────────────────────────────────────────────────────────────────────────
+  arch_vc_investor:
+    label: VC investor
+    spawnable: true
+    profile:
+      name: Marcus Holloway
+      role: Partner
+      domain: venture
+      seniority: senior
+      headline: General partner, applied-AI thesis fund, eight portfolio companies.
+      archetype_summary: >-
+        Early-stage VC scanning the conference for deal flow. Loves a warm
+        opener that names a portfolio adjacency, but will close immediately if
+        the pitch demands deep technical engagement. Wants the intro ask, not
+        the chat.
+      recent_signals:
+        - "Three of our portfolio companies are hiring research-leaning founders this month."
+        - "If your demo doesn't work in the first 30 seconds, I'm out."
+        - "Looking for academics who've productised their thesis — DM me."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.90
+        peer-collaboration:    0.30
+        knowledge-share:       0.20
+        applied-curiosity:     0.95
+        skeptical-respect:     0.50
+        follow-up-comment:     0.65
+      tone_affinity:
+        formal:    0.55
+        warm:      0.90
+        socratic:  0.20
+        direct:    0.75
+        playful:   0.65
+      opener_affinity:
+        question:             0.40
+        reference-to-signal:  0.95
+        shared-context:       0.85
+        credential-anchor:    0.70
+        cold:                 0.20
+      word_target_affinity:
+        short:   0.90
+        medium:  0.60
+        long:    0.20
+      ask_size_affinity:
+        chat:       0.70
+        co-author:  0.30
+        intro:      0.95
+        trial:      0.60
+        none:       0.40
+      combo_bonuses:
+        - if: { framing: applied-curiosity, tone: warm, opener_type: reference-to-signal, ask_size: intro }
+          bonus: 0.50
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 8. tech journalist (spawnable) — narrative-hungry, follow-up-driven
+  # ────────────────────────────────────────────────────────────────────────
+  arch_journalist_curious:
+    label: tech journalist
+    spawnable: true
+    profile:
+      name: Lior Mendel
+      role: Journalist
+      domain: media
+      seniority: mid
+      headline: Senior tech reporter, weekly column on the AI industry.
+      archetype_summary: >-
+        Tech journalist scouting for follow-up stories. Engages on
+        follow-up-comment framings, especially when the opener references one
+        of her own pieces or a panel she covered. Wants narrative tension she
+        can quote, not a slide deck.
+      recent_signals:
+        - "Filed yesterday's piece on the conference keynote — three corrections already, sigh."
+        - "Looking for sources on the post-hype reality of agent deployments — off-record OK."
+        - "Best panel of the week: the one nobody live-tweeted."
+    preferences:
+      framing_affinity:
+        strategic-alignment:   0.30
+        peer-collaboration:    0.40
+        knowledge-share:       0.85
+        applied-curiosity:     0.70
+        skeptical-respect:     0.65
+        follow-up-comment:     0.95
+      tone_affinity:
+        formal:    0.40
+        warm:      0.85
+        socratic:  0.80
+        direct:    0.45
+        playful:   0.55
+      opener_affinity:
+        question:             0.85
+        reference-to-signal:  0.95
+        shared-context:       0.55
+        credential-anchor:    0.40
+        cold:                 0.30
+      word_target_affinity:
+        short:   0.50
+        medium:  0.95
+        long:    0.55
+      ask_size_affinity:
+        chat:       0.95
+        co-author:  0.30
+        intro:      0.65
+        trial:      0.20
+        none:       0.45
+      combo_bonuses:
+        - if: { framing: follow-up-comment, tone: warm, opener_type: reference-to-signal, ask_size: chat }
+          bonus: 0.50

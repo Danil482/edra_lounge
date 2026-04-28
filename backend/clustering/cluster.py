@@ -1,7 +1,13 @@
 """HDBSCAN clustering over episode summary embeddings + UMAP projection for UI.
 
 Re-cluster on every N new episodes (N = settings.recluster_every).
+
+Heavy dependencies (`sentence_transformers`, `hdbscan`, `umap`) are imported
+lazily inside the relevant function bodies so unrelated unit tests don't pay
+the import cost.
 """
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -38,7 +44,7 @@ def cluster_episodes(
     if len(episodes) < settings.n_min:
         return {}
 
-    import hdbscan
+    import hdbscan  # type: ignore[import-untyped]
 
     X = np.array([ep.summary_embedding for ep in episodes])
     clusterer = hdbscan.HDBSCAN(
@@ -60,7 +66,7 @@ def project_umap(embeddings: list[list[float]]) -> list[tuple[float, float]]:
     if len(embeddings) < 4:
         return [(0.0, 0.0)] * len(embeddings)
 
-    import umap
+    import umap  # type: ignore[import-untyped]
 
     reducer = umap.UMAP(n_components=2, random_state=settings.rng_seed)
     coords = reducer.fit_transform(np.array(embeddings))
@@ -68,7 +74,16 @@ def project_umap(embeddings: list[list[float]]) -> list[tuple[float, float]]:
 
 
 def success_ratio(episodes: "list[schemas.Episode]") -> float:
+    """Cluster success metric per TASK.md §4.5: accepted / (accepted + rejected).
+
+    The 'exploring' and 'abandoned' outcomes are excluded — neither a clean
+    win nor a clean loss for the rule.
+    """
     if not episodes:
         return 0.0
-    n_sat = sum(1 for ep in episodes if ep.outcome == "satisfied")
-    return n_sat / len(episodes)
+    accepted = sum(1 for ep in episodes if ep.outcome == "accepted")
+    rejected = sum(1 for ep in episodes if ep.outcome == "rejected")
+    denom = accepted + rejected
+    if denom == 0:
+        return 0.0
+    return accepted / denom

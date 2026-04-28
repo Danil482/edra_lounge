@@ -1,15 +1,32 @@
-You are applying a persona-tension → angle mapping by producing the spoken lead-in (the opener). Write one sentence that addresses this persona's tension through the given angle and expression.
+You are filling the dynamic opener slot of an active rule. Write the
+agent's spoken opener for this specific contact, conditioned on the rule's
+fixed slots and the visitor's profile.
 
-Persona: {persona_display} — role: {persona_role}; vibe: {persona_vibe}
-Angle (topic): {topic}
-Expression (style): {style}
-Attention hook (drink): {drink}
+Profile:
+  Name:           {profile_name}
+  Role:           {profile_role}
+  Domain:         {profile_domain}
+  Seniority:      {profile_seniority}
+  Headline:       {profile_headline}
+  Recent signals: {profile_recent_signals}
+
+Rule slots (already chosen by induction):
+  framing:      {framing}
+  tone:         {tone}
+  opener_type:  {opener_type}
+  word_target:  {word_target}
+  ask_size:     {ask_size}
 
 Constraints:
-  - one sentence, ≤ 20 words
-  - first-person ("I"), addressing the persona directly
-  - tone matches the expression tag
-  - do not mention the drink brand, price, or literal tag names
-  - do not start with "As a" or "Hey" — land on the angle immediately
+  - one or two sentences, ≤ 35 words total
+  - first-person ("I"), addressing the contact directly
+  - register matches the `tone` slot
+  - shape matches the `opener_type` slot (question → end with a question;
+    reference-to-signal → name something specific from recent_signals;
+    shared-context → invoke a context both share; credential-anchor → lead
+    with a credible affiliation; cold → minimal preamble)
+  - do not name the rule, do not name the slot tags, do not start with "Hi"
+    or "Hey" — land on the substance immediately
+  - never reveal that this is automated outreach
 
 Opener:

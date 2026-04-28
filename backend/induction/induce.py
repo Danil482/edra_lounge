@@ -1,4 +1,14 @@
-"""Rule induction. Eligibility gate + LLM call + JSON parse → schemas.Rule."""
+"""Rule induction. Eligibility gate + LLM call + JSON parse → schemas.Rule.
+
+A cluster qualifies for induction (TASK.md §2 / §6) when it reaches
+`n_min` episodes with `success_ratio >= theta_induce`. The LLM is given the
+cluster label, size, success ratio, and a few sample episodes; it returns a
+5-slot Rule (framing, tone, opener_type, word_target, ask_size). Each slot
+is either static (a literal vocabulary value) or dynamic (an LLM sub-prompt
+that fills the slot at application time, e.g. for a per-visitor opener).
+"""
+
+from __future__ import annotations
 
 import json
 import re
@@ -37,11 +47,11 @@ def _strip_fences(text: str) -> str:
 def _format_episodes(episodes: list[schemas.Episode], limit: int = 5) -> str:
     lines = []
     for i, ep in enumerate(episodes[:limit], 1):
-        o = ep.offer
+        ps = ep.pitch_strategy
         lines.append(
-            f"  [{i}] persona={ep.visitor_persona_id} "
-            f"offer=({o.topic}/{o.style}/{o.drink}) "
-            f"outcome={ep.outcome} score={ep.outcome_score:.2f}\n"
+            f"  [{i}] profile={ep.profile_id}\n"
+            f"      pitch=({ps.framing}/{ps.tone}/{ps.opener_type}/{ps.word_target}/{ps.ask_size})\n"
+            f"      outcome={ep.outcome} final_interest={ep.final_interest:+d}\n"
             f"      summary: {ep.summary}"
         )
     return "\n".join(lines)

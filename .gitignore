@@ -20,3 +20,4 @@ edra_lounge.db-shm
 # editor
 .vscode/
 .idea/
+.claude/

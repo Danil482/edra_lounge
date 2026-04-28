@@ -1,30 +1,31 @@
 """Orchestrator — all background coordination lives here as asyncio tasks.
 
 Replaces what would have been an external workflow engine. Kept deliberately
-small: three loops + one reactive hook. Each loop wraps its body in try/except
-so a single-iteration failure does not kill the loop (see acceptance §14).
+small: three loops + one reactive hook (TASK.md §6). Each loop wraps its body
+in try/except so a single-iteration failure does not kill the loop (acceptance
+§14).
+
+Phase 1A surface: lifecycle, game-clock advancement, drift schedule, and the
+public hooks `on_new_episode` / `inject_archetype`. Multi-turn synthetic
+session generation lands in Phase 1B (`spawn_synthetic_session`); for now
+`advance_one_visit` only advances the clock.
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
 from collections import deque
-from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from backend import schemas
-from backend.clustering import cluster as clustering
 from backend.config import settings
-from backend.factory import factory
-from backend.induction import induce as induction
 from backend.memory import models as orm
-from backend.memory import store
-from backend.memory.ids import short_id
-from backend.monitor import consistency
+from backend.profile_source import ProfileSource
 from backend.simulator import drift as drift_mod
 from backend.simulator import schedule as schedule_mod
-from backend.simulator import tick as sim_tick
 
 log = logging.getLogger(__name__)
 
@@ -32,13 +33,21 @@ log = logging.getLogger(__name__)
 class Orchestrator:
     """Owns the event loops and game-clock state for a running demo."""
 
-    def __init__(self, session_factory: async_sessionmaker):
+    def __init__(
+        self,
+        session_factory: async_sessionmaker,
+        profile_source: ProfileSource | None = None,
+    ):
         self.session_factory = session_factory
+        # ProfileSource is injected by `backend/app.py` at lifespan startup —
+        # NOT defaulted here, so the orchestrator stays decoupled from any
+        # concrete implementation (TASK.md §14 isolation acceptance).
+        self.profile_source: ProfileSource | None = profile_source
+
         self.paused = False
         self._tasks: list[asyncio.Task] = []
 
-        # Game clock + visit queue loaded from seeded_run.yaml on first call to
-        # start(); kept as a deque so advance / peek is O(1).
+        # Game clock + visit queue loaded from seeded_run.yaml on first start().
         self._visits: deque[schedule_mod.Visit] = deque()
         self._clock_day: int = 1
         self._clock_time: str = "09:00"
@@ -47,11 +56,12 @@ class Orchestrator:
         self._gradual_postdoc = drift_mod.GradualPostdocShift()
         self._drift_a_fired = False
 
-        # Injected-at-runtime personas (e.g. VC-investor after "New Segment").
-        self._injected_personas: set[str] = set()
+        # Operator-injected archetypes (spawnable archetype rotation).
+        self._injected_archetypes: list[str] = []
 
-        # In-flight revision (for /reflections/stream).
+        # In-flight session + revision (for /reflections/stream and /state).
         self.active_revision_id: str | None = None
+        self.active_session: schemas.SessionSnapshot | None = None
 
     # ── lifecycle ────────────────────────────────────────────────────────
 
@@ -81,8 +91,14 @@ class Orchestrator:
     def clock(self) -> schemas.Clock:
         return schemas.Clock(day=self._clock_day, time=self._clock_time)
 
-    def inject_persona(self, persona_id: str) -> None:
-        self._injected_personas.add(persona_id)
+    def inject_archetype(self, archetype_id: str) -> None:
+        """Add a spawnable archetype to the front of the visit queue.
+
+        Used by the `👤+ New Segment` operator button to introduce a previously-
+        unseen archetype mid-demo. The Agent Factory should pick up the new
+        cluster within ~3 episodes (TASK.md §14).
+        """
+        self._injected_archetypes.append(archetype_id)
 
     # ── loops ────────────────────────────────────────────────────────────
 
@@ -123,34 +139,43 @@ class Orchestrator:
         """Called after an episode is persisted. Triggers recluster + induction checks."""
         async with self.session_factory() as session:
             total = await _count_episodes(session)
-            if total % settings.recluster_every == 0:
+            if settings.recluster_every and total % settings.recluster_every == 0:
                 await self._recluster(session)
             await self._try_induce_all(session)
 
     # ── visit advancement ────────────────────────────────────────────────
 
     async def advance_one_visit(self) -> schemas.Episode | None:
-        """Pop next scheduled visit, fire a simulator tick, persist, fan out."""
-        if not self._visits:
+        """Advance the game clock by one visit. Phase 1A: clock-only.
+
+        Phase 1B replaces this with a full synthetic session — fetch the
+        archetype's Profile via `self.profile_source`, run a multi-turn
+        dialogue against the preference function, persist the Episode, and
+        fan out via `on_new_episode`.
+        """
+        if self._injected_archetypes:
+            archetype_id = self._injected_archetypes.pop(0)
+            visit = schedule_mod.Visit(
+                day=self._clock_day,
+                time=self._clock_time,
+                archetype_id=archetype_id,
+            )
+        elif self._visits:
+            visit = self._visits.popleft()
+            self._clock_day = visit.day
+            self._clock_time = visit.time
+        else:
             return None
-        visit = self._visits.popleft()
-        self._clock_day = visit.day
-        self._clock_time = visit.time
 
         self._maybe_fire_scheduled_drift()
-
-        async with self.session_factory() as session:
-            persona = await store.get_persona(session, visit.persona_id)
-            if persona is None:
-                log.warning("unknown persona_id in schedule: %s", visit.persona_id)
-                return None
-
-            active_rule = await self._pick_rule_for_persona(session, persona.id)
-            ep = await sim_tick.tick_once(visit, persona, active_rule)
-            await store.save_episode(session, ep)
-
-        await self.on_new_episode(ep)
-        return ep
+        # TODO(phase1B): generate Episode via simulator.session.run_synthetic.
+        log.debug(
+            "tick: day=%d time=%s archetype=%s (Phase 1A clock-only)",
+            visit.day,
+            visit.time,
+            visit.archetype_id,
+        )
+        return None
 
     def _maybe_fire_scheduled_drift(self) -> None:
         if (
@@ -162,36 +187,27 @@ class Orchestrator:
             self._drift_a_fired = True
             log.info("Drift A fired (ai_bubble_pops) at day=3 %s", self._clock_time)
 
-        # Drift B is per-episode advancement; advance one step if we're past its start.
+        # Drift B is per-episode; advance one step if we're past its start.
         if self._clock_day > 2 or (self._clock_day == 2 and self._clock_time >= "14:00"):
             self._gradual_postdoc.advance()
 
-    # ── internals ────────────────────────────────────────────────────────
-
-    async def _pick_rule_for_persona(
-        self, session, persona_id: str
-    ) -> schemas.Rule | None:
-        """TODO(phase1): walk persona → cluster → active rule. For now: None → improvise."""
-        return None
+    # ── internals (Phase 1B will fill these) ─────────────────────────────
 
     async def _recluster(self, session) -> None:
-        """TODO(phase1): pull all episodes, run clustering.cluster_episodes, upsert ClusterRows."""
-        log.debug("recluster triggered")
+        """TODO(phase1B): pull all episodes, run clustering, upsert ClusterRows."""
+        log.debug("recluster requested")
 
     async def _try_induce_all(self, session) -> None:
-        """TODO(phase1): iterate clusters, check eligibility, call induction.induce_rule, persist."""
-        pass
+        """TODO(phase1B): for each eligible cluster, induce a rule via LLM."""
 
     async def _check_all_rule_cs(self) -> None:
-        """TODO(phase1): per active rule → compute CS → if should_revise, create pending Revision row."""
-        pass
+        """TODO(phase1B): per active rule → CS → if should_revise, create pending Revision."""
 
     async def _evaluate_factory(self) -> None:
-        """TODO(phase1): pull clusters + active rules, find_uncovered_cluster, spawn."""
-        pass
+        """TODO(phase1B): pull clusters + active rules → find_uncovered_cluster → spawn."""
 
 
-# ── small helpers (kept here to avoid polluting store.py) ─────────────────
+# ── small helpers ─────────────────────────────────────────────────────────
 
 async def _count_episodes(session) -> int:
     result = await session.execute(select(orm.EpisodeRow.id))

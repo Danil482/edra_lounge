@@ -1,22 +1,32 @@
-You are a reflection engine. A rule — a (persona, tension) → (angle, expression) mapping — has dropped below the consistency threshold. Its chosen angle no longer resolves the tension for the persona it was induced on. Analyse the contradicting interactions and propose a revised mapping.
+You are a reflection engine. A rule — a (cluster) → (PitchStrategy) mapping —
+has dropped below the consistency threshold. The pitch shape it prescribes no
+longer produces collaboration interest in the cluster it was induced on.
+Analyse the contradicting sessions and propose a revised rule.
 
 Current rule (id {rule_id}):
 {rule_slots_formatted}
 
-Contradicting interactions (rule predicted satisfied, observed neutral/rejected):
+Contradicting sessions (rule predicted accepted, observed rejected/abandoned):
 {contradicting_episodes_formatted}
 
 Think step-by-step:
-  1. What shared signal among the contradicting interactions indicates that the persona's tension has shifted (or was misread)?
-  2. Which slot — angle (topic), expression (style), attention hook (drink), opener — is the principal cause of the miss?
-  3. What is the minimal revision that restores fit without breaking the rule on the still-satisfied tail of the segment?
+  1. What shared signal among the contradicting sessions indicates that the
+     cluster's preference has shifted (or was misread at induction time)?
+  2. Which of the five slots — framing, tone, opener_type, word_target,
+     ask_size — is the principal cause of the miss?
+  3. What is the minimal revision that restores fit without breaking the rule
+     on the still-accepting tail of the cluster?
 
-Output format: stream plain-prose reasoning first. When reasoning is complete, emit a line containing exactly "---REVISION---" on its own, then the JSON object for the revised rule, using the same 4-slot schema as induction. No code fences around the JSON.
+Output format: stream plain-prose reasoning first. When reasoning is complete,
+emit a line containing exactly "---REVISION---" on its own, then the JSON
+object for the revised rule, using the same 5-slot schema as induction. No
+code fences around the JSON.
 
-Fixed vocabularies:
-  topic:  hype | foundations | applied | meta-science | career | gossip
-  style:  enthusiastic | skeptical | socratic | gossipy | formal
-  drink:  coffee | beer | tea | water
-  opener: free text (≤ 20 words) or null
+Fixed vocabularies — do not invent new values:
+  framing:      strategic-alignment | peer-collaboration | knowledge-share | applied-curiosity | skeptical-respect | follow-up-comment
+  tone:         formal | warm | socratic | direct | playful
+  opener_type:  question | reference-to-signal | shared-context | credential-anchor | cold
+  word_target:  short | medium | long
+  ask_size:     chat | co-author | intro | trial | none
 
 Begin reasoning now.

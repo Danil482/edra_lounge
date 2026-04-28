@@ -4,7 +4,7 @@ install:
 	pip install -e ".[dev]"
 
 seed:
-	@python -m backend.memory.seed
+	@python -m backend.seed
 
 demo:
 	@echo "Starting EDRA Lounge on :8000 (orchestrator loops run inside the FastAPI process)"
@@ -13,7 +13,7 @@ demo:
 reset:
 	@echo "Resetting SQLite DB and re-seeding"
 	@rm -f edra_lounge.db
-	@python -m backend.memory.seed
+	@python -m backend.seed
 
 booth:
 	@echo "Booth mode — full-screen, offline, deterministic"

@@ -1,7 +1,9 @@
 """Rule revision — streams LLM reasoning for the UI reflection console, then
 parses a proposed rule. Does NOT auto-apply in Phase 1; returns a pending
-Revision for the operator to accept/reject/edit.
+Revision for the operator to accept / reject / edit (TASK.md §10.6).
 """
+
+from __future__ import annotations
 
 import json
 import re
@@ -25,11 +27,11 @@ def _format_rule_slots(rule: schemas.Rule) -> str:
 def _format_contradicting(episodes: list[schemas.Episode]) -> str:
     lines = []
     for i, ep in enumerate(episodes, 1):
-        o = ep.offer
+        ps = ep.pitch_strategy
         lines.append(
-            f"  [{i}] persona={ep.visitor_persona_id} "
-            f"offer=({o.topic}/{o.style}/{o.drink}) "
-            f"outcome={ep.outcome} score={ep.outcome_score:.2f}"
+            f"  [{i}] profile={ep.profile_id} "
+            f"pitch=({ps.framing}/{ps.tone}/{ps.opener_type}/{ps.word_target}/{ps.ask_size}) "
+            f"outcome={ep.outcome} final_interest={ep.final_interest:+d}"
         )
     return "\n".join(lines)
 
@@ -61,19 +63,19 @@ async def stream_revision(
     async for chunk in llm.stream(prompt, system="You are a rule-revision engine."):
         buffer += chunk
         if not reasoning_done and REVISION_MARKER in buffer:
-            head, tail = buffer.split(REVISION_MARKER, 1)
-            yield ("reasoning", head[len(buffer) - len(chunk) - len(head):])
+            head, _, tail = buffer.partition(REVISION_MARKER)
+            # Yield only the portion of head we haven't already yielded as reasoning.
+            already_yielded_len = len(buffer) - len(chunk)
+            new_reasoning = head[max(0, already_yielded_len) :]
+            if new_reasoning:
+                yield ("reasoning", new_reasoning)
             reasoning_done = True
             buffer = tail
         elif not reasoning_done:
             yield ("reasoning", chunk)
-        # after marker we just accumulate into buffer
+        # after marker we accumulate the JSON body into buffer
 
-    if reasoning_done:
-        yield ("revision", buffer.strip())
-    else:
-        # fallback: no marker — treat entire buffer as the JSON
-        yield ("revision", buffer.strip())
+    yield ("revision", buffer.strip())
 
 
 def parse_proposed_rule(
@@ -83,7 +85,7 @@ def parse_proposed_rule(
     data = json.loads(_strip_fences(revision_json))
     slots = [schemas.RuleSlot(**s) for s in data["slots"]]
     return schemas.Rule(
-        id=original.id,  # keep same id; status change handled by router
+        id=original.id,  # caller decides whether to issue a new id on accept
         cluster_id=original.cluster_id,
         slots=slots,
         induced_at=datetime.utcnow(),

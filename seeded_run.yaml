@@ -1,36 +1,38 @@
 # Deterministic 3-day visit schedule for the 5-minute booth arc (TASK.md §9).
 # RNG_SEED=42 + this schedule = reproducible episode trace.
 #
-# ~6 visits per day. Persona IDs must match seeded_run personas; persona_vc_investor
-# is excluded from rotation until POST /simulator/inject_persona fires.
+# ~6 visits per day. archetype_ids must match entries in
+# backend/data/archetypes.yaml. Spawnable archetypes (vc_investor, journalist)
+# are excluded from rotation — they appear only when the operator clicks
+# "👤+ New Segment" or POST /simulator/inject_archetype.
 
 day_1:
-  - { time: "09:00", persona: persona_phd_nlp }
-  - { time: "09:20", persona: persona_tech_founder }
-  - { time: "09:40", persona: persona_senior_prof }
-  - { time: "14:00", persona: persona_postdoc_cv }
-  - { time: "14:20", persona: persona_industry_pm }
-  - { time: "14:40", persona: persona_phd_nlp }
+  - { time: "09:00", archetype: arch_phd_nlp_introvert }
+  - { time: "09:20", archetype: arch_tech_founder_applied }
+  - { time: "09:40", archetype: arch_senior_prof_meta }
+  - { time: "14:00", archetype: arch_postdoc_cv_ambitious }
+  - { time: "14:20", archetype: arch_industry_pm_pragmatic }
+  - { time: "14:40", archetype: arch_phd_nlp_introvert }
 
 day_2:
-  - { time: "09:00", persona: persona_tech_founder }
-  - { time: "09:20", persona: persona_phd_nlp }
-  - { time: "09:40", persona: persona_phd_nlp }
-  - { time: "10:00", persona: persona_phd_nlp }
-  - { time: "14:00", persona: persona_postdoc_cv }
-  - { time: "14:20", persona: persona_tech_founder }
-  - { time: "14:40", persona: persona_tech_founder }
-  - { time: "15:00", persona: persona_tech_founder }
+  - { time: "09:00", archetype: arch_tech_founder_applied }
+  - { time: "09:20", archetype: arch_phd_nlp_introvert }
+  - { time: "09:40", archetype: arch_phd_nlp_introvert }
+  - { time: "10:00", archetype: arch_phd_nlp_introvert }
+  - { time: "14:00", archetype: arch_postdoc_cv_ambitious }
+  - { time: "14:20", archetype: arch_tech_founder_applied }
+  - { time: "14:40", archetype: arch_tech_founder_applied }
+  - { time: "15:00", archetype: arch_tech_founder_applied }
 
 day_3:
-  - { time: "09:00", persona: persona_senior_prof }
-  - { time: "09:20", persona: persona_tech_founder }
-  - { time: "09:40", persona: persona_industry_pm }
-  - { time: "10:00", persona: persona_tech_founder }   # first tick after drift A
-  - { time: "10:20", persona: persona_tech_founder }
-  - { time: "10:40", persona: persona_tech_founder }
-  - { time: "14:00", persona: persona_postdoc_cv }
-  - { time: "14:20", persona: persona_phd_nlp }
+  - { time: "09:00", archetype: arch_senior_prof_meta }
+  - { time: "09:20", archetype: arch_tech_founder_applied }
+  - { time: "09:40", archetype: arch_industry_pm_pragmatic }
+  - { time: "10:00", archetype: arch_tech_founder_applied }   # first tick after drift A
+  - { time: "10:20", archetype: arch_tech_founder_applied }
+  - { time: "10:40", archetype: arch_research_engineer_skeptic }
+  - { time: "14:00", archetype: arch_postdoc_cv_ambitious }
+  - { time: "14:20", archetype: arch_phd_nlp_introvert }
 
 # Scheduled drifts — orchestrator checks these against the game clock on every tick.
 day_3_drift_a_triggers_at: "10:00"

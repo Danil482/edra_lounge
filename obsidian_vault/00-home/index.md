@@ -1,33 +1,52 @@
 ---
 tags: [home, index]
-date: 2026-04-21
+date: 2026-04-28
 ---
 
-# EDRA Lounge — Vault Home
+# EDRA — Vault Home
 
-Booth demo of Experience-Driven Rule Adaptation (EDRA) as a café-manager game, for research-conference demo.
+Booth demo + research artifact для **EDRA** (Experience-Driven Rule Adaptation). Тематический wrapper — visual-novel сцена с anime-агентом, представляющим research-collaboration от **DEFY.group**. Бывший рабочий заголовок "Lounge / Café Manager" устарел на 2026-04-28 — см. [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
 
-Spec: [`../../TASK.md`](../../TASK.md)
+Spec: [`../../TASK.md`](../../TASK.md) (живой документ, переписан 2026-04-28)
+Mockup: [`../../frontend/edra_design_mockup.html`](../../frontend/edra_design_mockup.html) (финальный, портируется verbatim)
 
-## Architecture (2 layers)
+## Архитектура (2 слоя)
 
-1. **Backend** (Python / FastAPI) — lives in [`../../backend/`](../../backend/)
-   - `orchestrator.py` — asyncio loops (tick / consistency / factory) + `on_new_episode` reactive hook
-   - Core modules: `memory`, `clustering`, `induction`, `monitor`, `reflection`, `factory`, `simulator`, `llm`
-   - No external orchestrator. No n8n, no Celery. All coordination is in-process.
+1. **Backend** (Python / FastAPI) — [`../../backend/`](../../backend/)
+   - `orchestrator.py` — три asyncio-loop (tick / consistency / factory) + `on_new_episode` reactive hook
+   - Core modules: `memory`, `clustering`, `induction`, `monitor`, `reflection`, `factory`, `simulator`, `pitch`, `llm`
+   - **Новое**: `profile_source/` — Protocol + Synthetic + LinkedIn-RapidAPI (load-bearing для научного фрейминга, TASK.md §4.1)
+   - Никаких external orchestrators. Всё в-процессе FastAPI / asyncio.
 2. **Frontend** (vanilla HTML/JS) — [`../../frontend/`](../../frontend/)
-   - Polls `/state` every 1s, subscribes to SSE `/reflections/stream/{id}` during revision
-   - Ports the mockup `edra_lounge_mockup.html` (author still refining it)
+   - VN-сцена: anime portrait в центре, VN textbox внизу, interest gauge от −5 до +5, три hover-out панели (top/left/right)
+   - Polling `GET /state` каждую секунду + SSE на `/reflections/stream/{id}` во время revision
 
-## Where is the research track?
+## Vocabulary cheat-sheet (после пивота 2026-04-28)
 
-Doctoral-proposal work with real Pipedrive data lives in the **EDRA** repo (`../EDRA/`). That track is paused — Lounge is the focus until the booth is done.
+| Концепт | Тип | Значения / форма |
+|---|---|---|
+| `Profile` | объект | `id, source_kind, source_identifier, name, role, domain, seniority, headline, recent_signals[], archetype_summary, embedding, fetched_at, ttl_seconds` |
+| `PitchStrategy` | объект | 5 слотов: `framing, tone, opener_type, word_target, ask_size` (TASK.md §4.3) |
+| `FRAMING` | literal | `strategic-alignment, peer-collaboration, knowledge-share, applied-curiosity, skeptical-respect, follow-up-comment` |
+| `TONE` | literal | `formal, warm, socratic, direct, playful` |
+| `OPENER_TYPE` | literal | `question, reference-to-signal, shared-context, credential-anchor, cold` |
+| `WORD_TARGET` | literal | `short ~30, medium ~80, long ~120` |
+| `ASK_SIZE` | literal | `chat, co-author, intro, trial, none` |
+| `Episode.dialogue` | list | `[DialogueStep]` 3–7 шагов, каждый с `agent_thought, agent_reply, visitor_choice, interest_delta` |
+| `Episode.outcome` | literal | `accepted, exploring, rejected, abandoned` |
+| Interest gauge | int | `−5..+5`; ±5 завершает сессию |
+
+## Где научный track?
+
+Doctoral-proposal с реальными Pipedrive-данными живёт в **EDRA repo** (`../EDRA/`). Тот трек на паузе — Lounge/PitchFloor (этот репо) — фокус до закрытия booth-демки.
 
 ## Status
 
-- 2026-04-21: repo carved out of EDRA, Phase 1 skeleton in place. See [[current priorities]].
+- 2026-04-21: репо отчленили от EDRA, Phase 1 skeleton (café vocab) сделан
+- 2026-04-28: автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_design_mockup.html` в репо. См. [[current priorities]] и [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
 
 ## Navigation
 
-- [[current priorities]]
-- [[sessions/2026-04-21 Pivot to Lounge demo, skeleton shipped]]
+- [[current priorities]] — план реализации (Phase 1A → 1B → 2 → 3)
+- [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]] — пивот-сессия, что выкидываем / что оставляем
+- [[../sessions/2026-04-21 Pivot to Lounge demo, skeleton shipped]] — историческая сессия с café-каркасом (vocab устарел, инфраструктура жива)

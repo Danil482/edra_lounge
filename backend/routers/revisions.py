@@ -1,10 +1,17 @@
-from pydantic import BaseModel
+"""POST /revisions/{id}/decision — operator's accept / reject / edit verdict.
 
-from fastapi import APIRouter, Depends
+Phase 1A stub. Phase 1B wires the deprecate-with-pointer behaviour for
+`decision == "accepted"` (default per TASK.md §15) and persists the edited
+rule when `decision == "edited"`.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend import schemas
 from backend.db import get_session
+
 
 router = APIRouter(prefix="/revisions", tags=["revisions"])
 
@@ -20,5 +27,4 @@ async def decide(
     body: DecisionIn,
     session: AsyncSession = Depends(get_session),
 ):
-    # TODO(phase1): update revision row, deprecate old rule with pointer if accepted.
-    raise NotImplementedError
+    raise HTTPException(status_code=501, detail="phase1B-stub: revision decision not wired yet")

@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EDRA / Pitch Floor — VN Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&family=Archivo+Black&family=IBM+Plex+Mono:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+
+/* ════════════════════════════════════════════════════════════════
+   EDRA / Pitch Floor — visual-novel mode (v2)
+   
+   Changes from v1:
+   - Central character is now a PLACEHOLDER SLOT, not an SVG portrait.
+     Production swaps in PNG files per emotion (see notes at bottom).
+   - Denser, more atmospheric bokeh layers
+   - Textbox + name plate refined
+   - Right side panel slightly tightened
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  --night:        #0a0612;
+  --night-deep:   #050309;
+  --night-soft:   #1a1228;
+  --plum:         #2a1a3e;
+  --plum-warm:    #3d2548;
+
+  --amber:        #ffb86b;
+  --amber-deep:   #c98244;
+  --amber-glow:   rgba(255, 184, 107, 0.4);
+  --rose:         #ff7796;
+  --rose-deep:    #c84e6e;
+  --teal:         #5dd4d6;
+  --teal-deep:    #2a8a8c;
+
+  --bone:         #f4ecdf;
+  --bone-dim:     #d4c8b3;
+  --bone-faint:   #8a8174;
+  --ink:          #14101a;
+
+  --moss:         #8eb86e;
+  --oxide:        #ff6b4a;
+  --gold:         #ffd166;
+
+  --f-display:    'Archivo Black', 'Helvetica Neue', sans-serif;
+  --f-grotesk:    'Archivo', 'Helvetica Neue', sans-serif;
+  --f-mono:       'IBM Plex Mono', monospace;
+  --f-narrative:  'Cormorant Garamond', Georgia, serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: var(--night);
+  color: var(--bone);
+  font-family: var(--f-grotesk);
+  font-size: 14px;
+  line-height: 1.4;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE — full-bleed VN scene
+   ═══════════════════════════════════════════════════════════════ */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ─── BACKGROUND: night lounge with deep bokeh ─── */
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background:
+    /* warm window glow — left */
+    radial-gradient(ellipse 320px 420px at 16% 32%, rgba(255, 184, 107, 0.28), transparent 70%),
+    /* warm window glow — right */
+    radial-gradient(ellipse 260px 360px at 80% 28%, rgba(255, 184, 107, 0.22), transparent 70%),
+    /* warm window glow — far right small */
+    radial-gradient(ellipse 180px 240px at 95% 40%, rgba(255, 184, 107, 0.16), transparent 70%),
+    /* rose neon — bottom right */
+    radial-gradient(circle 200px at 88% 70%, rgba(255, 119, 150, 0.22), transparent 75%),
+    /* rose neon — small accent */
+    radial-gradient(circle 100px at 72% 82%, rgba(255, 119, 150, 0.15), transparent 75%),
+    /* teal neon — bottom left */
+    radial-gradient(circle 160px at 8% 78%, rgba(93, 212, 214, 0.16), transparent 75%),
+    /* purple ambient floor */
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(61, 37, 72, 0.7), transparent 70%),
+    /* base */
+    linear-gradient(180deg, #050309 0%, #0a0612 35%, #1a1228 100%);
+}
+
+/* hint of window mullion silhouettes */
+.bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    /* faint vertical mullions */
+    linear-gradient(90deg,
+      transparent 9%, rgba(0,0,0,0.5) 9.3%, rgba(0,0,0,0.4) 9.7%, transparent 10%,
+      transparent 22%, rgba(0,0,0,0.4) 22.3%, rgba(0,0,0,0.3) 22.7%, transparent 23%,
+      transparent 75%, rgba(0,0,0,0.35) 75.3%, rgba(0,0,0,0.25) 75.7%, transparent 76%,
+      transparent 88%, rgba(0,0,0,0.4) 88.3%, rgba(0,0,0,0.3) 88.7%, transparent 89%
+    ),
+    /* horizontal mullion */
+    linear-gradient(0deg,
+      transparent 38%, rgba(0,0,0,0.3) 38.5%, transparent 39%
+    ),
+    /* vignette */
+    radial-gradient(ellipse 110% 80% at 50% 60%, transparent 50%, rgba(0,0,0,0.65) 100%);
+  pointer-events: none;
+}
+
+/* film grain */
+.bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.018) 0px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.014) 0px, transparent 1px),
+    radial-gradient(circle at 50% 90%, rgba(255,255,255,0.012) 0px, transparent 1px);
+  background-size: 3px 3px, 5px 5px, 7px 7px;
+  pointer-events: none;
+}
+
+/* ─── BOKEH — denser, more layers, varied sizes ─── */
+
+.bokeh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bokeh-dot {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(10px);
+  animation: float 14s ease-in-out infinite;
+}
+
+/* large warm bokeh — main lights */
+.bokeh-dot.-l { filter: blur(14px); }
+/* medium bokeh */
+.bokeh-dot.-m { filter: blur(8px); }
+/* tiny sharp bokeh */
+.bokeh-dot.-s { filter: blur(4px); }
+
+/* warm cluster — left window area */
+.bokeh-dot:nth-child(1)  { top: 14%; left: 12%; width: 60px; height: 60px; background: var(--amber); opacity: 0.55; animation-delay: 0s; }
+.bokeh-dot:nth-child(2)  { top: 22%; left: 22%; width: 36px; height: 36px; background: var(--amber); opacity: 0.4; animation-delay: -2s; }
+.bokeh-dot:nth-child(3)  { top: 28%; left: 14%; width: 24px; height: 24px; background: var(--gold); opacity: 0.5; animation-delay: -4s; }
+.bokeh-dot:nth-child(4)  { top: 8%;  left: 28%; width: 18px; height: 18px; background: var(--amber); opacity: 0.45; animation-delay: -6s; }
+
+/* warm cluster — right window area */
+.bokeh-dot:nth-child(5)  { top: 16%; left: 76%; width: 50px; height: 50px; background: var(--amber); opacity: 0.5; animation-delay: -1s; }
+.bokeh-dot:nth-child(6)  { top: 24%; left: 84%; width: 30px; height: 30px; background: var(--amber); opacity: 0.4; animation-delay: -3s; }
+.bokeh-dot:nth-child(7)  { top: 32%; left: 92%; width: 18px; height: 18px; background: var(--gold); opacity: 0.55; animation-delay: -5s; }
+.bokeh-dot:nth-child(8)  { top: 11%; left: 88%; width: 14px; height: 14px; background: var(--amber); opacity: 0.42; animation-delay: -7s; }
+
+/* center / ambient */
+.bokeh-dot:nth-child(9)  { top: 18%; left: 48%; width: 22px; height: 22px; background: var(--gold); opacity: 0.35; animation-delay: -8s; }
+.bokeh-dot:nth-child(10) { top: 36%; left: 56%; width: 16px; height: 16px; background: var(--amber); opacity: 0.32; animation-delay: -9s; }
+.bokeh-dot:nth-child(11) { top: 42%; left: 38%; width: 12px; height: 12px; background: var(--gold); opacity: 0.38; animation-delay: -10s; }
+
+/* rose accents — bottom right */
+.bokeh-dot:nth-child(12) { top: 58%; left: 86%; width: 28px; height: 28px; background: var(--rose); opacity: 0.42; animation-delay: -1.5s; }
+.bokeh-dot:nth-child(13) { top: 68%; left: 92%; width: 18px; height: 18px; background: var(--rose); opacity: 0.5; animation-delay: -4.5s; }
+.bokeh-dot:nth-child(14) { top: 76%; left: 78%; width: 14px; height: 14px; background: var(--rose); opacity: 0.4; animation-delay: -7.5s; }
+
+/* teal accents — bottom left */
+.bokeh-dot:nth-child(15) { top: 64%; left: 6%;  width: 30px; height: 30px; background: var(--teal); opacity: 0.32; animation-delay: -2.5s; }
+.bokeh-dot:nth-child(16) { top: 74%; left: 14%; width: 16px; height: 16px; background: var(--teal); opacity: 0.38; animation-delay: -8.5s; }
+
+/* far background — small far lights */
+.bokeh-dot:nth-child(17) { top: 6%;  left: 42%; width: 8px;  height: 8px;  background: var(--gold); opacity: 0.5; animation-delay: -3s; }
+.bokeh-dot:nth-child(18) { top: 12%; left: 62%; width: 10px; height: 10px; background: var(--amber); opacity: 0.45; animation-delay: -6s; }
+.bokeh-dot:nth-child(19) { top: 4%;  left: 18%; width: 6px;  height: 6px;  background: var(--gold); opacity: 0.6; animation-delay: -9s; }
+.bokeh-dot:nth-child(20) { top: 9%;  left: 80%; width: 8px;  height: 8px;  background: var(--gold); opacity: 0.5; animation-delay: -11s; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(8px, -10px); }
+  66% { transform: translate(-6px, 5px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AGENT CHARACTER SLOT — placeholder for external PNG
+   
+   PRODUCTION:
+     Replace the .agent-slot div content with:
+       <img src="/assets/agent/neutral.png"   data-emotion="neutral">
+       <img src="/assets/agent/pleased.png"   data-emotion="pleased">
+       ... etc
+     Show only the one matching current emotion via JS:
+       document.querySelector(`[data-emotion="${currentEmotion}"]`).style.opacity=1;
+     PNG specs: transparent background, 720×1080px, half-body, 
+                character vertically centered, slight headroom at top.
+   ═══════════════════════════════════════════════════════════════ */
+
+.agent-slot {
+  position: absolute;
+  bottom: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 64%;
+  aspect-ratio: 0.7;       /* matches typical VN portrait ratio */
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 50px rgba(255, 184, 107, 0.28))
+    drop-shadow(0 0 100px rgba(255, 119, 150, 0.14));
+  animation: idleBreathe 4.5s ease-in-out infinite;
+}
+@keyframes idleBreathe {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-5px); }
+}
+
+/* placeholder visual — visible only in mockup */
+.agent-slot-placeholder {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed rgba(255, 184, 107, 0.45);
+  background:
+    linear-gradient(135deg,
+      rgba(255, 184, 107, 0.04) 0%,
+      rgba(255, 119, 150, 0.04) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  position: relative;
+}
+.agent-slot-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px dotted rgba(255, 184, 107, 0.2);
+  pointer-events: none;
+}
+.agent-slot-placeholder svg {
+  width: 38%;
+  height: auto;
+  opacity: 0.35;
+}
+.placeholder-label {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--amber);
+  opacity: 0.7;
+}
+.placeholder-detail {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--bone-faint);
+  line-height: 1.5;
+  max-width: 180px;
+}
+.placeholder-current {
+  margin-top: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--amber);
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--amber);
+  background: rgba(255, 184, 107, 0.06);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VN TEXTBOX — bottom-third, semi-transparent
+   ═══════════════════════════════════════════════════════════════ */
+
+.textbox {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 110px;
+  padding: 28px 40px 36px;
+  background: linear-gradient(180deg,
+    rgba(10, 6, 18, 0.82) 0%,
+    rgba(10, 6, 18, 0.94) 100%);
+  border: 1px solid rgba(255, 184, 107, 0.28);
+  border-radius: 2px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 184, 107, 0.10);
+  min-height: 168px;
+}
+
+/* speaker name plate, top-left of textbox, overlapping border */
+.speaker {
+  position: absolute;
+  top: -16px;
+  left: 36px;
+  background: var(--night);
+  border: 1px solid var(--amber);
+  padding: 7px 20px 8px;
+  font-family: var(--f-display);
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(255, 184, 107, 0.32);
+}
+.speaker.-visitor {
+  border-color: var(--teal);
+  color: var(--teal);
+  left: auto;
+  right: 36px;
+  box-shadow: 0 0 16px rgba(93, 212, 214, 0.32);
+}
+.speaker .role {
+  font-family: var(--f-mono);
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  color: var(--bone-faint);
+  margin-left: 10px;
+  display: inline-block;
+  vertical-align: middle;
+  padding-left: 10px;
+  border-left: 1px solid currentColor;
+  opacity: 0.6;
+}
+
+/* internal thought line */
+.thought {
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--bone-faint);
+  margin-bottom: 14px;
+  position: relative;
+  padding-left: 24px;
+}
+.thought::before {
+  content: '※';
+  position: absolute;
+  left: 0; top: 0;
+  color: var(--amber);
+  font-style: normal;
+}
+.thought .rule-tag {
+  font-family: var(--f-mono);
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: rgba(93, 212, 214, 0.08);
+  padding: 1.5px 8px;
+  margin-left: 8px;
+  vertical-align: middle;
+  border-left: 2px solid var(--teal);
+}
+
+/* spoken line */
+.utterance {
+  font-family: var(--f-narrative);
+  font-size: 26px;
+  line-height: 1.45;
+  color: var(--bone);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+  min-height: 76px;
+}
+.utterance .em {
+  color: var(--amber);
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* "click to continue" arrow */
+.continue-arrow {
+  position: absolute;
+  bottom: 14px;
+  right: 32px;
+  font-family: var(--f-grotesk);
+  color: var(--amber);
+  font-size: 20px;
+  animation: bounceArrow 1.4s ease-in-out infinite;
+}
+@keyframes bounceArrow {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(4px); opacity: 1; }
+}
+
+/* visitor choice buttons */
+.choices {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 60px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  z-index: 10;
+}
+.choice {
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 20px;
+  background: rgba(10, 6, 18, 0.88);
+  color: var(--bone);
+  border: 1px solid rgba(244, 236, 223, 0.32);
+  padding: 16px 22px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.choice .ix {
+  font-family: var(--f-display);
+  font-size: 15px;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.choice:hover {
+  transform: translateY(-2px);
+  border-color: var(--amber);
+  background: rgba(255, 184, 107, 0.1);
+  color: var(--amber);
+}
+.choice.-positive:hover  { border-color: var(--moss); background: rgba(142, 184, 110, 0.12); color: var(--moss); }
+.choice.-skeptical:hover { border-color: var(--gold); background: rgba(255, 209, 102, 0.12); color: var(--gold); }
+.choice.-negative:hover  { border-color: var(--oxide); background: rgba(255, 107, 74, 0.12); color: var(--oxide); }
+
+/* ═══════════════════════════════════════════════════════════════
+   INTEREST GAUGE — bottom center, full-width status bar
+   ═══════════════════════════════════════════════════════════════ */
+
+.gauge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 92px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(10, 6, 18, 0.88) 30%,
+    rgba(5, 3, 9, 0.98) 100%);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 32px;
+  padding: 16px 60px 18px;
+  border-top: 1px solid rgba(255, 184, 107, 0.22);
+}
+
+.gauge-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gauge-side.-left  { align-items: flex-start; }
+.gauge-side.-right { align-items: flex-end; }
+
+.gauge-label {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.gauge-end {
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--bone-dim);
+}
+.gauge-end.-low { color: var(--oxide); }
+.gauge-end.-high { color: var(--moss); }
+
+.gauge-track-wrap { position: relative; }
+.gauge-track {
+  display: grid;
+  grid-template-columns: repeat(11, 30px);
+  gap: 4px;
+  align-items: center;
+}
+.gauge-cell {
+  height: 18px;
+  background: rgba(244, 236, 223, 0.08);
+  border: 1px solid rgba(244, 236, 223, 0.18);
+  position: relative;
+  transition: all 0.3s ease;
+}
+.gauge-cell.-mid {
+  background: transparent;
+  border-color: var(--bone-dim);
+  height: 28px;
+}
+.gauge-cell.-mid::after {
+  content: '0';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--bone-dim);
+}
+.gauge-cell.-on {
+  background: var(--moss);
+  border-color: var(--moss);
+  box-shadow: 0 0 8px rgba(142, 184, 110, 0.45);
+}
+.gauge-cell.-on.-warm {
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 12px rgba(255, 184, 107, 0.55);
+}
+.gauge-cell.-on.-hot {
+  background: var(--moss);
+  border-color: var(--moss);
+  box-shadow: 0 0 12px rgba(142, 184, 110, 0.65);
+}
+
+.gauge-value-wrap {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+.gauge-value {
+  font-family: var(--f-display);
+  font-size: 24px;
+  line-height: 1;
+  color: var(--moss);
+  letter-spacing: -0.03em;
+  text-shadow: 0 0 18px rgba(142, 184, 110, 0.5);
+}
+.gauge-value::before { content: '+'; }
+
+/* ═══════════════════════════════════════════════════════════════
+   HOVER PANELS — hidden at edges, slide in
+   ═══════════════════════════════════════════════════════════════ */
+
+.edge-handle {
+  position: absolute;
+  z-index: 20;
+  background: rgba(10, 6, 18, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.edge-handle:hover { color: var(--amber); background: rgba(255, 184, 107, 0.08); }
+
+.edge-top {
+  top: 0; left: 0; right: 0;
+  height: 24px;
+  border-bottom: 1px solid rgba(255, 184, 107, 0.15);
+  letter-spacing: 0.4em;
+}
+.edge-top::after { content: '▼  EDRA — DAY 03  ·  47 EPISODES  ·  5 RULES  ▼'; }
+
+.edge-right {
+  top: 24px; bottom: 90px;
+  right: 0;
+  width: 28px;
+  border-left: 1px solid rgba(93, 212, 214, 0.25);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 18px 0;
+  letter-spacing: 0.36em;
+}
+.edge-right::after {
+  content: '◀  SUBJECT №47  ·  MAYA LIANG  ·  HOVER';
+  color: var(--teal);
+}
+
+.edge-left {
+  top: 24px; bottom: 90px;
+  left: 0;
+  width: 28px;
+  border-right: 1px solid rgba(255, 184, 107, 0.25);
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  padding: 18px 0;
+  letter-spacing: 0.36em;
+}
+.edge-left::after {
+  content: '◀  RULEBOOK  ·  R.07 FIRING  ·  R.12 REVISING';
+  color: var(--amber);
+}
+
+.panel {
+  position: absolute;
+  z-index: 30;
+  background: rgba(5, 3, 9, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  pointer-events: none;
+  opacity: 0;
+}
+.panel-trigger:hover ~ .panel,
+.panel:hover {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.panel-right {
+  top: 24px; bottom: 90px;
+  right: 0;
+  width: 380px;
+  border-left: 1px solid var(--teal-deep);
+  transform: translateX(calc(100% - 28px));
+  padding: 24px 28px;
+}
+.panel-trigger.-right:hover ~ .panel-right,
+.panel-right:hover {
+  transform: translateX(0);
+}
+
+.panel-left {
+  top: 24px; bottom: 90px;
+  left: 0;
+  width: 420px;
+  border-right: 1px solid var(--amber-deep);
+  transform: translateX(calc(-100% + 28px));
+  padding: 24px 28px;
+}
+.panel-trigger.-left:hover ~ .panel-left,
+.panel-left:hover {
+  transform: translateX(0);
+}
+
+.panel-top {
+  top: 0;
+  left: 0; right: 0;
+  height: 96px;
+  border-bottom: 1px solid var(--amber-deep);
+  transform: translateY(calc(-100% + 24px));
+  padding: 18px 36px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 32px;
+}
+.panel-trigger.-top:hover ~ .panel-top,
+.panel-top:hover {
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PANEL CONTENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+.panel-title {
+  font-family: var(--f-display);
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--bone);
+  margin-bottom: 4px;
+}
+.panel-title.-amber { color: var(--amber); }
+.panel-title.-teal  { color: var(--teal); }
+.panel-meta {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(244, 236, 223, 0.15);
+}
+
+/* PROFILE PANEL — visitor portrait is also a placeholder */
+
+.profile-portrait {
+  width: 100%;
+  aspect-ratio: 1.05;
+  background: rgba(20, 12, 30, 0.6);
+  position: relative;
+  margin-bottom: 16px;
+  border: 1px solid rgba(93, 212, 214, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.profile-portrait::before, .profile-portrait::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-color: var(--teal);
+  border-style: solid;
+}
+.profile-portrait::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.profile-portrait::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+.profile-portrait .ph-icon {
+  font-family: var(--f-mono);
+  font-size: 28px;
+  color: var(--teal);
+  opacity: 0.4;
+  letter-spacing: 0.1em;
+}
+.profile-portrait .ph-label {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--teal);
+  opacity: 0.7;
+}
+.profile-portrait .ph-detail {
+  font-family: var(--f-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: var(--bone-faint);
+  line-height: 1.5;
+  max-width: 220px;
+}
+
+.subject-name {
+  font-family: var(--f-display);
+  font-size: 22px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--bone);
+}
+.subject-role {
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--bone-dim);
+  margin-top: 4px;
+}
+
+.archetype {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 184, 107, 0.08);
+  border-left: 3px solid var(--amber);
+}
+.archetype-lab {
+  font-family: var(--f-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 3px;
+}
+.archetype-val {
+  font-family: var(--f-display);
+  font-size: 14px;
+  color: var(--amber);
+  letter-spacing: -0.01em;
+}
+
+.fields {
+  margin-top: 16px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px 12px;
+}
+.fields .k {
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  padding-top: 2px;
+}
+.fields .v { color: var(--bone); }
+.fields .v.-cyan { color: var(--teal); }
+
+.posts {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(244, 236, 223, 0.15);
+}
+.posts-lab {
+  font-family: var(--f-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 8px;
+}
+.post-snip {
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 14.5px;
+  line-height: 1.35;
+  color: var(--bone-dim);
+  border-left: 2px solid var(--amber-deep);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 8px;
+}
+.post-snip .when {
+  display: block;
+  font-family: var(--f-mono);
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-top: 4px;
+}
+
+/* RULEBOOK PANEL */
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rule {
+  background: rgba(20, 12, 30, 0.7);
+  padding: 10px 14px 12px;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 4px 14px;
+  position: relative;
+  border-left: 2px solid rgba(244, 236, 223, 0.15);
+}
+.rule.-fresh {
+  border-left-color: var(--amber);
+  background: rgba(255, 184, 107, 0.06);
+}
+.rule.-fresh::before {
+  content: 'NEW';
+  position: absolute;
+  top: 5px; right: 8px;
+  background: var(--amber);
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  padding: 2px 6px;
+}
+.rule.-revising {
+  border-left-color: var(--oxide);
+  animation: pulseRevise 1.6s ease-in-out infinite;
+}
+@keyframes pulseRevise {
+  50% { background: rgba(255, 107, 74, 0.12); }
+}
+.rule.-deprecated { opacity: 0.4; border-left-color: rgba(244, 236, 223, 0.1); }
+.rule.-deprecated .rule-num { text-decoration: line-through; }
+
+.rule-num {
+  font-family: var(--f-display);
+  font-size: 32px;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: var(--bone);
+  align-self: center;
+}
+.rule.-fresh .rule-num    { color: var(--amber); }
+.rule.-revising .rule-num { color: var(--oxide); }
+
+.rule-body {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--bone-dim);
+  align-self: center;
+}
+.rule-body .if { color: var(--teal); font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; margin-right: 4px; font-weight: 500; }
+.rule-body .then { color: var(--amber); font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; margin-right: 4px; font-weight: 500; }
+.rule-body .clu { color: var(--bone); }
+.rule-body .clu em { color: var(--bone-faint); font-style: italic; font-family: var(--f-narrative); font-size: 12.5px; }
+.rule-body .slot { background: rgba(244, 236, 223, 0.08); padding: 1px 5px; color: var(--bone); }
+.rule-body .dyn {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--teal);
+}
+
+.rule-cs {
+  align-self: center;
+  text-align: right;
+  width: 50px;
+}
+.cs-hist {
+  height: 30px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 1.5px;
+  align-items: end;
+  margin-bottom: 4px;
+}
+.cs-bar { background: rgba(142, 184, 110, 0.25); min-height: 3px; }
+.cs-bar.-active { background: var(--moss); box-shadow: 0 0 4px rgba(142, 184, 110, 0.6); }
+.rule.-revising .cs-bar { background: rgba(255, 107, 74, 0.25); }
+.rule.-revising .cs-bar.-active { background: var(--oxide); }
+.rule.-fresh .cs-bar { background: rgba(255, 184, 107, 0.25); }
+.rule.-fresh .cs-bar.-active { background: var(--amber); }
+.cs-num {
+  font-family: var(--f-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bone);
+}
+.cs-num small { font-size: 9px; font-weight: 400; color: var(--bone-faint); }
+.rule.-revising .cs-num { color: var(--oxide); }
+.rule.-fresh .cs-num { color: var(--amber); }
+
+.reflection {
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 107, 74, 0.05);
+  border-left: 2px solid var(--oxide);
+}
+.refl-title {
+  font-family: var(--f-display);
+  font-size: 16px;
+  color: var(--oxide);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.refl-title::before { content: '⚠ '; animation: warnBlink 1.4s steps(2) infinite; }
+@keyframes warnBlink { 50% { opacity: 0.5; } }
+.refl-text {
+  font-family: var(--f-narrative);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--bone-dim);
+  margin-bottom: 8px;
+}
+.refl-text.-streaming::after {
+  content: '▌';
+  color: var(--amber);
+  animation: cursor 1s step-start infinite;
+}
+@keyframes cursor { 50% { opacity: 0; } }
+
+.refl-proposal {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  background: rgba(0,0,0,0.4);
+  padding: 9px 11px;
+  border: 1px solid var(--moss);
+  margin-top: 8px;
+}
+.refl-proposal .head {
+  display: block;
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--moss);
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.refl-proposal .change b { color: var(--moss); background: rgba(142, 184, 110, 0.15); padding: 0 4px; }
+.refl-proposal .change s { color: var(--bone-faint); }
+
+.refl-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.btn-sm {
+  flex: 1;
+  font-family: var(--f-mono);
+  font-size: 9.5px;
+  padding: 7px;
+  background: rgba(20, 12, 30, 0.7);
+  color: var(--bone);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: all 0.12s;
+  text-align: center;
+  font-weight: 500;
+}
+.btn-sm.-go    { color: var(--moss); border-bottom: 2px solid var(--moss); }
+.btn-sm.-go:hover { background: var(--moss); color: var(--ink); }
+.btn-sm.-edit  { color: var(--teal); border-bottom: 2px solid var(--teal); }
+.btn-sm.-edit:hover { background: var(--teal); color: var(--ink); }
+.btn-sm.-no    { color: var(--oxide); border-bottom: 2px solid var(--oxide); }
+.btn-sm.-no:hover { background: var(--oxide); color: var(--ink); }
+
+/* TOP PANEL */
+.brand-glyph {
+  font-family: var(--f-display);
+  font-size: 42px;
+  line-height: 1;
+  color: var(--bone);
+  letter-spacing: -0.04em;
+}
+.brand-glyph .acc { color: var(--amber); }
+.top-stats {
+  display: flex;
+  gap: 36px;
+  justify-content: center;
+}
+.top-stat { text-align: center; }
+.top-stat-num {
+  font-family: var(--f-display);
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.top-stat-num.-amber { color: var(--amber); }
+.top-stat-num.-oxide { color: var(--oxide); }
+.top-stat-num.-teal  { color: var(--teal); }
+.top-stat-lab {
+  font-family: var(--f-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-top: 4px;
+}
+.top-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btn-op {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 9px 14px;
+  background: rgba(20, 12, 30, 0.7);
+  color: var(--bone);
+  border: 1px solid rgba(244, 236, 223, 0.2);
+  cursor: pointer;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+.btn-op:hover { background: var(--bone); color: var(--ink); }
+.btn-op.-danger { color: var(--oxide); border-color: var(--oxide); }
+.btn-op.-danger:hover { background: var(--oxide); color: var(--ink); }
+.btn-op.-spawn  { color: var(--amber); border-color: var(--amber); }
+.btn-op.-spawn:hover { background: var(--amber); color: var(--ink); }
+
+/* mockup note */
+.mockup-note {
+  position: fixed;
+  bottom: 100px;
+  right: 16px;
+  background: rgba(10, 6, 18, 0.9);
+  border: 1px dashed var(--amber);
+  padding: 6px 12px;
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: rgba(244, 236, 223, 0.2); }
+
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ═══════════════ BACKGROUND: night lounge with bokeh ═══════════════ -->
+  <div class="bg"></div>
+  <div class="bokeh">
+    <!-- 20 bokeh dots, varied size and color, see CSS -->
+    <div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div>
+    <div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div>
+    <div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div>
+    <div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div>
+    <div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div><div class="bokeh-dot"></div>
+  </div>
+
+  <!-- ═══════════════ AGENT — placeholder slot for external PNG ═══════════════
+       
+       Production usage:
+         <div class="agent-slot">
+           <img src="assets/agent/neutral.png"   class="agent-emotion -active" alt="">
+           <img src="assets/agent/pleased.png"   class="agent-emotion" alt="">
+           <img src="assets/agent/thoughtful.png" class="agent-emotion" alt="">
+           <img src="assets/agent/concerned.png" class="agent-emotion" alt="">
+           <img src="assets/agent/confident.png" class="agent-emotion" alt="">
+           <img src="assets/agent/disappointed.png" class="agent-emotion" alt="">
+         </div>
+       
+       Then JS: when interest changes, swap the .-active class.
+       PNG specs:
+         - 720×1080 px, transparent background (PNG-32)
+         - Same character pose / framing across all 6 emotions
+         - Half-body, top of head ~10% from frame top, hands not in frame
+         - Lighting baked in: warm amber rim from upper right + soft rose 
+           rim from left, matching the lounge background
+         
+       Mapping (which emotion shows when):
+         interest gauge   →   emotion png
+         +4 to +5         →   confident.png
+         +1 to +3         →   pleased.png
+         0                →   neutral.png
+         -1 to -2         →   thoughtful.png
+         -3 to -4         →   concerned.png
+         -5               →   disappointed.png
+  -->
+  <div class="agent-slot">
+    <div class="agent-slot-placeholder">
+      <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="32" cy="22" r="14"/>
+        <path d="M 8 80 Q 8 50 32 44 Q 56 50 56 80"/>
+        <path d="M 24 22 Q 24 24 26 24"/>
+        <path d="M 38 22 Q 38 24 40 24"/>
+        <path d="M 28 32 Q 32 34 36 32"/>
+      </svg>
+      <div class="placeholder-label">agent portrait</div>
+      <div class="placeholder-detail">composited externally · transparent PNG · 720×1080 · half-body · 6 emotion variants</div>
+      <div class="placeholder-current">current: neutral</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TEXTBOX ═══════════════ -->
+  <div class="textbox">
+    <div class="speaker">
+      EDRA
+      <span class="role">research liaison</span>
+    </div>
+    <div class="thought">
+      Profile maps cleanly to cluster #3. R.07 says: open with a question that references their own recent post — not a compliment, a challenge.
+      <span class="rule-tag">R.07 / hybrid</span>
+    </div>
+    <div class="utterance">
+      Your post on negative results in production — were you imagining a venue for that, or just <span class="em">naming a gap</span>? We've been trying to publish ours and the pattern of which conferences accept them is bizarrely skewed.
+    </div>
+    <div class="continue-arrow">▼</div>
+  </div>
+
+  <!-- ═══════════════ CHOICES ═══════════════ -->
+  <div class="choices">
+    <button class="choice -positive">
+      <span class="ix">A</span>
+      <span>Tell me more.</span>
+    </button>
+    <button class="choice -skeptical">
+      <span class="ix">B</span>
+      <span>Skeptical — why DEFY?</span>
+    </button>
+    <button class="choice -negative">
+      <span class="ix">C</span>
+      <span>Not interested.</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════ INTEREST GAUGE ═══════════════ -->
+  <div class="gauge">
+    <div class="gauge-side -left">
+      <span class="gauge-label">Interest</span>
+      <span class="gauge-end -low">— rejected</span>
+    </div>
+    <div class="gauge-track-wrap">
+      <div class="gauge-value-wrap">
+        <span class="gauge-value">3</span>
+      </div>
+      <div class="gauge-track">
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell -mid"></div>
+        <div class="gauge-cell -on"></div>
+        <div class="gauge-cell -on -warm"></div>
+        <div class="gauge-cell -on -hot"></div>
+        <div class="gauge-cell"></div>
+        <div class="gauge-cell"></div>
+      </div>
+    </div>
+    <div class="gauge-side -right">
+      <span class="gauge-label">+5 accepted</span>
+      <span class="gauge-end">collaboration —</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HOVER PANELS ═══════════════ -->
+
+  <!-- TOP -->
+  <div class="edge-handle edge-top panel-trigger -top"></div>
+  <div class="panel panel-top">
+    <div class="brand-glyph">EDR<span class="acc">A</span></div>
+    <div class="top-stats">
+      <div class="top-stat"><div class="top-stat-num">DAY 03</div><div class="top-stat-lab">simulated time</div></div>
+      <div class="top-stat"><div class="top-stat-num">47</div><div class="top-stat-lab">episodes</div></div>
+      <div class="top-stat"><div class="top-stat-num -amber">5</div><div class="top-stat-lab">rules</div></div>
+      <div class="top-stat"><div class="top-stat-num -oxide">1</div><div class="top-stat-lab">revising</div></div>
+      <div class="top-stat"><div class="top-stat-num -teal">2</div><div class="top-stat-lab">specialists</div></div>
+    </div>
+    <div class="top-controls">
+      <button class="btn-op -danger">AI bubble pops</button>
+      <button class="btn-op -spawn">+ segment</button>
+      <button class="btn-op">expert ▸ off</button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="edge-handle edge-right panel-trigger -right"></div>
+  <div class="panel panel-right">
+    <div class="panel-title -teal">SUBJECT №47</div>
+    <div class="panel-meta">live · linkedin · classified day 3</div>
+
+    <!-- visitor portrait — also a placeholder, simpler -->
+    <div class="profile-portrait">
+      <span class="ph-icon">◇</span>
+      <span class="ph-label">visitor portrait</span>
+      <span class="ph-detail">live LinkedIn fetch · cropped to 200×200 · sketched line-art style</span>
+    </div>
+
+    <div class="subject-name">MAYA LIANG</div>
+    <div class="subject-role">Postdoctoral researcher · Computer Vision · ETH Zürich</div>
+
+    <div class="archetype">
+      <div class="archetype-lab">classified archetype</div>
+      <div class="archetype-val">RISING POSTDOC / APPLIED-LEAN</div>
+    </div>
+
+    <div class="fields">
+      <div class="k">cluster</div>      <div class="v -cyan">#03 · n=12</div>
+      <div class="k">seniority</div>    <div class="v">mid · 2.1y postdoc</div>
+      <div class="k">domain</div>       <div class="v">CV / self-supervised</div>
+      <div class="k">posts/30d</div>    <div class="v">7 · skeptical-pragmatic</div>
+      <div class="k">embedding</div>    <div class="v -cyan">d=384 · norm 0.92</div>
+    </div>
+
+    <div class="posts">
+      <div class="posts-lab">recent posts</div>
+      <div class="post-snip">
+        "Three years of self-supervised pretraining and we still hand-label the eval sets. Tell me again why this scales."
+        <span class="when">12 days ago · 38 reactions</span>
+      </div>
+      <div class="post-snip">
+        "Genuinely curious which industry partners are open to publishing negative results from production deployments."
+        <span class="when">8 days ago · 21 reactions</span>
+      </div>
+    </div>
+
+    <div class="posts">
+      <div class="posts-lab">closest in cluster space</div>
+      <div class="fields" style="margin-top:0;">
+        <div class="k">01</div><div class="v">Prof. R. Jain · UC Irvine — <span style="color:var(--teal);">0.81</span></div>
+        <div class="k">02</div><div class="v">Dr. S. Mahmood · Mila — <span style="color:var(--teal);">0.74</span></div>
+        <div class="k">03</div><div class="v">S. Ferreira · DeepMind — <span style="color:var(--teal);">0.69</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEFT -->
+  <div class="edge-handle edge-left panel-trigger -left"></div>
+  <div class="panel panel-left">
+    <div class="panel-title -amber">RULEBOOK</div>
+    <div class="panel-meta">5 active · 1 deprecated · 1 revising · induced from 47 episodes</div>
+
+    <div class="rules-list">
+      <div class="rule -fresh">
+        <div class="rule-num">13</div>
+        <div class="rule-body">
+          <span class="if">if</span><span class="clu">cluster #5 <em>founders</em></span><br>
+          <span class="then">then</span>framing <span class="slot">skeptical-respect</span> · tone <span class="slot">direct</span> · opener <span class="slot">shared-context</span> · words <span class="slot">medium</span> · ask <span class="slot">chat</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+          </div>
+          <div class="cs-num">88<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-num">07</div>
+        <div class="rule-body">
+          <span class="if">if</span><span class="clu">cluster #3 <em>postdocs</em></span><br>
+          <span class="then">then</span>framing <span class="slot">knowledge-share</span> · tone <span class="slot">socratic</span> · opener <span class="slot">question</span> · words <span class="slot">medium</span> · ask <span class="slot">co-author</span>
+          <span class="dyn">+ opener via LLM (refs visitor's last post)</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar"></div>
+          </div>
+          <div class="cs-num">81<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule">
+        <div class="rule-num">03</div>
+        <div class="rule-body">
+          <span class="if">if</span><span class="clu">cluster #2 <em>senior profs</em></span><br>
+          <span class="then">then</span>framing <span class="slot">strategic-alignment</span> · tone <span class="slot">formal</span> · opener <span class="slot">credential-anchor</span> · words <span class="slot">long</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+            <div class="cs-bar"></div><div class="cs-bar"></div>
+          </div>
+          <div class="cs-num">64<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule -revising">
+        <div class="rule-num">12</div>
+        <div class="rule-body">
+          <span class="if">if</span><span class="clu">cluster #5 <em>tech-founders</em></span><br>
+          <span class="then">then</span>framing <span class="slot">applied-curiosity</span> · tone <span class="slot">playful</span> · opener <span class="slot">shared-context</span> · words <span class="slot">short</span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-hist">
+            <div class="cs-bar"></div><div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar"></div><div class="cs-bar"></div><div class="cs-bar"></div>
+            <div class="cs-bar"></div>
+            <div class="cs-bar -active"></div><div class="cs-bar -active"></div><div class="cs-bar -active"></div>
+          </div>
+          <div class="cs-num">31<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="rule -deprecated">
+        <div class="rule-num">05</div>
+        <div class="rule-body">
+          <span class="if">if</span><span class="clu">cluster #5 <em>(replaced by R.13)</em></span>
+        </div>
+        <div class="rule-cs">
+          <div class="cs-num" style="opacity:0.4;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reflection">
+      <div class="refl-title">R.12 / revising</div>
+      <div class="refl-text -streaming">
+        Three founders rejected the playful + applied-curiosity combo within twelve minutes. All three had recent posts mentioning "post-hype reality" or "actual revenue, not pilots". The cluster's tone preference appears to have shifted from playful exploration to skeptical seriousness
+      </div>
+      <div class="refl-proposal">
+        <span class="head">proposed: R.12 → R.13</span>
+        <div>tone: <s>playful</s> → <b>direct</b></div>
+        <div>framing: <s>applied-curiosity</s> → <b>skeptical-respect</b></div>
+      </div>
+      <div class="refl-actions">
+        <button class="btn-sm -go">accept</button>
+        <button class="btn-sm -edit">edit</button>
+        <button class="btn-sm -no">keep</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="mockup-note">static mockup · vn mode · v2 · placeholder slot for agent png</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PRODUCTION NOTES — for the developer
+     ═══════════════════════════════════════════════════════════════
+     
+     1. AGENT PNG GENERATION
+        Use NovelAI (recommended for anime), or Midjourney v6 + niji.
+        
+        Master prompt (single character, 6 expressions):
+        ----
+        anime key visual, 1girl, half-body portrait, female AI research liaison,
+        long dark purple hair with subtle teal highlights, large warm amber eyes
+        with anime catchlights, soft confident expression, professional dark
+        navy suit jacket over cream blouse, subtle cyan circuit accent on right
+        temple, rim-lit warmly from upper right (matching window), soft rose
+        rim from left, looking forward, transparent background, isolated on
+        empty bg, no background, original character, key visual quality
+        --niji 6 --style raw --ar 720:1080
+        ----
+        
+        Then for each emotion variant, add to the prompt:
+          neutral:       "calm neutral expression, mouth closed, slight composed look"
+          pleased:       "warm gentle smile, eyes slightly narrowed, head slightly tilted"
+          thoughtful:    "lips slightly parted, eyes looking up-left, finger near chin"
+          concerned:     "brows slightly furrowed, lips pressed thin, gentle worry"
+          confident:     "confident half-smile, direct gaze, slight chin lift"
+          disappointed:  "soft sad expression, eyes downcast, lips closed flat"
+        
+        Keep all six VARIATIONS of the same character, same outfit, same lighting,
+        same framing — only the face/expression differs. Use img2img / consistent
+        character feature in NovelAI to lock identity.
+        
+        Output: 6 transparent PNGs in /assets/agent/ at 720×1080.
+     
+     2. EMOTION SWITCHING (in app.js)
+        function getEmotion(interestValue) {
+          if (interestValue >= 4)  return 'confident';
+          if (interestValue >= 1)  return 'pleased';
+          if (interestValue === 0) return 'neutral';
+          if (interestValue >= -2) return 'thoughtful';
+          if (interestValue >= -4) return 'concerned';
+          return 'disappointed';
+        }
+        // then swap visible img inside .agent-slot
+     
+     3. VISITOR PORTRAIT (right panel)
+        Live mode: take headshot from LinkedIn fetch, run through a quick CSS
+        filter chain (grayscale + slight blur + multiply tint with --bone) to
+        match the sketched aesthetic. NOT generated.
+        Synthetic mode: hand-drawn line-art SVGs per archetype.
+     
+     ═══════════════════════════════════════════════════════════════ -->
+
+</body>
+</html>

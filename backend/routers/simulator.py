@@ -1,58 +1,49 @@
+"""Simulator + drift control surface (TASK.md §8).
+
+`POST /simulator/pause`               — freeze / unfreeze the orchestrator tick loop
+`POST /simulator/drift/{drift_id}`    — manually fire a scripted drift
+`POST /simulator/inject_archetype`    — push a spawnable archetype to the queue
+"""
+
 from typing import Literal
 
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from backend import schemas
-from backend.db import get_session
 
 router = APIRouter(prefix="/simulator", tags=["simulator"])
 
 
-class TickIn(BaseModel):
-    persona_id: str | None = None
-
-
 class InjectIn(BaseModel):
-    persona_id: str
+    archetype_id: str
 
 
 class PauseIn(BaseModel):
     paused: bool
 
 
-@router.post("/tick", response_model=schemas.Episode)
-async def tick(body: TickIn, request: Request):
-    """Advance one visit manually. Normally the orchestrator does this every 20s."""
-    orch = request.app.state.orchestrator
-    ep = await orch.advance_one_visit()
-    if ep is None:
-        raise HTTPException(status_code=409, detail="no more scheduled visits")
-    return ep
-
-
 @router.post("/pause")
 async def pause(body: PauseIn, request: Request):
-    """Freeze/unfreeze the orchestrator tick loop."""
     request.app.state.orchestrator.paused = body.paused
     return {"paused": body.paused}
 
 
 @router.post("/drift/{drift_id}")
-async def fire_drift(drift_id: Literal["ai_bubble_pops", "gradual_postdoc"]):
+async def fire_drift(drift_id: Literal["ai_bubble_pops", "postdoc_burnout"]):
     from backend.simulator import drift
 
-    handler = drift.DRIFT_REGISTRY[drift_id]
+    handler = drift.DRIFT_REGISTRY.get(drift_id)
+    if handler is None:
+        raise HTTPException(status_code=404, detail=f"unknown drift: {drift_id}")
     if callable(handler):
         handler()
     else:
+        # GradualPostdocShift instance — advance one step.
         handler.advance()
     return {"ok": True, "drift": drift_id}
 
 
-@router.post("/inject_persona")
-async def inject_persona(body: InjectIn, request: Request):
-    request.app.state.orchestrator.inject_persona(body.persona_id)
-    return {"ok": True, "persona_id": body.persona_id}
+@router.post("/inject_archetype")
+async def inject_archetype(body: InjectIn, request: Request):
+    request.app.state.orchestrator.inject_archetype(body.archetype_id)
+    return {"ok": True, "archetype_id": body.archetype_id}

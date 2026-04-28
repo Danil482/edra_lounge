@@ -1,57 +1,83 @@
 """Drift events — mutate the preference matrix to simulate domain drift.
 
-After any mutation, call `preferences.reset_matrix()` to invalidate the cache.
+Two scripted drifts (TASK.md §5.3):
+
+  - `ai_bubble_pops`  (instantaneous, fires day-3 10:00 or via button):
+        For arch_tech_founder_applied:
+            framing[applied-curiosity]  ↔  framing[skeptical-respect]
+            tone[playful]               ↔  tone[direct]
+        Effect: rules induced for tech-founders flip in CS, triggering revision.
+
+  - `GradualPostdocShift` (over 15 episodes from day-2 14:00):
+        For arch_postdoc_cv_ambitious:
+            framing[strategic-alignment]  linearly interp 0.90 → 0.40
+        Effect: rule for postdocs degrades slowly — illustrates θ_revise sensitivity.
+
+After any mutation the caller should NOT call preferences.reset() — that would
+reload the YAML from disk and undo the drift. The mutation lives in the cache.
 """
+
+from __future__ import annotations
 
 from backend.simulator import preferences
 
 
+# ── Drift A — AI Bubble Pops ─────────────────────────────────────────────
+
+FOUNDER_ARCHETYPE = "arch_tech_founder_applied"
+
+
 def ai_bubble_pops() -> None:
-    """Drift A (TASK.md §5.3): for tech-founder, swap topic hype↔foundations and
-    style enthusiastic↔skeptical. Triggered by UI button or scheduled at day=3 10:00.
+    """Swap two pairs of affinity values for the tech-founder archetype.
+
+    Idempotent if applied an even number of times; intended to fire once per
+    demo run.
     """
-    p = "persona_tech_founder"
-    ta = preferences.topic_affinity[p]
-    ta["hype"], ta["foundations"] = ta["foundations"], ta["hype"]
+    framing = preferences.affinity_table(FOUNDER_ARCHETYPE, "framing")
+    framing["applied-curiosity"], framing["skeptical-respect"] = (
+        framing["skeptical-respect"],
+        framing["applied-curiosity"],
+    )
 
-    sa = preferences.style_affinity[p]
-    sa["enthusiastic"], sa["skeptical"] = sa["skeptical"], sa["enthusiastic"]
+    tone = preferences.affinity_table(FOUNDER_ARCHETYPE, "tone")
+    tone["playful"], tone["direct"] = tone["direct"], tone["playful"]
 
-    preferences.reset_matrix()
+
+# ── Drift B — Postdoc burnout creep ──────────────────────────────────────
+
+POSTDOC_ARCHETYPE = "arch_postdoc_cv_ambitious"
 
 
 class GradualPostdocShift:
-    """Drift B: linearly interpolate postdoc topic affinities over 15 episodes
-    starting at day=2 14:00.
+    """Linearly interpolate one framing affinity over a fixed number of steps.
 
-      hype:    0.8 → 0.3
-      applied: 0.7 → 0.9
+    Step 0 leaves the baseline value alone; step TOTAL_STEPS lands on `END`.
+    `advance()` is idempotent past the final step (returns False once exhausted).
     """
 
     TOTAL_STEPS = 15
+    SLOT_NAME = "framing"
+    SLOT_VALUE = "strategic-alignment"
+    START = 0.90
+    END = 0.40
 
     def __init__(self) -> None:
         self.step = 0
-        self.start_hype = 0.80
-        self.end_hype = 0.30
-        self.start_applied = 0.70
-        self.end_applied = 0.90
 
     def advance(self) -> bool:
-        """Nudge one step. Returns True while drift is still advancing."""
         if self.step >= self.TOTAL_STEPS:
             return False
-        t = (self.step + 1) / self.TOTAL_STEPS
-        p = "persona_postdoc_cv"
-        ta = preferences.topic_affinity[p]
-        ta["hype"] = self.start_hype + t * (self.end_hype - self.start_hype)
-        ta["applied"] = self.start_applied + t * (self.end_applied - self.start_applied)
-        preferences.reset_matrix()
         self.step += 1
+        t = self.step / self.TOTAL_STEPS
+        new_value = self.START + t * (self.END - self.START)
+        table = preferences.affinity_table(POSTDOC_ARCHETYPE, self.SLOT_NAME)
+        table[self.SLOT_VALUE] = new_value
         return True
 
 
-DRIFT_REGISTRY = {
+# ── Public registry — used by /simulator/drift/{drift_id} ─────────────────
+
+DRIFT_REGISTRY: dict[str, object] = {
     "ai_bubble_pops": ai_bubble_pops,
-    "gradual_postdoc": GradualPostdocShift(),
+    "postdoc_burnout": GradualPostdocShift(),
 }

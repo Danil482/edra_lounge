@@ -1,32 +1,43 @@
-You are a rule-induction engine operating on a segment of persona-with-tension interactions.
+You are a rule-induction engine.
 
-A rule is a mapping (persona archetype, tension) → (angle, expression). You are given a cluster of interactions that share the underlying tension and where the agent's chosen angle produced a satisfied response most of the time. Induce the rule that describes what works for this segment.
+A rule is a mapping (cluster of similar contacts) → (PitchStrategy). You are
+given a cluster of past outreach sessions where the agent's pitch produced a
+collaboration-interest acceptance most of the time. Induce the rule that
+captures what works for this segment.
 
-The rule has exactly 4 slots. Each slot is either:
-  - static: a literal value from the fixed vocabulary
-  - dynamic: a short LLM sub-prompt that will fill the slot at application time, conditioned on the specific visiting persona
+The rule has exactly 5 slots, mirroring the PitchStrategy schema. Each slot is
+either:
+  - static:  a literal value drawn from its fixed vocabulary
+  - dynamic: a short LLM sub-prompt that fills the slot at application time,
+             conditioned on the specific incoming Profile (typically used for
+             `opener_type` so the opener can reference the visitor's signals)
 
-Fixed vocabularies (map to the deployed surface: topic = angle tag, style = expression tag, drink = attention hook, opener = free-text lead-in):
-  topic:  hype | foundations | applied | meta-science | career | gossip
-  style:  enthusiastic | skeptical | socratic | gossipy | formal
-  drink:  coffee | beer | tea | water
-  opener: free text (≤ 20 words) or null for "no opener"
+Fixed vocabularies — do not invent new values:
+  framing:      strategic-alignment | peer-collaboration | knowledge-share | applied-curiosity | skeptical-respect | follow-up-comment
+  tone:         formal | warm | socratic | direct | playful
+  opener_type:  question | reference-to-signal | shared-context | credential-anchor | cold
+  word_target:  short | medium | long
+  ask_size:     chat | co-author | intro | trial | none
 
-Segment label: {cluster_label}
-Segment size: {cluster_size}
-Success ratio: {success_ratio}
+Cluster label:  {cluster_label}
+Cluster size:   {cluster_size}
+Success ratio:  {success_ratio}
 
-Sample interactions from the segment:
+Sample sessions from the cluster:
 {episodes_formatted}
 
-Think: what persona tension binds this segment, and what angle + expression reliably resolve it? Prefer static when the segment is tight, dynamic for the opener when phrasing must adapt per-visitor.
+Think: what binds this cluster (their seniority, their domain, the signals in
+their recent_signals), and what pitch shape reliably converts them to
+"accepted"? Prefer static slots when the cluster is tight; mark `opener_type`
+as dynamic when the opener must adapt to the specific visitor's signals.
 
-Return JSON only, no prose, no code fences:
+Return JSON only — no prose, no code fences:
 {{
   "slots": [
-    {{"name": "topic",  "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
-    {{"name": "style",  "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
-    {{"name": "drink",  "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
-    {{"name": "opener", "kind": "static|dynamic", "value": "<text>|null", "prompt": "<sub-prompt>|null"}}
+    {{"name": "framing",     "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "tone",        "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "opener_type", "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "word_target", "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}},
+    {{"name": "ask_size",    "kind": "static|dynamic", "value": "<tag>|null", "prompt": "<sub-prompt>|null"}}
   ]
 }}

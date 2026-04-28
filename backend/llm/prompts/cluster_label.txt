@@ -1,11 +1,14 @@
-Give a 2–5 word human-readable label for a segment of persona interactions. The label should name the shared persona archetype + their dominant tension, not the angle that worked.
+Give a short (2–5 word) human-readable label for a cluster of outreach
+sessions. The label should name the shared contact archetype, not the pitch
+shape that worked.
 
-Sample pattern summaries from the segment:
+Sample pattern summaries from the cluster:
 {sample_summaries}
 
 Examples of good labels:
-  "PhD-NLP researchers seeking rigour"
-  "founders chasing applied hype"
+  "depth-seeking PhD researchers"
+  "applied-AI founders chasing traction"
   "senior profs wary of fads"
+  "skeptical research engineers"
 
 Return the label only, no quotes, no trailing punctuation.

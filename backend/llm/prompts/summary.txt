@@ -1,14 +1,19 @@
-You are a pattern extractor for a persona-driven interaction log.
+You are a pattern extractor for an outreach-dialogue log.
 
-Write a single-sentence abstract pattern describing this (persona, tension → angle, expression) interaction and its outcome. Frame it in marketing terms — persona archetype, underlying tension / pain point, the angle chosen, the expression of that angle, and how the persona responded.
+Write a single-sentence abstract pattern describing this completed pitch
+session: who the contact was, what pitch the agent applied, how the contact
+reacted across the dialogue, and whether the session ended with collaboration
+interest, exploration, rejection, or abandonment.
 
-Avoid: persona IDs, literal tag names repeated as tags, internal identifiers, fluff.
+Keep it neutral and structural. Avoid:
+  - profile IDs or any other internal identifier
+  - the literal slot tag names (framing, tone, opener_type, etc.)
+  - filler ("ultimately", "in conclusion", etc.)
 
-Interaction:
-  Persona: {persona_display} — role: {persona_role}; vibe: {persona_vibe}
-  Angle tag: {topic}
-  Expression tag: {style}
-  Attention hook: {drink}{opener_line}
-  Response: {outcome}
+Session:
+  Profile:        {profile_name} — role: {profile_role}; domain: {profile_domain}; seniority: {profile_seniority}
+  Pitch strategy: framing={framing}, tone={tone}, opener_type={opener_type}, word_target={word_target}, ask_size={ask_size}
+  Dialogue:       {dialogue_formatted}
+  Outcome:        {outcome} (final_interest={final_interest:+d})
 
 Pattern (one sentence):
