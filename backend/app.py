@@ -16,10 +16,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import PROJECT_ROOT
+from backend.config import PROJECT_ROOT, settings
 from backend.db import async_session_factory, init_db
 from backend.orchestrator import Orchestrator
 from backend.profile_source import ProfileSource
+from backend.profile_source.linkedin_rapidapi import LinkedInRapidAPISource
 from backend.profile_source.synthetic import SyntheticProfileSource
 from backend.routers import (
     clusters,
@@ -28,24 +29,33 @@ from backend.routers import (
     reflections,
     revisions,
     rules,
+    sessions,
     simulator,
     state,
 )
 
 
 def _build_profile_source() -> ProfileSource:
-    """Phase 1A: synthetic only. Phase 3 will branch on LIVE_MODE / RAPIDAPI_KEY
-    and return LinkedInRapidAPISource when live mode is enabled.
+    """Pick the live or synthetic implementation based on env config.
+
+    The orchestrator and the sessions router both read `app.state.profile_source`,
+    which is set once here on startup so swapping the implementation only
+    requires bouncing the process.
     """
+    if getattr(settings, "live_mode", False) and getattr(settings, "rapidapi_key", ""):
+        return LinkedInRapidAPISource(api_key=settings.rapidapi_key)
     return SyntheticProfileSource()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    profile_source = _build_profile_source()
+    app.state.profile_source = profile_source
+
     orch = Orchestrator(
         session_factory=async_session_factory,
-        profile_source=_build_profile_source(),
+        profile_source=profile_source,
     )
     await orch.start()
     app.state.orchestrator = orch
@@ -64,6 +74,7 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
+api.include_router(sessions.router)
 api.include_router(episodes.router)
 api.include_router(clusters.router)
 api.include_router(rules.router)

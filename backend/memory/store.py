@@ -6,7 +6,7 @@ ORM objects outside this module.
 
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend import schemas
@@ -180,4 +180,221 @@ async def list_rules(
     return [_rule_from_row(r) for r in result.scalars()]
 
 
-# ── Clusters, Revisions, Agents — added as routers / orchestrator need them ─
+async def get_rule(session: AsyncSession, rule_id: str) -> schemas.Rule | None:
+    row = await session.get(models.RuleRow, rule_id)
+    return _rule_from_row(row) if row else None
+
+
+async def update_rule(
+    session: AsyncSession,
+    rule_id: str,
+    *,
+    status: str | None = None,
+    deprecated_by: str | None = None,
+    cs_history: list[tuple[datetime, float]] | None = None,
+) -> schemas.Rule | None:
+    row = await session.get(models.RuleRow, rule_id)
+    if row is None:
+        return None
+    if status is not None:
+        row.status = status
+    if deprecated_by is not None:
+        row.deprecated_by = deprecated_by
+    if cs_history is not None:
+        row.cs_history = [[t.isoformat(), s] for t, s in cs_history]
+    await session.commit()
+    return _rule_from_row(row)
+
+
+async def existing_rule_ids(session: AsyncSession) -> list[str]:
+    result = await session.execute(select(models.RuleRow.id))
+    return [rid for (rid,) in result.all()]
+
+
+# ── Clusters ──────────────────────────────────────────────────────────────
+
+def _cluster_from_row(row: models.ClusterRow) -> schemas.Cluster:
+    return schemas.Cluster(
+        id=row.id,
+        label=row.label or "",
+        profile_ids=row.profile_ids or [],
+        episode_ids=row.episode_ids or [],
+        centroid_embedding=row.centroid_embedding or [],
+        size=row.size,
+        success_ratio=row.success_ratio,
+        created_at=row.created_at,
+        last_updated=row.last_updated,
+    )
+
+
+async def upsert_cluster(session: AsyncSession, c: schemas.Cluster) -> schemas.Cluster:
+    existing = await session.get(models.ClusterRow, c.id)
+    if existing:
+        existing.label = c.label
+        existing.profile_ids = list(c.profile_ids)
+        existing.episode_ids = list(c.episode_ids)
+        existing.centroid_embedding = list(c.centroid_embedding)
+        existing.size = c.size
+        existing.success_ratio = c.success_ratio
+        existing.last_updated = c.last_updated
+    else:
+        session.add(
+            models.ClusterRow(
+                id=c.id,
+                label=c.label,
+                profile_ids=list(c.profile_ids),
+                episode_ids=list(c.episode_ids),
+                centroid_embedding=list(c.centroid_embedding),
+                size=c.size,
+                success_ratio=c.success_ratio,
+                created_at=c.created_at,
+                last_updated=c.last_updated,
+            )
+        )
+    await session.commit()
+    return c
+
+
+async def list_clusters(session: AsyncSession) -> list[schemas.Cluster]:
+    result = await session.execute(select(models.ClusterRow))
+    return [_cluster_from_row(r) for r in result.scalars()]
+
+
+async def get_cluster(session: AsyncSession, cluster_id: str) -> schemas.Cluster | None:
+    row = await session.get(models.ClusterRow, cluster_id)
+    return _cluster_from_row(row) if row else None
+
+
+# ── Revisions ─────────────────────────────────────────────────────────────
+
+def _revision_from_row(row: models.RevisionRow) -> schemas.Revision:
+    return schemas.Revision(
+        id=row.id,
+        rule_id=row.rule_id,
+        triggered_at=row.triggered_at,
+        contradicting_episode_ids=row.contradicting_episode_ids or [],
+        llm_reasoning=row.llm_reasoning or "",
+        proposed_rule=schemas.Rule(**row.proposed_rule),
+        decision=row.decision,  # type: ignore[arg-type]
+        resolved_at=row.resolved_at,
+    )
+
+
+async def save_revision(session: AsyncSession, r: schemas.Revision) -> schemas.Revision:
+    row = models.RevisionRow(
+        id=r.id,
+        rule_id=r.rule_id,
+        triggered_at=r.triggered_at,
+        contradicting_episode_ids=list(r.contradicting_episode_ids),
+        llm_reasoning=r.llm_reasoning,
+        proposed_rule=r.proposed_rule.model_dump(),
+        decision=r.decision,
+        resolved_at=r.resolved_at,
+    )
+    session.add(row)
+    await session.commit()
+    return r
+
+
+async def get_revision(
+    session: AsyncSession, revision_id: str
+) -> schemas.Revision | None:
+    row = await session.get(models.RevisionRow, revision_id)
+    return _revision_from_row(row) if row else None
+
+
+async def update_revision(
+    session: AsyncSession,
+    revision_id: str,
+    *,
+    decision: str | None = None,
+    llm_reasoning: str | None = None,
+    proposed_rule: schemas.Rule | None = None,
+    resolved_at: datetime | None = None,
+) -> schemas.Revision | None:
+    row = await session.get(models.RevisionRow, revision_id)
+    if row is None:
+        return None
+    if decision is not None:
+        row.decision = decision
+    if llm_reasoning is not None:
+        row.llm_reasoning = llm_reasoning
+    if proposed_rule is not None:
+        row.proposed_rule = proposed_rule.model_dump()
+    if resolved_at is not None:
+        row.resolved_at = resolved_at
+    await session.commit()
+    return _revision_from_row(row)
+
+
+async def pending_revision_for_rule(
+    session: AsyncSession, rule_id: str
+) -> schemas.Revision | None:
+    stmt = (
+        select(models.RevisionRow)
+        .where(models.RevisionRow.rule_id == rule_id)
+        .where(models.RevisionRow.decision == "pending")
+        .order_by(models.RevisionRow.triggered_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    row = result.scalars().first()
+    return _revision_from_row(row) if row else None
+
+
+async def latest_pending_revision(
+    session: AsyncSession,
+) -> schemas.Revision | None:
+    stmt = (
+        select(models.RevisionRow)
+        .where(models.RevisionRow.decision == "pending")
+        .order_by(models.RevisionRow.triggered_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    row = result.scalars().first()
+    return _revision_from_row(row) if row else None
+
+
+# ── Agents ────────────────────────────────────────────────────────────────
+
+def _agent_from_row(row: models.AgentRow) -> schemas.Agent:
+    return schemas.Agent(
+        id=row.id,
+        cluster_id=row.cluster_id,
+        zone_description=row.zone_description,
+        created_at=row.created_at,
+        is_active=row.is_active,
+    )
+
+
+async def save_agent(session: AsyncSession, a: schemas.Agent) -> schemas.Agent:
+    session.add(
+        models.AgentRow(
+            id=a.id,
+            cluster_id=a.cluster_id,
+            zone_description=a.zone_description,
+            created_at=a.created_at,
+            is_active=a.is_active,
+        )
+    )
+    await session.commit()
+    return a
+
+
+async def list_agents(session: AsyncSession) -> list[schemas.Agent]:
+    result = await session.execute(select(models.AgentRow))
+    return [_agent_from_row(r) for r in result.scalars()]
+
+
+async def cluster_has_agent(session: AsyncSession, cluster_id: str) -> bool:
+    stmt = select(models.AgentRow.id).where(models.AgentRow.cluster_id == cluster_id)
+    result = await session.execute(stmt)
+    return result.first() is not None
+
+
+# ── Episode helpers ───────────────────────────────────────────────────────
+
+async def all_episodes(session: AsyncSession) -> list[schemas.Episode]:
+    result = await session.execute(select(models.EpisodeRow))
+    return [_episode_from_row(r) for r in result.scalars()]
