@@ -174,6 +174,15 @@ async def take_turn(
     sess.dialogue[-1] = finalised
     sess.interest = max(-5, min(5, sess.interest + delta))
 
+    log.info(
+        "session.turn id=%s turn=%d choice=%s interest=%+d (delta=%+d)",
+        sess.id,
+        len(sess.dialogue),
+        visitor_choice,
+        sess.interest,
+        delta,
+    )
+
     if _should_terminate(sess):
         sess.ended = True
         sess.outcome = _resolve_outcome(sess)
@@ -193,6 +202,12 @@ async def take_turn(
         pitch_strategy=sess.pitch_strategy,
     )
     sess.dialogue.append(next_step)
+    log.info(
+        "session.next-step id=%s turn=%d reply=%r",
+        sess.id,
+        next_step.turn,
+        next_step.agent_reply[:80],
+    )
     return sess, next_step, False
 
 

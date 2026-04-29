@@ -489,15 +489,21 @@ def _avatar_url_from_data(profile_data: dict[str, Any]) -> str | None:
     """
     raw = profile_data.get("avatar")
     if not isinstance(raw, list) or not raw:
+        log.info("avatar: no avatar array in profile_data (got %r)", type(raw).__name__)
         return None
     candidates: list[dict[str, Any]] = [a for a in raw if isinstance(a, dict) and a.get("url")]
     if not candidates:
+        log.info("avatar: avatar array present but no entries with .url")
         return None
     for preferred in (200, 400, 800, 100):
         for entry in candidates:
             if entry.get("width") == preferred:
-                return str(entry["url"])
-    return str(candidates[0]["url"])
+                url = str(entry["url"])
+                log.info("avatar: picked %dx%d → %s", preferred, preferred, url[:80])
+                return url
+    fallback = str(candidates[0]["url"])
+    log.info("avatar: no preferred size found, using first → %s", fallback[:80])
+    return fallback
 
 
 def _role_from_experiences(experiences: list[Any]) -> str:

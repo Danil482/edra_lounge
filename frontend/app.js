@@ -447,14 +447,25 @@ function applyVisitor(currentSession, recentEpisodes) {
 function setVisitorAvatar(url) {
   const box = $('#visitor-portrait-box');
   const img = $('#visitor-avatar');
-  if (!box || !img) return;
+  if (!box || !img) {
+    console.warn('setVisitorAvatar: portrait elements not found in DOM');
+    return;
+  }
   if (url) {
+    console.log('setVisitorAvatar: loading', url);
     // Reveal only after the image loads — if it 404s (signed URL expired,
     // network blocked, etc.) we silently fall back to the placeholder.
-    img.onload = () => box.classList.add('-has-image');
-    img.onerror = () => box.classList.remove('-has-image');
+    img.onload = () => {
+      console.log('setVisitorAvatar: loaded ✓');
+      box.classList.add('-has-image');
+    };
+    img.onerror = (e) => {
+      console.warn('setVisitorAvatar: image failed to load (expired/CORS/blocked)', e);
+      box.classList.remove('-has-image');
+    };
     img.setAttribute('src', url);
   } else {
+    console.log('setVisitorAvatar: no url, showing placeholder');
     img.removeAttribute('src');
     box.classList.remove('-has-image');
   }
