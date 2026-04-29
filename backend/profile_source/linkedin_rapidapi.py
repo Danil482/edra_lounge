@@ -88,6 +88,10 @@ _MOCK_AUTHOR_PROFILE_DATA: dict[str, Any] = {
         "research."
     ),
     "location": {"country": "Russia", "city": "Saint Petersburg"},
+    "avatar": [
+        {"width": 200, "height": 200, "url": "https://example.invalid/mock-avatar-200.jpg"},
+        {"width": 400, "height": 400, "url": "https://example.invalid/mock-avatar-400.jpg"},
+    ],
     "experiences": [
         {
             "title": "Software Engineer",
@@ -463,10 +467,37 @@ def _map_to_profile(
         headline=headline or "(no headline)",
         recent_signals=recent_signals,
         archetype_summary=archetype_summary,
+        avatar_url=_avatar_url_from_data(profile_data),
         embedding=None,
         fetched_at=datetime.utcnow(),
         ttl_seconds=LIVE_TTL_SECONDS,
     )
+
+
+def _avatar_url_from_data(profile_data: dict[str, Any]) -> str | None:
+    """Pick a portrait avatar URL from the provider's avatar array.
+
+    Provider returns up to 4 sizes (100/200/400/800) per `avatar[N]` with
+    `{width, height, url, expires_at}`. We prefer 200x200 (sharp enough for
+    the booth's right-panel portrait while staying small over the wire);
+    fall back to whatever's available in 400 → 800 → 100 → first.
+
+    URLs are signed and expire (`expires_at` is a few months out for this
+    provider) — fine for the booth demo session, would need refresh for
+    long-lived pages. We don't store expires_at; the avatar is purely
+    cosmetic and a 404 just shows the placeholder.
+    """
+    raw = profile_data.get("avatar")
+    if not isinstance(raw, list) or not raw:
+        return None
+    candidates: list[dict[str, Any]] = [a for a in raw if isinstance(a, dict) and a.get("url")]
+    if not candidates:
+        return None
+    for preferred in (200, 400, 800, 100):
+        for entry in candidates:
+            if entry.get("width") == preferred:
+                return str(entry["url"])
+    return str(candidates[0]["url"])
 
 
 def _role_from_experiences(experiences: list[Any]) -> str:

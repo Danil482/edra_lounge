@@ -112,6 +112,11 @@ def _profile_envelope() -> dict:
             "headline": "Director of ML Research at Defy.group",
             "bio": "Leading the retrieval-augmented agents team at Defy.group.",
             "location": {"country": "United States"},
+            "avatar": [
+                {"width": 100, "height": 100, "url": "https://media.example/avatar-100.jpg"},
+                {"width": 200, "height": 200, "url": "https://media.example/avatar-200.jpg"},
+                {"width": 400, "height": 400, "url": "https://media.example/avatar-400.jpg"},
+            ],
             "experiences": [
                 {
                     "title": "Director of ML Research",
@@ -253,6 +258,8 @@ async def test_linkedin_maps_payload_to_profile():
     # Vanity handle (public_identifier) is preferred over slugified URL for Profile.id.
     assert profile.id == "li:maya-chen"
     assert profile.ttl_seconds == 3600
+    # Avatar — picker prefers 200x200 over other sizes.
+    assert profile.avatar_url == "https://media.example/avatar-200.jpg"
     # Top 3 ugc posts, with the activity item filtered out, ordered most-recent first.
     assert len(profile.recent_signals) == 3
     assert any("RAG" in s for s in profile.recent_signals)
@@ -437,6 +444,43 @@ async def test_linkedin_accepts_bare_handle_input():
     assert profile.source_identifier == "https://www.linkedin.com/in/maya-chen/"
     # Profile endpoint was called with username=maya-chen (the original handle).
     assert tracker.calls[0][1].get("params", {}).get("username") == "maya-chen"
+
+
+@pytest.mark.asyncio
+async def test_linkedin_avatar_absent_or_empty_yields_none():
+    """Profiles without an avatar field (or empty array) → avatar_url is None,
+    so frontend falls back to the placeholder graphic."""
+    src = LinkedInRapidAPISource(api_key="test-key")
+    envelope = _profile_envelope()
+    envelope["data"]["avatar"] = []  # empty array
+    items = [
+        _mock_response(200, envelope),
+        _mock_response(200, {"success": True, "cost": 1, "data": []}),
+    ]
+    cm, _ = _patched_async_client(items)
+    with cm:
+        profile = await src.fetch("https://www.linkedin.com/in/maya-chen/")
+    assert profile.avatar_url is None
+
+
+@pytest.mark.asyncio
+async def test_linkedin_avatar_falls_back_to_largest_when_200_missing():
+    """Picker prefers 200x200; if absent, walks 400 → 800 → 100 → first entry."""
+    src = LinkedInRapidAPISource(api_key="test-key")
+    envelope = _profile_envelope()
+    envelope["data"]["avatar"] = [
+        {"width": 100, "height": 100, "url": "https://media.example/avatar-100.jpg"},
+        {"width": 800, "height": 800, "url": "https://media.example/avatar-800.jpg"},
+    ]
+    items = [
+        _mock_response(200, envelope),
+        _mock_response(200, {"success": True, "cost": 1, "data": []}),
+    ]
+    cm, _ = _patched_async_client(items)
+    with cm:
+        profile = await src.fetch("https://www.linkedin.com/in/maya-chen/")
+    # 200 absent → next preference is 400 (also absent) → then 800.
+    assert profile.avatar_url == "https://media.example/avatar-800.jpg"
 
 
 @pytest.mark.asyncio

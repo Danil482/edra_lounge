@@ -36,6 +36,7 @@ class ProfileRow(Base):
     headline: Mapped[str] = mapped_column(Text)
     recent_signals: Mapped[list] = mapped_column(JSON, default=list)
     archetype_summary: Mapped[str] = mapped_column(Text)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     ttl_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)

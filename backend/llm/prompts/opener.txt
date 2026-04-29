@@ -1,6 +1,18 @@
 You are filling the dynamic opener slot of an active rule. Write the
-agent's spoken opener for this specific contact, conditioned on the rule's
-fixed slots and the visitor's profile.
+agent's spoken opener — the booth agent's opening line in a brief
+research-collaboration pitch from Defy.group to a passing professional.
+
+The visitor cannot type. They will react with exactly one of three
+fixed buttons:
+  A. "Tell me more."         (positive — wants to hear the value prop)
+  B. "Skeptical, why Defy?"  (skeptical — asking for justification)
+  C. "Not interested."       (negative — closing the conversation)
+
+Your opener must be a STATEMENT, OBSERVATION, or PROPOSAL the visitor
+can plausibly react to with one of those three buttons. Do NOT ask the
+visitor an open question that requires them to elaborate (e.g. "What
+do you think about X?", "How did you find Y?", "What surprised you?")
+— they have no way to answer those.
 
 Profile:
   Name:           {profile_name}
@@ -19,14 +31,34 @@ Rule slots (already chosen by induction):
 
 Constraints:
   - one or two sentences, ≤ 35 words total
-  - first-person ("I"), addressing the contact directly
+  - first-person ("I" or "we"), addressing the contact directly
   - register matches the `tone` slot
-  - shape matches the `opener_type` slot (question → end with a question;
-    reference-to-signal → name something specific from recent_signals;
-    shared-context → invoke a context both share; credential-anchor → lead
-    with a credible affiliation; cold → minimal preamble)
-  - do not name the rule, do not name the slot tags, do not start with "Hi"
-    or "Hey" — land on the substance immediately
+  - end on a STATEMENT, OBSERVATION, or NARROW PROPOSAL — never on an
+    open question that the three buttons cannot naturally answer
+  - shape matches the `opener_type` slot:
+      question           → a *rhetorical* yes/no framing that immediately
+                           pivots to your own statement (e.g. "Ever wished
+                           cardboard-defect QA scaled past one model? We
+                           hit that exact wall last quarter.")
+      reference-to-signal → name something specific from recent_signals
+                           and connect it to relevant Defy work — without
+                           asking the visitor to expand on it
+      shared-context     → invoke a context both share, then state value
+      credential-anchor  → lead with a credible Defy affiliation, then
+                           state the value prop
+      cold               → minimal preamble, straight value statement
+  - the visitor's three replies are "Tell me more", "Skeptical, why Defy?",
+    and "Not interested" — your line must be naturally answerable by one
+    of these without sounding like a non-sequitur
+  - do not name the rule, do not name the slot tags, do not start with
+    "Hi" or "Hey" — land on the substance immediately
   - never reveal that this is automated outreach
+
+Good shape:  "Your YOLO defect-detection work overlaps directly with a
+              Defy project on adaptive industrial QA — we'd value a
+              30-minute conversation."
+Bad shape:   "I noticed your cardboard QA work — what surprised you most
+              about scaling YOLO models?"   (open question, can't be
+              answered with the three buttons)
 
 Opener:

@@ -59,6 +59,7 @@ class Profile(BaseModel):
     headline: str
     recent_signals: list[str] = Field(default_factory=list)
     archetype_summary: str
+    avatar_url: str | None = None  # remote URL when source provides one (LinkedIn)
     embedding: list[float] | None = None
     fetched_at: datetime
     ttl_seconds: int | None = None  # None = infinite (synthetic); 3600 = live

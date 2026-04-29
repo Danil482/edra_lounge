@@ -27,6 +27,7 @@ def _profile_from_row(row: models.ProfileRow) -> schemas.Profile:
         headline=row.headline,
         recent_signals=row.recent_signals or [],
         archetype_summary=row.archetype_summary,
+        avatar_url=row.avatar_url,
         embedding=row.embedding,
         fetched_at=row.fetched_at,
         ttl_seconds=row.ttl_seconds,
@@ -45,6 +46,7 @@ async def upsert_profile(session: AsyncSession, p: schemas.Profile) -> schemas.P
         existing.headline = p.headline
         existing.recent_signals = list(p.recent_signals)
         existing.archetype_summary = p.archetype_summary
+        existing.avatar_url = p.avatar_url
         existing.embedding = p.embedding
         existing.fetched_at = p.fetched_at
         existing.ttl_seconds = p.ttl_seconds
@@ -61,6 +63,7 @@ async def upsert_profile(session: AsyncSession, p: schemas.Profile) -> schemas.P
                 headline=p.headline,
                 recent_signals=list(p.recent_signals),
                 archetype_summary=p.archetype_summary,
+                avatar_url=p.avatar_url,
                 embedding=p.embedding,
                 fetched_at=p.fetched_at,
                 ttl_seconds=p.ttl_seconds,
