@@ -93,6 +93,13 @@ async def start_session(
         )
 
     profile = await profile_source.fetch(identifier)
+    log.info(
+        "session.profile-fetched id=%s name=%r role=%r avatar_url=%s",
+        profile.id,
+        profile.name,
+        profile.role,
+        (profile.avatar_url[:80] + "...") if profile.avatar_url else "None",
+    )
     await memory_store.upsert_profile(db, profile)
 
     cluster_id = await classify_profile(db, profile)
