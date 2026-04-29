@@ -15,13 +15,20 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    llm_mode: Literal["local", "remote"] = "local"
+    # LLM provider:
+    #   local    → Ollama on localhost (offline-capable booth default)
+    #   remote   → Anthropic Messages API
+    #   openai   → OpenAI Chat Completions API
+    llm_mode: Literal["local", "remote", "openai"] = "local"
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b-instruct"
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-7"
+
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
 
     n_min: int = 5
     theta_induce: float = 0.6

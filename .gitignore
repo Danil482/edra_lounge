@@ -23,6 +23,9 @@ edra_lounge.db-shm
 data/linkedin_cache/*
 !data/linkedin_cache/.gitkeep
 
+# Dev-aid: raw RapidAPI responses for parser-debugging. Never committed.
+data/linkedin_raw/
+
 # editor
 .vscode/
 .idea/

@@ -93,65 +93,89 @@ async def test_linkedin_no_api_key_raises_unavailable():
 # ── LinkedIn live-fetch path (mocked httpx) ─────────────────────────────
 
 
-def _profile_payload() -> dict:
-    """linkedin-data-api success shape (top-level, not wrapped in `data`).
+def _profile_envelope() -> dict:
+    """fresh-linkedin-scraper-api response envelope for the profile endpoint.
 
-    Modeled on the real Adam Selipsky response — director-level title,
-    multi-decade career, computer-software industry.
+    Modeled on a director-level career — multi-decade span, two experiences
+    with the most recent being current (no end year).
     """
     return {
-        "firstName": "Maya",
-        "lastName": "Chen",
-        "username": "maya-chen",
-        "headline": "Director of ML Research at Defy.group",
-        "summary": "Leading the retrieval-augmented agents team at Defy.group.",
-        "geo": {"country": "United States"},
-        "position": [
-            {
-                "title": "Director of ML Research",
-                "companyName": "Defy.group",
-                "companyIndustry": "Computer Software",
-                "description": "Leading retrieval-augmented agents team",
-                "start": {"year": 2021, "month": 5},
-                "end": {"year": 0, "month": 0},
-            },
-            {
-                "title": "Senior Research Engineer",
-                "companyName": "Acme Labs",
-                "companyIndustry": "Computer Software",
-                "description": "Worked on scalable inference",
-                "start": {"year": 2013, "month": 0},
-                "end": {"year": 2021, "month": 4},
-            },
-        ],
+        "success": True,
+        "cost": 1,
+        "data": {
+            "id": "12345",
+            "urn": "urn:li:person:ACoAAA-maya",
+            "public_identifier": "maya-chen",
+            "first_name": "Maya",
+            "last_name": "Chen",
+            "full_name": "Maya Chen",
+            "headline": "Director of ML Research at Defy.group",
+            "bio": "Leading the retrieval-augmented agents team at Defy.group.",
+            "location": {"country": "United States"},
+            "experiences": [
+                {
+                    "title": "Director of ML Research",
+                    "description": "Leading retrieval-augmented agents team",
+                    "company": {"name": "Defy.group", "id": "100"},
+                    "employment_type": "Full-time",
+                    "date": {
+                        "start": {"year": 2021, "month": 5},
+                        "end": {"year": 0, "month": 0},
+                    },
+                },
+                {
+                    "title": "Senior Research Engineer",
+                    "description": "Worked on scalable inference",
+                    "company": {"name": "Acme Labs", "id": "101"},
+                    "employment_type": "Full-time",
+                    "date": {
+                        "start": {"year": 2013, "month": 0},
+                        "end": {"year": 2021, "month": 4},
+                    },
+                },
+            ],
+        },
     }
 
 
-def _posts_payload() -> dict:
-    """linkedin-data-api /get-profile-posts response. The wrapper IS `data` here."""
+def _posts_envelope() -> dict:
+    """fresh-linkedin-scraper-api response envelope for the posts endpoint.
+
+    Includes one `activity` item to verify it's filtered out (only `ugc`
+    posts represent original content the visitor said).
+    """
     return {
         "success": True,
+        "cost": 1,
         "data": [
             {
+                "id": "p1",
                 "text": "Excited about open-source RAG benchmarks landing this Q2.",
-                "postedDateTimestamp": 1714000000000,
-                "reposted": False,
+                "created_at": "2026-04-25T12:00:00Z",
+                "post_type": "ugc",
+                "activity": {"num_likes": 10, "num_comments": 1, "num_shares": 0},
             },
             {
+                "id": "p2",
                 "text": "Recruiting two staff researchers — DM me.",
-                "postedDateTimestamp": 1713800000000,
-                "reposted": False,
+                "created_at": "2026-04-22T09:00:00Z",
+                "post_type": "ugc",
+                "activity": {"num_likes": 5, "num_comments": 0, "num_shares": 0},
             },
-            # Repost should be filtered out — author here is someone else.
+            # Activity-type post should be filtered out (typically a like/reshare).
             {
+                "id": "p3",
                 "text": "Resharing a great post by a colleague about distributed training.",
-                "postedDateTimestamp": 1713900000000,
-                "reposted": True,
+                "created_at": "2026-04-23T11:00:00Z",
+                "post_type": "activity",
+                "activity": {"num_likes": 0, "num_comments": 0, "num_shares": 0},
             },
             {
+                "id": "p4",
                 "text": "Filler post that should be skipped because cap=3.",
-                "postedDateTimestamp": 1713600000000,
-                "reposted": False,
+                "created_at": "2026-04-20T15:00:00Z",
+                "post_type": "ugc",
+                "activity": {"num_likes": 1, "num_comments": 0, "num_shares": 0},
             },
         ],
     }
@@ -211,8 +235,8 @@ def _patched_async_client(items):
 async def test_linkedin_maps_payload_to_profile():
     src = LinkedInRapidAPISource(api_key="test-key")
     items = [
-        _mock_response(200, _profile_payload()),
-        _mock_response(200, _posts_payload()),
+        _mock_response(200, _profile_envelope()),
+        _mock_response(200, _posts_envelope()),
     ]
     cm, tracker = _patched_async_client(items)
     with cm:
@@ -221,30 +245,31 @@ async def test_linkedin_maps_payload_to_profile():
     assert profile.source_kind == "linkedin_rapidapi"
     assert profile.name == "Maya Chen"
     assert profile.role == "Director of ML Research"
-    assert profile.domain == "Computer Software"
+    # Provider doesn't expose industry, so domain falls back to company name.
+    assert profile.domain == "Defy.group"
     assert profile.seniority == "senior"  # "Director" trips the senior marker
     assert profile.headline.startswith("Director of ML Research")
     assert profile.archetype_summary
-    # Vanity username is preferred over the slugified URL for Profile.id.
+    # Vanity handle (public_identifier) is preferred over slugified URL for Profile.id.
     assert profile.id == "li:maya-chen"
     assert profile.ttl_seconds == 3600
-    # Top 3 posts, with the repost filtered out, ordered most-recent first.
+    # Top 3 ugc posts, with the activity item filtered out, ordered most-recent first.
     assert len(profile.recent_signals) == 3
     assert any("RAG" in s for s in profile.recent_signals)
     assert all("Resharing a great post" not in s for s in profile.recent_signals)
     # Two HTTP calls: profile then posts.
     assert tracker.call_count == 2
-    assert "get-profile-data-by-url" in tracker.calls[0][0]
-    assert "get-profile-posts" in tracker.calls[1][0]
+    assert "/api/v1/user/profile" in tracker.calls[0][0]
+    assert "/api/v1/user/posts" in tracker.calls[1][0]
 
 
 @pytest.mark.asyncio
 async def test_linkedin_falls_back_when_posts_endpoint_fails():
     """Posts call failure must not fail the whole fetch — fall back to
-    summary + position descriptions for recent_signals."""
+    bio + experience descriptions for recent_signals."""
     src = LinkedInRapidAPISource(api_key="test-key")
     items = [
-        _mock_response(200, _profile_payload()),
+        _mock_response(200, _profile_envelope()),
         _mock_response(503, {}),  # posts endpoint down
     ]
     cm, tracker = _patched_async_client(items)
@@ -253,7 +278,7 @@ async def test_linkedin_falls_back_when_posts_endpoint_fails():
 
     # Both calls were attempted.
     assert tracker.call_count == 2
-    # Fallback signals: summary first, then position descriptions.
+    # Fallback signals: bio first, then experience descriptions.
     assert profile.recent_signals
     assert any("retrieval-augmented" in s for s in profile.recent_signals)
 
@@ -305,13 +330,32 @@ async def test_linkedin_network_error_raises_unavailable():
 
 @pytest.mark.asyncio
 async def test_linkedin_malformed_payload_raises_unavailable():
-    """A 200 response without firstName means the API shape changed under us."""
+    """A 200 response without first_name means the API shape changed under us."""
     src = LinkedInRapidAPISource(api_key="test-key")
-    items = [_mock_response(200, {"unexpected": "shape"})]
+    items = [_mock_response(200, {"success": True, "data": {"unexpected": "shape"}})]
     cm, _ = _patched_async_client(items)
     with cm:
-        with pytest.raises(ProfileSourceUnavailable, match="missing"):
+        with pytest.raises(ProfileSourceUnavailable, match="missing first_name"):
             await src.fetch("https://www.linkedin.com/in/weird/")
+
+
+@pytest.mark.asyncio
+async def test_linkedin_envelope_success_false_raises_unavailable():
+    """Provider can return HTTP 200 with `success: false` (e.g. service sunset).
+    We must surface this as ProfileSourceUnavailable, not silently miscount as
+    a parser bug."""
+    src = LinkedInRapidAPISource(api_key="test-key")
+    items = [
+        _mock_response(200, {
+            "success": False,
+            "message": "We are no longer providing this service",
+            "data": None,
+        }),
+    ]
+    cm, _ = _patched_async_client(items)
+    with cm:
+        with pytest.raises(ProfileSourceUnavailable, match="success=false"):
+            await src.fetch("https://www.linkedin.com/in/anyone/")
 
 
 @pytest.mark.asyncio
@@ -324,13 +368,14 @@ async def test_linkedin_mock_key_returns_author_profile_without_http():
         side_effect=AssertionError("HTTP must not be called in mock mode")
     )
     with patch("backend.profile_source.linkedin_rapidapi.httpx.AsyncClient", sentinel_factory):
-        profile = await src.fetch("any-identifier-here")
+        profile = await src.fetch("any-input-here")
 
     assert profile.source_kind == "linkedin_rapidapi"
     assert profile.name == "Danil Onishchenko"
     assert profile.id == "li:danil-onishchenko-30876037a"
     assert profile.ttl_seconds == 3600
-    # Identifier is rewritten to the author URL so Profile.id is stable.
+    # Mock always returns the author URL as source_identifier — the booth
+    # demo UX is "we hold up a stable example profile" regardless of input.
     assert "danil-onishchenko" in profile.source_identifier
     # Mock posts payload populates 3 recent signals.
     assert len(profile.recent_signals) == 3
@@ -340,30 +385,124 @@ async def test_linkedin_mock_key_returns_author_profile_without_http():
 async def test_linkedin_seniority_heuristic():
     """Title-based seniority overrides years; intern → early."""
     src = LinkedInRapidAPISource(api_key="test-key")
-    profile_payload = {
-        "firstName": "Sam",
-        "lastName": "Intern",
-        "username": "sam-intern",
-        "headline": "Research Intern at Defy.group",
-        "summary": "",
-        "position": [
-            {
-                "title": "Research Intern",
-                "companyName": "Defy.group",
-                "companyIndustry": "Research",
-                "start": {"year": 2024, "month": 6},
-                "end": {"year": 0, "month": 0},
-            }
-        ],
+    profile_envelope = {
+        "success": True,
+        "cost": 1,
+        "data": {
+            "first_name": "Sam",
+            "last_name": "Intern",
+            "full_name": "Sam Intern",
+            "public_identifier": "sam-intern",
+            "urn": "urn:li:person:sam",
+            "headline": "Research Intern at Defy.group",
+            "bio": "",
+            "experiences": [
+                {
+                    "title": "Research Intern",
+                    "description": "",
+                    "company": {"name": "Defy.group"},
+                    "date": {
+                        "start": {"year": 2024, "month": 6},
+                        "end": {"year": 0, "month": 0},
+                    },
+                }
+            ],
+        },
     }
     items = [
-        _mock_response(200, profile_payload),
-        _mock_response(200, {"success": True, "data": []}),
+        _mock_response(200, profile_envelope),
+        _mock_response(200, {"success": True, "cost": 1, "data": []}),
     ]
     cm, _ = _patched_async_client(items)
     with cm:
         profile = await src.fetch("https://www.linkedin.com/in/intern/")
     assert profile.seniority == "early"
+
+
+@pytest.mark.asyncio
+async def test_linkedin_accepts_bare_handle_input():
+    """Hybrid input: bare handle should be canonicalized to the standard URL
+    form internally, and the API call should use the handle as `username`."""
+    src = LinkedInRapidAPISource(api_key="test-key")
+    items = [
+        _mock_response(200, _profile_envelope()),
+        _mock_response(200, _posts_envelope()),
+    ]
+    cm, tracker = _patched_async_client(items)
+    with cm:
+        profile = await src.fetch("maya-chen")  # bare handle, no URL
+
+    assert profile.id == "li:maya-chen"
+    # source_identifier was canonicalized to the standard URL form.
+    assert profile.source_identifier == "https://www.linkedin.com/in/maya-chen/"
+    # Profile endpoint was called with username=maya-chen (the original handle).
+    assert tracker.calls[0][1].get("params", {}).get("username") == "maya-chen"
+
+
+@pytest.mark.asyncio
+async def test_linkedin_handles_wrapped_experiences_and_string_dates():
+    """Real-world response shape (observed against fresh-linkedin-scraper-api)
+    differs from the docs in two ways:
+      - experiences is wrapped in pagination metadata: {total, has_more, data: [...]}
+      - date sub-fields are strings ('Feb 2026', 'Present') not nested {year: N}
+    Parser must accept both shapes — docs-schema and real-world."""
+    src = LinkedInRapidAPISource(api_key="test-key")
+    real_world_envelope = {
+        "success": True,
+        "cost": 1,
+        "data": {
+            "first_name": "Real",
+            "last_name": "Person",
+            "full_name": "Real Person",
+            "public_identifier": "real-person",
+            "urn": "urn:li:person:real",
+            "headline": "AI researcher at SomeCo",
+            "bio": None,  # provider can return None even with include_bio=true
+            "experiences": {
+                "total": 2,
+                "has_more": False,
+                "data": [
+                    {
+                        "title": "Senior Research Engineer",
+                        "description": "Doing things",
+                        "date": {"start": "Feb 2024", "end": "Present"},
+                        "company": {"name": "SomeCo"},
+                    },
+                    {
+                        "title": "ML Engineer",
+                        "description": "Did things",
+                        "date": {"start": "Sep 2018", "end": "Feb 2024"},
+                        "company": {"name": "OldCo"},
+                    },
+                ],
+            },
+        },
+    }
+    items = [
+        _mock_response(200, real_world_envelope),
+        _mock_response(200, {"success": True, "cost": 1, "data": []}),
+    ]
+    cm, _ = _patched_async_client(items)
+    with cm:
+        profile = await src.fetch("https://www.linkedin.com/in/real-person/")
+
+    # Wrapped experiences were unwrapped: role/domain come from first entry.
+    assert profile.role == "Senior Research Engineer"
+    assert profile.domain == "SomeCo"
+    # Years calc must work with string dates (Feb 2018 → today via "Present"):
+    # ~8 years experience puts us in "mid" — proves the date parser succeeded
+    # (otherwise years=None and we'd default to "mid" anyway, but for a
+    # different reason). The point is no crash on string dates.
+    assert profile.seniority in ("mid", "senior")
+
+
+@pytest.mark.asyncio
+async def test_linkedin_invalid_handle_raises_not_found():
+    src = LinkedInRapidAPISource(api_key="test-key")
+    sentinel = MagicMock(side_effect=AssertionError("HTTP must not be called"))
+    with patch("backend.profile_source.linkedin_rapidapi.httpx.AsyncClient", sentinel):
+        with pytest.raises(ProfileNotFound):
+            await src.fetch("not a valid handle!")
 
 
 @pytest.mark.asyncio
@@ -375,8 +514,8 @@ async def test_linkedin_cache_hit_skips_http(tmp_path):
     """
     src = LinkedInRapidAPISource(api_key="test-key", cache_dir=tmp_path)
     items = [
-        _mock_response(200, _profile_payload()),
-        _mock_response(200, _posts_payload()),
+        _mock_response(200, _profile_envelope()),
+        _mock_response(200, _posts_envelope()),
     ]
     cm, tracker = _patched_async_client(items)
     with cm:

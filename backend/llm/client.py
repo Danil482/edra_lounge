@@ -1,9 +1,10 @@
-"""Unified LLM client — two modes switchable via LLM_MODE env var.
+"""Unified LLM client — three modes switchable via LLM_MODE env var.
 
 - `local`  → Ollama on localhost:11434 (booth-default, offline-capable)
 - `remote` → Anthropic Messages API (dev/testing only)
+- `openai` → OpenAI Chat Completions API (dev/testing only)
 
-Both providers use httpx directly per TASK.md §3. No provider SDKs.
+All providers use httpx directly per TASK.md §3. No provider SDKs.
 
 Public surface:
     complete(prompt, *, system=None)      → str
@@ -33,6 +34,8 @@ async def complete(prompt: str, *, system: str | None = None) -> str:
     """Non-streaming completion. Returns full response text."""
     if settings.llm_mode == "local":
         return await _ollama_complete(prompt, system)
+    if settings.llm_mode == "openai":
+        return await _openai_complete(prompt, system)
     return await _anthropic_complete(prompt, system)
 
 
@@ -40,6 +43,9 @@ async def stream(prompt: str, *, system: str | None = None) -> AsyncIterator[str
     """Token stream. Yields text chunks as they arrive."""
     if settings.llm_mode == "local":
         async for chunk in _ollama_stream(prompt, system):
+            yield chunk
+    elif settings.llm_mode == "openai":
+        async for chunk in _openai_stream(prompt, system):
             yield chunk
     else:
         async for chunk in _anthropic_stream(prompt, system):
@@ -139,6 +145,61 @@ def _anthropic_headers() -> dict[str, str]:
         "x-api-key": settings.anthropic_api_key,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
+    }
+
+
+# ── OpenAI (remote) ───────────────────────────────────────────────────────
+
+async def _openai_complete(prompt: str, system: str | None) -> str:
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        r = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=_openai_headers(),
+            json={
+                "model": settings.openai_model,
+                "messages": _messages(prompt, system),
+                "stream": False,
+            },
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"]
+
+
+async def _openai_stream(prompt: str, system: str | None) -> AsyncIterator[str]:
+    import json
+
+    async with httpx.AsyncClient(timeout=None) as client:
+        async with client.stream(
+            "POST",
+            "https://api.openai.com/v1/chat/completions",
+            headers=_openai_headers(),
+            json={
+                "model": settings.openai_model,
+                "messages": _messages(prompt, system),
+                "stream": True,
+            },
+        ) as r:
+            r.raise_for_status()
+            async for line in r.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                data = line[len("data: "):]
+                if data == "[DONE]":
+                    break
+                event = json.loads(data)
+                choices = event.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta") or {}
+                text = delta.get("content")
+                if text:
+                    yield text
+
+
+def _openai_headers() -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {settings.openai_api_key}",
+        "Content-Type": "application/json",
     }
 
 

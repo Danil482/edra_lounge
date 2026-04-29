@@ -1,14 +1,29 @@
 """LinkedInRapidAPISource — Phase 4 implementation.
 
-Two RapidAPI calls per fresh fetch on linkedin-data-api.p.rapidapi.com:
-  1. /get-profile-data-by-url?url=<linkedin-url>  → profile data + vanity username
-  2. /get-profile-posts?username=<username>         → recent posts
+Provider: fresh-linkedin-scraper-api.p.rapidapi.com (saleleads.ai docs).
+
+Two RapidAPI calls per fresh fetch:
+  1. /api/v1/user/profile?username=<handle>&include_experiences=true&include_bio=true
+       Wrapped {success, cost, data: {...}}; validates data.first_name presence.
+       Returns the canonical urn used by the posts call.
+  2. /api/v1/user/posts?urn=<urn>
+       Wrapped {success, cost, data: [...]}.
+       URN is preferred over username because the docs note that calling the
+       posts endpoint with `username` consumes an additional request on top of
+       the base cost.
 
 Quota: free RapidAPI plan caps at 50 requests/month. Each successful full
-  fetch burns 2 (profile + posts). The on-disk cache at data/linkedin_cache/
+  fetch burns 2 (profile + posts) at minimum; include_* flags may add cost
+  per the provider's billing — surfaced via the `cost` field on each
+  envelope (logged at INFO). The on-disk cache at data/linkedin_cache/
   re-uses raw responses for repeated lookups during dev — cache hits cost
   zero quota. Cache is opt-in via the `cache_dir` constructor arg; tests
   leave it None.
+
+Input flexibility: identifier may be either a full LinkedIn URL
+  (`https://www.linkedin.com/in/<handle>/`) or just the handle itself
+  (`<handle>`). Both are normalized to the canonical URL form for
+  source_identifier and cache-key consistency.
 
 Privacy: live-fetched Profile rows in SQLite are stamped with
   ttl_seconds=3600 so the Phase 3 purge job removes them. The on-disk
@@ -27,6 +42,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -43,70 +59,86 @@ from backend.profile_source import (
 log = logging.getLogger(__name__)
 
 
-DEFAULT_HOST = "linkedin-data-api.p.rapidapi.com"
-DEFAULT_TIMEOUT = 10.0
+DEFAULT_HOST = "fresh-linkedin-scraper-api.p.rapidapi.com"
+DEFAULT_TIMEOUT = 15.0
 LIVE_TTL_SECONDS = 3600  # SQLite Profile row TTL — see purge_expired_live_profiles
 
 # Sentinel for booth without subscription. RAPIDAPI_KEY=mock → no HTTP, no cache,
 # returns the hand-crafted author profile via the same mapper used for real data.
 MOCK_KEY_SENTINEL = "mock"
 
-_AUTHOR_LINKEDIN_URL = "https://www.linkedin.com/in/danil-onishchenko-30876037a/"
+_CANONICAL_URL_TEMPLATE = "https://www.linkedin.com/in/{handle}/"
+_USERNAME_FROM_URL_RE = re.compile(r"/in/([^/?#]+)")
+_VALID_HANDLE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
-_MOCK_AUTHOR_PROFILE_PAYLOAD: dict[str, Any] = {
-    "firstName": "Danil",
-    "lastName": "Onishchenko",
-    "username": "danil-onishchenko-30876037a",
+_AUTHOR_HANDLE = "danil-onishchenko-30876037a"
+_AUTHOR_LINKEDIN_URL = _CANONICAL_URL_TEMPLATE.format(handle=_AUTHOR_HANDLE)
+
+_MOCK_AUTHOR_PROFILE_DATA: dict[str, Any] = {
+    "id": "12345",
+    "urn": "urn:li:person:ACoAAAxxxxxxxxxxx",
+    "public_identifier": _AUTHOR_HANDLE,
+    "first_name": "Danil",
+    "last_name": "Onishchenko",
+    "full_name": "Danil Onishchenko",
     "headline": "Software engineer · building research-liaison agents at Defy.group",
-    "summary": (
+    "bio": (
         "Building EDRA at Defy.group — an agent framework that learns rules "
         "from booth visit episodes. Looking for collaborators on adaptive-rule "
         "research."
     ),
-    "geo": {"country": "Russia", "city": "Saint Petersburg"},
-    "position": [
+    "location": {"country": "Russia", "city": "Saint Petersburg"},
+    "experiences": [
         {
             "title": "Software Engineer",
-            "companyName": "Defy.group",
-            "companyIndustry": "Computer Software",
             "description": "EDRA — agent framework that learns rules from booth visit episodes.",
-            "start": {"year": 2024, "month": 1, "day": 0},
-            "end": {"year": 0, "month": 0, "day": 0},
+            "company": {"name": "Defy.group", "id": "111"},
+            "employment_type": "Full-time",
+            "date": {
+                "start": {"year": 2024, "month": 1},
+                "end": {"year": 0, "month": 0},
+            },
         }
     ],
 }
 
-_MOCK_AUTHOR_POSTS_PAYLOAD: dict[str, Any] = {
-    "success": True,
-    "data": [
-        {
-            "text": "Shipped EDRA Phase 1B — multi-turn pitch sessions with hybrid static/dynamic rules.",
-            "postedDateTimestamp": 1714000000000,
-            "totalReactionCount": 12,
-            "reposted": False,
-        },
-        {
-            "text": "Reading: Lin et al. on retrieval-augmented agents, and the latest MetaFlowLLM paper.",
-            "postedDateTimestamp": 1713800000000,
-            "totalReactionCount": 5,
-            "reposted": False,
-        },
-        {
-            "text": "Looking for collaborators on adaptive-rule research — DM me on the Defy floor.",
-            "postedDateTimestamp": 1713600000000,
-            "totalReactionCount": 18,
-            "reposted": False,
-        },
-    ],
-}
+_MOCK_AUTHOR_POSTS_DATA: list[dict[str, Any]] = [
+    {
+        "id": "p1",
+        "urn": "urn:li:activity:1",
+        "text": "Shipped EDRA Phase 1B — multi-turn pitch sessions with hybrid static/dynamic rules.",
+        "created_at": "2026-04-25T12:00:00Z",
+        "activity": {"num_likes": 12, "num_comments": 2, "num_shares": 0, "reaction_counts": []},
+        "post_type": "ugc",
+        "url": "https://www.linkedin.com/feed/update/p1",
+    },
+    {
+        "id": "p2",
+        "urn": "urn:li:activity:2",
+        "text": "Reading: Lin et al. on retrieval-augmented agents, and the latest MetaFlowLLM paper.",
+        "created_at": "2026-04-22T09:00:00Z",
+        "activity": {"num_likes": 5, "num_comments": 0, "num_shares": 0, "reaction_counts": []},
+        "post_type": "ugc",
+        "url": "https://www.linkedin.com/feed/update/p2",
+    },
+    {
+        "id": "p3",
+        "urn": "urn:li:activity:3",
+        "text": "Looking for collaborators on adaptive-rule research — DM me on the Defy floor.",
+        "created_at": "2026-04-20T15:00:00Z",
+        "activity": {"num_likes": 18, "num_comments": 4, "num_shares": 1, "reaction_counts": []},
+        "post_type": "ugc",
+        "url": "https://www.linkedin.com/feed/update/p3",
+    },
+]
 
 
 class LinkedInRapidAPISource:
-    """Resolves a LinkedIn URL to a Profile via two RapidAPI calls.
+    """Resolves a LinkedIn URL or handle to a Profile via two RapidAPI calls.
 
-    Each successful real fetch costs two requests against the free 50/mo
-    quota — see module docstring. Pass `cache_dir` to enable on-disk cache;
-    leaving it None (the default) disables the cache (used in tests).
+    Each successful real fetch costs at least two requests against the free
+    50/mo quota — see module docstring. Pass `cache_dir` to enable on-disk
+    cache; leaving it None (the default) disables the cache (used in tests).
     """
 
     def __init__(
@@ -134,61 +166,111 @@ class LinkedInRapidAPISource:
         if not self._api_key:
             raise ProfileSourceUnavailable("RAPIDAPI_KEY not configured")
 
+        # Mock short-circuits before identifier parsing so the booth can demo
+        # the live-mode UI without a real subscription, and the "profile" is
+        # always the author's regardless of what the visitor typed in.
         if self._api_key == MOCK_KEY_SENTINEL:
             log.info("LinkedInRapidAPISource: returning mock author profile")
             return _map_to_profile(
                 _AUTHOR_LINKEDIN_URL,
-                _MOCK_AUTHOR_PROFILE_PAYLOAD,
-                _MOCK_AUTHOR_POSTS_PAYLOAD,
+                _MOCK_AUTHOR_PROFILE_DATA,
+                _MOCK_AUTHOR_POSTS_DATA,
             )
 
-        cached = self._cache_load(identifier)
+        username = _username_from_input(identifier)
+        if not username:
+            raise ProfileNotFound(
+                f"could not parse LinkedIn handle from {identifier!r}"
+            )
+        canonical_url = _CANONICAL_URL_TEMPLATE.format(handle=username)
+
+        cached = self._cache_load(canonical_url)
         if cached is not None:
-            log.info("LinkedInRapidAPISource: cache hit for %s", identifier)
+            log.info("LinkedInRapidAPISource: cache hit for %s", canonical_url)
             return _map_to_profile(
-                identifier,
+                canonical_url,
                 cached["profile_data"],
-                cached.get("posts_data") or {},
+                cached.get("posts_data") or [],
             )
 
         # Profile is mandatory — failures propagate. Posts is best-effort —
         # if the posts call fails we still return a Profile, falling back
-        # to summary + position descriptions for recent_signals.
-        profile_data = await self._fetch_profile_data(identifier)
-        username = (profile_data.get("username") or "").strip()
-        posts_data: dict[str, Any] = {}
-        if username:
+        # to bio + experience descriptions for recent_signals.
+        profile_data = await self._fetch_profile_data(username)
+        urn = (profile_data.get("urn") or "").strip()
+        posts_data: list[dict[str, Any]] = []
+        if urn:
             try:
-                posts_data = await self._fetch_posts(username)
+                posts_data = await self._fetch_posts(urn)
             except (ProfileSourceUnavailable, ProfileNotFound) as e:
                 log.warning(
                     "LinkedInRapidAPISource: posts fetch failed for %s — %s "
                     "(falling back to profile-only signals)",
-                    username, e,
+                    urn, e,
                 )
 
-        self._cache_save(identifier, profile_data, posts_data)
-        return _map_to_profile(identifier, profile_data, posts_data)
+        self._cache_save(canonical_url, profile_data, posts_data)
+        return _map_to_profile(canonical_url, profile_data, posts_data)
 
-    async def _fetch_profile_data(self, linkedin_url: str) -> dict[str, Any]:
-        url = f"https://{self._host}/get-profile-data-by-url"
-        payload = await self._http_get(url, params={"url": linkedin_url})
-        if not isinstance(payload, dict) or not payload.get("firstName"):
-            raise ProfileSourceUnavailable("RapidAPI profile response missing firstName")
-        return payload
+    async def _fetch_profile_data(self, username: str) -> dict[str, Any]:
+        url = f"https://{self._host}/api/v1/user/profile"
+        envelope = await self._http_get(
+            url,
+            params={
+                "username": username,
+                "include_experiences": "true",
+                "include_bio": "true",
+            },
+        )
+        if not isinstance(envelope, dict):
+            raise ProfileSourceUnavailable(
+                f"profile envelope not a dict: {repr(envelope)[:300]}"
+            )
+        if envelope.get("success") is False:
+            raise ProfileSourceUnavailable(
+                f"profile envelope success=false: {envelope.get('message') or envelope}"
+            )
+        data = envelope.get("data")
+        if not isinstance(data, dict) or not data.get("first_name"):
+            try:
+                excerpt = json.dumps(envelope, ensure_ascii=False)[:400]
+            except (TypeError, ValueError):
+                excerpt = repr(envelope)[:400]
+            raise ProfileSourceUnavailable(
+                f"profile data missing first_name; got envelope: {excerpt}"
+            )
+        cost = envelope.get("cost")
+        if cost is not None:
+            log.info("RapidAPI profile cost=%s for username=%s", cost, username)
+        return data
 
-    async def _fetch_posts(self, username: str) -> dict[str, Any]:
-        url = f"https://{self._host}/get-profile-posts"
-        payload = await self._http_get(url, params={"username": username})
-        if not isinstance(payload, dict):
-            raise ProfileSourceUnavailable("RapidAPI posts response not a dict")
-        return payload
+    async def _fetch_posts(self, urn: str) -> list[dict[str, Any]]:
+        url = f"https://{self._host}/api/v1/user/posts"
+        envelope = await self._http_get(url, params={"urn": urn})
+        if not isinstance(envelope, dict):
+            raise ProfileSourceUnavailable(
+                f"posts envelope not a dict: {repr(envelope)[:300]}"
+            )
+        if envelope.get("success") is False:
+            raise ProfileSourceUnavailable(
+                f"posts envelope success=false: {envelope.get('message') or envelope}"
+            )
+        items = envelope.get("data")
+        if items is None:
+            return []
+        if not isinstance(items, list):
+            raise ProfileSourceUnavailable(
+                f"posts data not a list: {repr(items)[:300]}"
+            )
+        cost = envelope.get("cost")
+        if cost is not None:
+            log.info("RapidAPI posts cost=%s for urn=%s", cost, urn)
+        return items
 
     async def _http_get(self, url: str, params: dict[str, str]) -> Any:
         headers = {
             "x-rapidapi-key": self._api_key,
             "x-rapidapi-host": self._host,
-            "Content-Type": "application/json",
         }
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -200,21 +282,52 @@ class LinkedInRapidAPISource:
 
         if response.status_code == 404:
             raise ProfileNotFound(f"profile not found: {url}")
+        body_excerpt = (response.text or "")[:300].replace("\n", " ")
         if response.status_code == 429:
-            raise ProfileSourceUnavailable("rate-limited by RapidAPI (HTTP 429)")
+            raise ProfileSourceUnavailable(
+                f"rate-limited by RapidAPI (HTTP 429): {body_excerpt}"
+            )
         if response.status_code >= 500:
             raise ProfileSourceUnavailable(
-                f"RapidAPI upstream error (HTTP {response.status_code})"
+                f"RapidAPI upstream error (HTTP {response.status_code}): {body_excerpt}"
             )
         if response.status_code != 200:
             raise ProfileSourceUnavailable(
-                f"unexpected RapidAPI status: HTTP {response.status_code}"
+                f"unexpected RapidAPI status: HTTP {response.status_code}: {body_excerpt}"
             )
 
         try:
-            return response.json()
+            data = response.json()
         except ValueError as e:
             raise ProfileSourceUnavailable(f"malformed JSON from RapidAPI: {e}") from e
+
+        self._dump_raw_response(url, params, data)
+        return data
+
+    def _dump_raw_response(
+        self, endpoint_url: str, params: dict[str, str], payload: Any
+    ) -> None:
+        """Dev-aid: write each successful raw response to data/linkedin_raw/<slug>.json
+        so the parser can be iterated on without re-burning RapidAPI quota.
+        Silently no-op if cache_dir not configured (we reuse the same parent)."""
+        if self._cache_dir is None:
+            return
+        try:
+            raw_dir = self._cache_dir.parent / "linkedin_raw"
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            endpoint_slug = endpoint_url.rsplit("/", 1)[-1]
+            ident = (
+                params.get("username")
+                or params.get("urn")
+                or params.get("url")
+                or "noident"
+            )
+            file_slug = f"{endpoint_slug}__{_slugify(ident)}.json"
+            (raw_dir / file_slug).write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        except Exception as e:  # never let dev-aid fail a real fetch
+            log.warning("raw response dump failed: %s", e)
 
     # ── Cache ────────────────────────────────────────────────────────────
 
@@ -253,7 +366,7 @@ class LinkedInRapidAPISource:
         self,
         linkedin_url: str,
         profile_data: dict[str, Any],
-        posts_data: dict[str, Any],
+        posts_data: list[dict[str, Any]],
     ) -> None:
         path = self._cache_path(linkedin_url)
         if path is None:
@@ -272,44 +385,72 @@ class LinkedInRapidAPISource:
             log.warning("cache write failed for %s: %s", path, e)
 
 
+# ── Input normalization ─────────────────────────────────────────────────
+
+
+def _username_from_input(s: str) -> str:
+    """Extract LinkedIn handle from either a profile URL or a bare handle.
+
+    Accepts:
+      - https://www.linkedin.com/in/<handle>/  (with or without trailing slash, scheme)
+      - linkedin.com/in/<handle>
+      - <handle>  (bare; validated against [A-Za-z0-9_-]+)
+
+    Returns the handle (no leading/trailing slash). Empty string on failure.
+    """
+    s = (s or "").strip()
+    if not s:
+        return ""
+    if "linkedin.com" in s.lower() or "/" in s:
+        m = _USERNAME_FROM_URL_RE.search(s)
+        if m and _VALID_HANDLE_RE.match(m.group(1)):
+            return m.group(1)
+        return ""
+    if _VALID_HANDLE_RE.match(s):
+        return s
+    return ""
+
+
 # ── Mapping helpers ──────────────────────────────────────────────────────
 
 
 def _map_to_profile(
     identifier: str,
     profile_data: dict[str, Any],
-    posts_data: dict[str, Any],
+    posts_data: list[dict[str, Any]],
 ) -> Profile:
-    """Combine profile + posts payloads into a Profile.
+    """Combine profile + posts data into a Profile.
 
-    Profile data is mandatory (caller validated firstName presence). Posts
-    data is optional — empty/missing falls back to summary + top position
-    description(s) for recent_signals.
+    profile_data is the unwrapped envelope.data dict (caller validated
+    first_name). posts_data is the unwrapped envelope.data list — empty
+    list means "no posts" or "fetch failed", and triggers fallback to
+    bio + experience descriptions for recent_signals.
     """
-    first = (profile_data.get("firstName") or "").strip()
-    last = (profile_data.get("lastName") or "").strip()
-    name = f"{first} {last}".strip() or identifier
+    first = (profile_data.get("first_name") or "").strip()
+    last = (profile_data.get("last_name") or "").strip()
+    full = (profile_data.get("full_name") or "").strip()
+    name = full or f"{first} {last}".strip() or identifier
 
     headline = (profile_data.get("headline") or "").strip()
-    summary = (profile_data.get("summary") or "").strip()
-    raw_positions = profile_data.get("position") or []
-    positions = raw_positions if isinstance(raw_positions, list) else []
+    bio = (profile_data.get("bio") or "").strip()
+
+    experiences = _experiences_from_data(profile_data)
 
     role = (
-        _role_from_positions(positions)
+        _role_from_experiences(experiences)
         or _role_from_headline(headline)
         or "professional"
     )
-    domain = _domain_from_positions(positions)
-    seniority = _seniority(role, headline, positions)
+    domain = _domain_from_experiences(experiences) or _domain_from_headline(headline)
+    seniority = _seniority(role, headline, experiences)
     recent_signals = (
         _signals_from_posts(posts_data)
-        or _signals_from_profile(summary, positions)
+        or _signals_from_profile(bio, experiences)
     )
     archetype_summary = _archetype_summary(role, domain, headline)
 
-    username = (profile_data.get("username") or "").strip()
-    profile_id = f"li:{username}" if username else f"li:{_slugify(identifier)}"
+    handle = (profile_data.get("public_identifier") or "").strip()
+    profile_id = f"li:{handle}" if handle else f"li:{_slugify(identifier)}"
 
     return Profile(
         id=profile_id,
@@ -328,10 +469,10 @@ def _map_to_profile(
     )
 
 
-def _role_from_positions(positions: list[Any]) -> str:
-    if not positions:
+def _role_from_experiences(experiences: list[Any]) -> str:
+    if not experiences:
         return ""
-    first = positions[0]
+    first = experiences[0]
     if not isinstance(first, dict):
         return ""
     return (first.get("title") or "").strip()
@@ -344,17 +485,28 @@ def _role_from_headline(headline: str) -> str:
     return head.strip()
 
 
-def _domain_from_positions(positions: list[Any]) -> str:
-    for pos in positions:
-        if not isinstance(pos, dict):
+def _domain_from_experiences(experiences: list[Any]) -> str:
+    """Provider doesn't expose company industry directly. Fall back to the
+    company name in the most recent experience as a coarse proxy.
+    """
+    for exp in experiences:
+        if not isinstance(exp, dict):
             continue
-        industry = (pos.get("companyIndustry") or "").strip()
-        if industry:
-            return industry
+        company = exp.get("company")
+        if isinstance(company, dict):
+            name = (company.get("name") or "").strip()
+            if name:
+                return name
+    return ""
+
+
+def _domain_from_headline(headline: str) -> str:
+    if " at " in headline:
+        return headline.split(" at ", 1)[1].split("·")[0].split("|")[0].strip() or "unspecified"
     return "unspecified"
 
 
-def _seniority(role: str, headline: str, positions: list[Any]) -> str:
+def _seniority(role: str, headline: str, experiences: list[Any]) -> str:
     """Title hints win over computed years (a 'Director with 4yrs' is senior)."""
     text = (role + " " + (headline or "")).lower()
     senior_markers = (
@@ -368,7 +520,7 @@ def _seniority(role: str, headline: str, positions: list[Any]) -> str:
     if any(m in text for m in early_markers):
         return "early"
 
-    years = _years_from_positions(positions)
+    years = _years_from_experiences(experiences)
     if years is not None:
         if years >= 10:
             return "senior"
@@ -377,40 +529,94 @@ def _seniority(role: str, headline: str, positions: list[Any]) -> str:
     return "mid"
 
 
-def _years_from_positions(positions: list[Any]) -> int | None:
-    """Span between earliest start year and latest end year.
+def _experiences_from_data(profile_data: dict[str, Any]) -> list[Any]:
+    """Extract experience entries from profile_data.
 
-    end.year=0 with a known start is treated as "current position" → today.
+    The provider's docs show `experiences: [{...}]` but real responses wrap
+    the array in pagination metadata: `experiences: {total, has_more, data: [...]}`.
+    Accept either shape.
+    """
+    raw = profile_data.get("experiences")
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict):
+        items = raw.get("data")
+        return items if isinstance(items, list) else []
+    return []
+
+
+def _year_from_date_field(field: Any) -> int | None:
+    """Extract a 4-digit year from a date sub-field that may be either:
+      - a nested dict like `{"year": 2024, "month": 5}` (docs schema)
+      - a string like `"Feb 2026"` or `"2024"` (observed real responses)
+      - the sentinel `"Present"` / `"Current"` → today's year
+      - empty / missing / 0 → None
+    """
+    if field is None or field == "" or field == 0:
+        return None
+    if isinstance(field, dict):
+        y = field.get("year")
+        return y if isinstance(y, int) and y > 0 else None
+    if isinstance(field, str):
+        s = field.strip()
+        if not s:
+            return None
+        if s.lower() in ("present", "current", "ongoing"):
+            return datetime.utcnow().year
+        m = re.search(r"\b((?:19|20|21)\d{2})\b", s)
+        return int(m.group(1)) if m else None
+    if isinstance(field, int) and field > 0:
+        return field
+    return None
+
+
+def _years_from_experiences(experiences: list[Any]) -> int | None:
+    """Span between earliest experience start year and latest end year.
+
+    Missing/empty end with a known start is treated as "current" → today.
     """
     starts: list[int] = []
     ends: list[int] = []
-    for pos in positions:
-        if not isinstance(pos, dict):
+    for exp in experiences:
+        if not isinstance(exp, dict):
             continue
-        s = (pos.get("start") or {}).get("year") or 0
-        e = (pos.get("end") or {}).get("year") or 0
-        if isinstance(s, int) and s > 0:
-            starts.append(s)
-        if isinstance(e, int) and e > 0:
-            ends.append(e)
-        elif isinstance(s, int) and s > 0:
-            ends.append(datetime.utcnow().year)
+        date = exp.get("date")
+        if not isinstance(date, dict):
+            continue
+        start = _year_from_date_field(date.get("start"))
+        end = _year_from_date_field(date.get("end"))
+        if start is not None:
+            starts.append(start)
+            if end is None:
+                ends.append(datetime.utcnow().year)
+        if end is not None:
+            ends.append(end)
     if starts and ends:
         return max(ends) - min(starts)
     return None
 
 
-def _signals_from_posts(posts_data: dict[str, Any]) -> list[str]:
-    """Top-3 original (non-reposted) posts, most recent first, truncated to 140.
+def _signals_from_posts(posts: list[dict[str, Any]]) -> list[str]:
+    """Top-3 original (UGC) posts, most recent first, truncated to 140.
 
-    Reposts are skipped because the opener template wants to reference what
-    the visitor *said*, not what they amplified.
+    Activity-type posts (likes, reshares without commentary) are skipped
+    because the opener wants to reference what the visitor *said*, not
+    what they amplified. If filtering UGC leaves us with nothing, we
+    fall back to any post that has non-empty text — better signal than none.
     """
-    items = posts_data.get("data") if isinstance(posts_data, dict) else None
-    if not isinstance(items, list):
+    if not isinstance(posts, list):
         return []
-    originals = [p for p in items if isinstance(p, dict) and not p.get("reposted")]
-    originals.sort(key=lambda p: p.get("postedDateTimestamp") or 0, reverse=True)
+    originals = [
+        p for p in posts
+        if isinstance(p, dict) and (p.get("post_type") or "").lower() == "ugc"
+    ]
+    if not originals:
+        originals = [
+            p for p in posts
+            if isinstance(p, dict) and (p.get("text") or "").strip()
+        ]
+    # ISO 8601 timestamps sort lexicographically as chronologically.
+    originals.sort(key=lambda p: p.get("created_at") or "", reverse=True)
     out: list[str] = []
     for p in originals:
         text = (p.get("text") or "").strip()
@@ -421,15 +627,15 @@ def _signals_from_posts(posts_data: dict[str, Any]) -> list[str]:
     return out
 
 
-def _signals_from_profile(summary: str, positions: list[Any]) -> list[str]:
-    """Fallback when posts are missing or all reposted: bio + top descriptions."""
+def _signals_from_profile(bio: str, experiences: list[Any]) -> list[str]:
+    """Fallback when posts are missing/empty: bio + top experience descriptions."""
     out: list[str] = []
-    if summary:
-        out.append(_truncate(summary, 140))
-    for pos in positions[:2]:
-        if not isinstance(pos, dict):
+    if bio:
+        out.append(_truncate(bio, 140))
+    for exp in experiences[:2]:
+        if not isinstance(exp, dict):
             continue
-        desc = (pos.get("description") or "").strip()
+        desc = (exp.get("description") or "").strip()
         if desc:
             out.append(_truncate(desc, 140))
         if len(out) >= 3:
@@ -440,7 +646,7 @@ def _signals_from_profile(summary: str, positions: list[Any]) -> list[str]:
 def _archetype_summary(role: str, domain: str, headline: str) -> str:
     parts = [role]
     if domain and domain != "unspecified":
-        parts.append(f"in {domain}")
+        parts.append(f"at {domain}")
     summary = " ".join(parts).strip()
     if not summary and headline:
         summary = _truncate(headline, 120)
