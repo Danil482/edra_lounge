@@ -35,9 +35,12 @@ class Settings(BaseSettings):
     db_path: str = "edra_lounge.db"
     embedding_model: str = "all-MiniLM-L6-v2"
 
-    # Phase 3 — live mode
-    live_mode: bool = False
-    rapidapi_key: str = ""
+    # Phase 3 — live mode (default: live with the `mock` RapidAPI sentinel so
+    # the booth boots into the right mode with zero env-vars. Override via .env:
+    # LIVE_MODE=false → synthetic auto-play (dev/test). RAPIDAPI_KEY=<real-key>
+    # → real LinkedIn fetches against fresh-linkedin-profile-data.p.rapidapi.com.)
+    live_mode: bool = True
+    rapidapi_key: str = "mock"
 
     @property
     def db_url(self) -> str:

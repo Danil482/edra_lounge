@@ -19,14 +19,18 @@ reset:
 
 # Dev mode — auto-reload, listens on all interfaces so the booth can pull from
 # a tablet on the same Wi-Fi if the kiosk laptop dies during a demo.
+# Defaults to live(mock) source per backend/config.py — set `LIVE_MODE=false`
+# in .env (or env) to switch to synthetic auto-play.
 demo:
 	@echo "→ EDRA Lounge starting on $(URL) (auto-reload on)"
 	@python -m uvicorn backend.app:api --reload --host 0.0.0.0 --port $(PORT)
 
-# Booth mode — strict deterministic run for the live booth.
-#   1. reset DB so the run is reproducible from seed=42
+# Booth mode — strict run for the live booth event.
+#   1. reset DB so the run starts from a clean seeded state
 #   2. start uvicorn in the background, wait for /health
 #   3. open kiosk Chrome at the demo URL (no reload, no devtools)
+# Profile source defaults to live LinkedIn (mock-key sentinel returns a
+# hand-crafted author profile when no real RAPIDAPI_KEY is provided).
 # Falls back to a friendly hint if `start` (Windows-only) isn't available.
 booth: reset
 	@echo "→ booth mode — full-screen, offline, deterministic"
