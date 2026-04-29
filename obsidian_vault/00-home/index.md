@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-04-28
+date: 2026-04-29
 ---
 
 # EDRA — Vault Home
@@ -45,10 +45,12 @@ Doctoral-proposal с реальными Pipedrive-данными живёт в *
 - 2026-04-21: репо отчленили от EDRA, Phase 1 skeleton (café vocab) сделан
 - 2026-04-28 (утро): автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_pitch_mockup.html` в репо. См. [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]]
 - 2026-04-28 (день): **Phase 1B → 2 → 3 завершены за одну сессию**. Booth работает в синтетике и live(mock); 62/62 теста зелёных. См. [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]]. Открытые задачи Phase 4 — в [[current priorities]]
+- 2026-04-29: **Phase 4.1 → 4.4 завершены за одну сессию**. Real LinkedIn fetch (после двух sunset'нувшихся RapidAPI провайдеров → `fresh-linkedin-scraper-api`) + OpenAI как третий LLM-mode + LLM-driven continuations с историей + visible logging + avatar plumbing. End-to-end проверено против реального профиля автора, 71/71 теста зелёных. См. [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]. Открытые задачи Phase 5 — в [[current priorities]]
 
 ## Navigation
 
-- [[current priorities]] — статус фаз + Phase 4 follow-ups + tech debt
+- [[current priorities]] — статус фаз + Phase 5 backlog + tech debt
+- [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]] — implementation сессия Phase 4.1/4.2/4.3/4.4 + e2e против реального LinkedIn
 - [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]] — implementation сессия Phase 1B/2/3 + UI iteration
 - [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]] — пивот-сессия, что выкидываем / что оставляем
 - [[../sessions/2026-04-21 Pivot to Lounge demo, skeleton shipped]] — историческая сессия с café-каркасом (vocab устарел, инфраструктура жива)

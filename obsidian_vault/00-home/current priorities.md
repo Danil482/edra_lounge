@@ -1,71 +1,108 @@
 ---
 tags: [home, priorities, status]
-date: 2026-04-28
+date: 2026-04-29
 ---
 
 # Current Priorities
 
 Контекст пивота → [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]]
 Сессия 2026-04-28 (Phase 1B/2/3) → [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]]
+Сессия 2026-04-29 (Phase 4.1-4.4) → [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]
 
-Каркас от 2026-04-21 был построен под café-метафору (Persona/Offer/topic/style/drink). После пивота 2026-04-28 проехали все три фазы (1B → 2 → 3) за одну сессию: skeleton реструктурирован под VN-сцену с research-outreach pitch для DEFY.group, реализованы multi-turn dialogue + sessions API + frontend port + live LinkedIn режим с privacy purge. **Booth функционально готов в синтетическом и live(mock)-режимах, 62/62 теста зелёных.**
+Каркас от 2026-04-21 был построен под café-метафору. После пивота 2026-04-28 проехали Phase 1B → 2 → 3 за одну сессию (booth готов в синтетике + live(mock)). 2026-04-29 — Phase 4.1 → 4.4 за одну сессию: новый RapidAPI-провайдер (после двух sunset'нувшихся), OpenAI как третий LLM-mode, переписанные промпты под 3-кнопочную UX-модель, LLM-driven continuations с историей, видимое логирование, avatar plumbing. **Booth полностью функционален с реальным LinkedIn-фетчем + OpenAI-генерацией, 71/71 теста зелёных, end-to-end сессия проверена против настоящего профиля автора.**
 
 ## ✅ Phase 1A — Vocabulary swap (готово, 2026-04-28)
 
-См. коммит `fd5f4d6 Phase 1A — Vocabulary swap to VN Pitch Floor`. Schemas, ORM, ProfileSource, archetypes.yaml, simulator preferences/drift, тесты — всё под новые контракты TASK.md §4.1–4.7.
+См. коммит `fd5f4d6 Phase 1A — Vocabulary swap to VN Pitch Floor`.
 
 ## ✅ Phase 1B — Multi-turn dialogue + sessions API (готово, 2026-04-28)
 
-См. коммит `227e0d4 Phase 1B — Multi-turn pitch sessions, rule pipeline wired`. `backend/pitch/`, `backend/sessions/`, `routers/sessions.py`, orchestrator wiring, 5 LLM-промптов в research-outreach vocab.
+См. коммит `227e0d4 Phase 1B — Multi-turn pitch sessions, rule pipeline wired`.
 
 ## ✅ Phase 2 — VN frontend (готово, 2026-04-28)
 
-См. коммит `3773700 Phase 2 — Frontend port (Defy Brand V2.0)`. Mockup ported verbatim в split files, `app.js` wired, typewriter / gauge / hover panels / choices / operator buttons / reflection console — всё работает.
+См. коммит `3773700 Phase 2 — Frontend port (Defy Brand V2.0)`.
 
 ## ✅ Phase 3 — Live mode + booth ready (готово, 2026-04-28)
 
-См. коммит `d6a9525 Phase 3 — Live LinkedIn mode + privacy purge + Wi-Fi fallback`. `LinkedInRapidAPISource` с реальным httpx, mock-key sentinel для booth без RapidAPI-подписки, privacy purge через factory loop, fallback dialog, `make booth` / `make reset` готовы.
+См. коммит `d6a9525 Phase 3 — Live LinkedIn mode + privacy purge + Wi-Fi fallback` + UI fixes (`bb77896` + `ffd978a`).
 
-UI fixes после первого запуска (`bb77896` + `ffd978a`): live-форма перенесена в модал, `op-live-toggle` в operator-панели; textbox/choices vertical overlap починен.
+## ✅ Phase 4 — Real LinkedIn + OpenAI + production-grade dialog (готово, 2026-04-29)
 
-## 🟡 Phase 4 — Booth polish + real LinkedIn (TBD)
+Все четыре подфазы плюс diagnostic-логирование:
+- `c533f84` Phase 4.1 — 2-endpoint flow + disk cache (linkedin-data-api)
+- `fd238c7` Phase 4.2 — OpenAI provider + switch to fresh-linkedin-scraper-api (после двух dead providers + parser hardening под реальную форму)
+- `5eb9970` Phase 4.3 — Opener prompt fits visitor reaction buttons + LinkedIn avatar plumbing
+- `d70aeda` Phase 4.4 — LLM-driven continuations + visible logging
+- `3491146` + `5ff5ec4` — verbose diagnostic logging для следующих итераций
 
-Открытые задачи после боевого использования mock-режима:
+End-to-end проверка: реальный URL автора → cache hit → OpenAI генерит опенер про "competitive pricing" → 5 unique LLM-ответов → terminate на interest=+5 = `accepted`. Сожжено ~3 RapidAPI квоты за всю сессию.
 
-- [ ] **Реальный LinkedIn parsing** — получить RAPIDAPI_KEY, проверить `_map_payload_to_profile` против настоящего ответа `fresh-linkedin-profile-data.p.rapidapi.com`. Сейчас mapping проверен только против hand-crafted mock payload — реальный JSON может отличаться по именам полей (e.g. `experiences[].duration.years` vs `years`). Пройти через 3-5 настоящих профилей разной seniority + индустрий, докрутить эвристики где надо. Acceptance: live LinkedIn URL → 3-turn dialogue без ошибок маппинга
-- [ ] **Live-mode по умолчанию** — `backend/config.py: live_mode: bool = True`, синтетика остаётся через `LIVE_MODE=false` или `.env`. Цель: booth-laptop стартует сразу в режиме, под который он развёрнут, без env-переменных. Не забыть обновить `make booth` и `Makefile` хелпы. Сейчас стартует в synthetic, что неправильный сигнал для оператора у booth
-- [ ] **Визуально проверить профиль в правой панели** — как mock-профиль автора и реальный LinkedIn-профиль рендерятся в hover-right panel (`#visitor-name`, `#visitor-role`, `#visitor-headline`, `#visitor-signals`). Длинные headline могут вылезти за рамки 360px панели; recent_signals по 140 chars × 3 — нужно проверить vertical clip. Также: `cluster_id: —` для live (потому что embedding-классификация для live-режима не реализована) — UX-fix или скрыть field
-- [ ] **`classify_profile` для live-режима** — сейчас возвращает None для non-synthetic, поэтому live-профиль попадает в uncovered cluster и factory создаёт agent stub. Реализовать sentence-transformers embedding + cosine-NN до существующих cluster centroids. Без этого live-режим даёт `cluster_id: —` и applicable_rule всегда null
+## 🟡 Phase 5 — Polish + scenarios (TBD)
+
+После сегодняшнего e2e-прогона приоритеты сместились с "заработает ли вообще" на "качество и устойчивость".
+
+### Промпты
+- [ ] **Continuation diversity** — все ответы LLM сейчас в одном русле ("ещё одна credential": партнёрство, cohort size, case study, scoping call). Нужна явная ротация типов через категории в промпте: 1) social proof, 2) personal story, 3) tool/method specific, 4) call to action. Сделать `last_category` трекинг в Session и инструктировать LLM не повторять
+- [ ] **Skeptical-ветка scenario test** — прогнать сессии где визитёр жмёт `Skeptical, why Defy?`. Промпт говорит "defuse with one specific reason Defy is legitimate" — реально ли LLM выдаёт конкретику или generic reassurance? Доработать если generic
+- [ ] **Negative — graceful close** — проверить что ответ на `Not interested` короткий и не пытается re-pitch'нуть. Промпт явно запрещает push, но проверим
+- [ ] **Opener_type=question** — сейчас редизайнен как rhetorical yes/no setup. Прогнать против разных profile signals — нет ли регрессий с открытыми вопросами
+
+### Scenario testing
+- [ ] **Mixed dialog patterns** — pos/skep/pos/neg/pos и вариации. Посмотреть что LLM делает на резкие повороты тона, как gauge ведёт себя
+- [ ] **Edge case профили** — пустой headline / без experiences / только bio / только headline. Парсер не должен падать, опенер должен gracefully degrade
+- [ ] **Длинные сессии** — поднять `MAX_TURNS` или `interest`-threshold временно и посмотреть что LLM делает на 7+ турне (не зацикливается ли)
+
+### UI polish
+- [ ] **Avatar caching strategy** — signed URLs от LinkedIn живут ~3 месяца, потом 404. Сейчас cache хранит URL forever. Парсить `e=` query param и invalidate cache при истечении, либо проксировать аватары через `/avatar/<profile_id>` endpoint
+- [ ] **`cluster_id: —` для live** — пока live-профили не классифицируются, в правой панели всегда `—`. Либо скрыть field в live-режиме, либо реализовать живую классификацию (см. ниже)
+- [ ] **Idle screen** — что показывается когда нет активной сессии? Текущий fallback на placeholder + `— no active session —` функциональный но скучный. Маленький карусель из synthetic archetypes "next visitor может быть ..."?
+- [ ] **Кнопки choices после terminate** — сейчас остаются enabled, юзер может кликнуть → 409. Нужно дизейблить когда `current_session.dialogue.last.visitor_choice` → не null И terminated
+
+### Frontend bugfix
+- [ ] **`session ended` → 409 заглушка** — после terminate frontend кликает Tell me more → 409 в console. Не ломает UX но шумно. Поправить в applyChoices: если последний step имеет visitor_choice и interest на пределе — disable buttons
+
+### Архитектурный вопрос
+- [ ] **Profile classification для live + 2-уровневая кластеризация** *(отложенный диалог с юзером)* — сейчас `classify_profile` для live возвращает None, поэтому live попадает в "uncovered" и factory-loop спавнит agent stub через 30s. Без живой классификации persona-rules не применяются к real LinkedIn визитёрам. **Открытый вопрос**: эмбедить надо profile-summary (для классификации live) или episode-summary (для induction)? Может нужны два уровня кластеризации — один для профилей (поведение), один для эпизодов (что сработало). Юзер пометил это как "пока отложим, не очень понятно"
 
 ## Технический долг
 
-- [ ] **`datetime.utcnow()` deprecation** — ~50 мест по коду, Python 3.13 убирает. Sweep на `datetime.now(UTC)`. Не блокирует, но засоряет pytest output 49 warnings
-- [ ] **Profile.id для live** — сейчас `li:https--wwwlinkedincom-in-danil-onishchenko-30876037a` (через `_slugify`). Уродливо в логах. Извлекать vanity handle: `li:<handle>`
-- [ ] **datetime UTC migration in ORM models** — для миграции выше нужно проверить SQLAlchemy DateTime defaults (сейчас `default=datetime.utcnow` без UTC tz)
+- [ ] **`datetime.utcnow()` deprecation** — ~50 мест по коду. Sweep на `datetime.now(UTC)`
+- [ ] **SQLAlchemy DateTime UTC migration** — связан с предыдущим
+- [x] **`Profile.id` для live = `li:<vanity-handle>`** — сделано в Phase 4.2 (`_username_from_input` нормализует, slug-fallback только если handle не парсится)
+- [ ] **`*.log` → .gitignore** — uvicorn.log от tee-эксперимента болтается untracked
 
 ## Acceptance gates (TASK.md §14, статус)
 
-- [x] `make demo` <30s — старт ~3s
+- [x] `make demo` <30s
 - [x] UI === мокап (Defy Brand V2.0)
 - [x] 5-минутный сценарий §9 разворачивается на seed=42
-- [x] AI Bubble Pops → CS-drop → revision <60s (через operator-кнопку)
+- [x] AI Bubble Pops → CS-drop → revision <60s
 - [x] +Segment → factory spawn ≤3 эпизода
 - [x] Expert View toggle работает
-- [x] LLM_MODE=local + LIVE_MODE=false → нет сетевых вызовов (offline-fallbacks ловят ConnectError)
-- [x] make reset воспроизводит ту же траекторию (deterministic seed)
-- [x] 5 промптов задокументированы (под новый vocab)
-- [x] Loops survive in-loop exceptions (try/except в каждом цикле)
-- [x] **import-graph test** — никакой core-модуль не импортит linkedin_rapidapi (AST-walk test passes)
-- [ ] **live LinkedIn URL → 3-turn dialogue** — против mock работает; против реального RapidAPI не проверяли
-- [x] **privacy purge test** — 6 кейсов в `tests/test_privacy_purge.py` зелёные
-- [x] pytest passes (62/62)
+- [x] LLM_MODE=local + LIVE_MODE=false → нет сетевых вызовов
+- [x] make reset воспроизводит ту же траекторию
+- [x] 5+ промптов задокументированы (`opener.txt`, `continuation.txt`, `induce.txt`, `cluster_label.txt`, `reflect.txt`, `summary.txt`)
+- [x] Loops survive in-loop exceptions
+- [x] **import-graph test**
+- [x] **live LinkedIn URL → 5-turn dialogue** ✅ end-to-end проверено 2026-04-29 против реального профиля
+- [x] **privacy purge test**
+- [x] pytest passes (71/71)
 
 ## Что выкидываем — финальный список (для архива)
 
 Из 2026-04-21:
-- ~~Pydantic 7 моделей под café-vocab~~ — переписали на Profile/PitchStrategy/DialogueStep
-- ~~Preference matrix 6×6×5×4 (плотный тензор)~~ — заменили на 5 affinity dicts + sparse combo_bonuses
-- ~~Frontend stubs~~ — выкинули, портировали `edra_pitch_mockup.html` v3
-- ~~Lounge mockup `edra_design_mockup.html`~~ — заменили на `edra_pitch_mockup.html` (Defy Brand V2.0)
+- ~~Pydantic 7 моделей под café-vocab~~
+- ~~Preference matrix 6×6×5×4 (плотный тензор)~~
+- ~~Frontend stubs~~
+- ~~Lounge mockup~~
 
-Что пережило: `llm/client.py`, `db.py`, `config.py`, тест-каркас, формула CS, HDBSCAN-pipeline, 3-loop оркестратор, 6 ORM таблиц (с переименованными колонками).
+Из 2026-04-28:
+- ~~Single-endpoint RapidAPI provider (`fresh-linkedin-profile-data`)~~ — заменён в Phase 4.1, потом ещё раз в 4.2
+- ~~`linkedin-data-api.p.rapidapi.com`~~ — sunset на стороне провайдера 2026-04-29
+
+Из 2026-04-29:
+- ~~Static template-based continuations~~ — заменены LLM-driven с history (Phase 4.4); templates остались только как offline-fallback
+- ~~`LLM_MODE` ограниченный двумя значениями (`local`/`remote`)~~ — расширен до `local`/`remote`/`openai`
+
+Что пережило: `llm/client.py` (расширен под третий провайдер), `db.py` (+миграция), `config.py` (+OpenAI поля), весь test scaffold, формула CS, HDBSCAN-pipeline, 3-loop оркестратор, 6 ORM-таблиц.
