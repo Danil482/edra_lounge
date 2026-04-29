@@ -220,16 +220,18 @@ async def test_generate_turn_llm_failure_falls_back_to_template(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_turn_continuation_uses_history_choice(monkeypatch):
-    """Turns 2+ stay within strategy and react to last visitor_choice."""
-    # Even if LLM is patched, continuations don't call it in Phase 1B.
+async def test_generate_turn_continuation_calls_llm_with_history(monkeypatch):
+    """Phase 4.3: turns 2+ go through the LLM (with full history) so replies
+    vary per turn instead of cycling through 5 hardcoded templates."""
     calls: dict[str, int] = {"complete": 0}
+    captured_prompts: list[str] = []
 
-    async def _no_llm(*args, **kwargs):
+    async def _stub_complete(prompt, *, system=None):
         calls["complete"] += 1
-        return "x"
+        captured_prompts.append(prompt)
+        return "Continuation reply from LLM."
 
-    monkeypatch.setattr("backend.pitch.generate.llm.complete", _no_llm)
+    monkeypatch.setattr("backend.pitch.generate.llm.complete", _stub_complete)
 
     profile = _phd_profile()
     rule = _static_rule()
@@ -237,7 +239,7 @@ async def test_generate_turn_continuation_uses_history_choice(monkeypatch):
         schemas.DialogueStep(
             turn=1,
             agent_thought="(rule R.07: knowledge-share/socratic/question)",
-            agent_reply="Opener.",
+            agent_reply="Opener line.",
             visitor_choice="positive",
             interest_delta=2,
             rule_applied="R.07",
@@ -250,6 +252,39 @@ async def test_generate_turn_continuation_uses_history_choice(monkeypatch):
         pitch_strategy=strategy_mod.assemble_strategy(rule),
     )
     assert step.turn == 2
-    assert calls["complete"] == 0
-    assert step.agent_reply  # continuation produced something
+    assert calls["complete"] == 1, "continuation must call the LLM"
+    assert step.agent_reply == "Continuation reply from LLM."
     assert step.rule_applied == "R.07"
+    # Prompt must include the prior turn so the LLM can avoid repeating.
+    assert "Opener line." in captured_prompts[0]
+    assert "[Tell me more.]" in captured_prompts[0]
+
+
+@pytest.mark.asyncio
+async def test_generate_turn_continuation_falls_back_to_template_on_llm_failure(monkeypatch):
+    """If the LLM is offline mid-session, continuation must still produce
+    a non-empty reply via the template fallback (no booth crash)."""
+
+    async def _broken(*args, **kwargs):
+        raise RuntimeError("openai down")
+
+    monkeypatch.setattr("backend.pitch.generate.llm.complete", _broken)
+
+    history = [
+        schemas.DialogueStep(
+            turn=1,
+            agent_thought="(rule R.07: knowledge-share/socratic/question)",
+            agent_reply="Opener line.",
+            visitor_choice="skeptical",
+            interest_delta=-1,
+            rule_applied="R.07",
+        )
+    ]
+    step, _ = await generate.generate_turn(
+        profile=_phd_profile(),
+        history=history,
+        applicable_rule=_static_rule(),
+        pitch_strategy=strategy_mod.assemble_strategy(_static_rule()),
+    )
+    assert step.turn == 2
+    assert step.agent_reply  # template fallback fired

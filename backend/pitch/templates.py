@@ -83,28 +83,32 @@ def render_continuation(
 
 # ── Continuation library, keyed by tone × visitor_choice ─────────────────
 
+# Continuation templates are the fallback path — they fire only when the LLM
+# is offline. Each one is a STATEMENT or NARROW PROPOSAL (yes/no shape) the
+# visitor can plausibly answer with one of the three buttons. No open
+# questions: the visitor cannot type free text.
+
 def _continuation_positive(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
     if s.tone == "socratic":
         return (
-            f"Glad that lands. What's the question you'd most want a small "
-            f"working group to commit to, if it had three months and no other "
-            f"obligations?"
+            f"Glad that lands. The shape: a small cohort, three or four people, "
+            f"meeting once a week for a focused thread."
         )
     if s.tone == "warm":
         return (
             f"That's the response I was hoping for. The cohort is intentionally "
-            f"small — three or four people who'd push each other. Want me to "
-            f"send the brief?"
+            f"small — three or four people who'd push each other. I can send "
+            f"the brief."
         )
     if s.tone == "direct":
         return (
             f"Good. Concrete next step: a thirty-minute scoping call this week, "
-            f"and I send a one-page brief beforehand. Does that work?"
+            f"with a one-page brief beforehand."
         )
     if s.tone == "playful":
         return (
             f"Excellent — refreshing to find someone who doesn't squint at the "
-            f"word 'collaboration'. What would make this actually fun for you?"
+            f"word 'collaboration'. I'll send the brief."
         )
     return (
         f"Good. I'll write up a short brief on the cohort and send it your way."
@@ -114,13 +118,14 @@ def _continuation_positive(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
 def _continuation_skeptical(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
     if s.tone == "socratic":
         return (
-            f"Fair. What would have to be true about the framing for it to "
-            f"warrant your time?"
+            f"Fair. The honest framing: this is exploratory, no contract, no "
+            f"recruiting hook — one scoping call to decide together."
         )
     if s.tone == "warm":
         return (
-            f"That's reasonable — most outreach we get sounds like recruiting in "
-            f"a trench coat. What signal would tell you this isn't that?"
+            f"That's reasonable — most outreach sounds like recruiting in a "
+            f"trench coat. We're a Defy.group research liaison, not a sourcer; "
+            f"happy to share two past collaborations as proof."
         )
     if s.tone == "direct":
         return (
@@ -131,20 +136,19 @@ def _continuation_skeptical(p: schemas.Profile, s: schemas.PitchStrategy) -> str
     if s.tone == "playful":
         return (
             f"Skeptical is the right opening move — I'd be worried if you "
-            f"weren't. What would change your mind?"
+            f"weren't. The justification fits in one line: Defy is a research "
+            f"collective, this is collaboration scouting, not recruitment."
         )
     return (
-        f"That's a fair pushback. What would have to be different for this to "
-        f"be worth a conversation?"
+        f"That's a fair pushback. Defy is a research collective; this is "
+        f"a scoping conversation, not a recruiting pitch."
     )
 
 
 def _continuation_negative(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
+    # Negative path = graceful close, no follow-up question that re-engages.
     if s.tone == "socratic":
-        return (
-            f"Understood. Last question, then I'll get out of your way: was it "
-            f"the framing or the ask that didn't fit?"
-        )
+        return f"Understood. Won't push — door stays open if the framing shifts."
     if s.tone == "warm":
         return (
             f"Heard. I won't push — if anything shifts, the door stays open."
@@ -162,8 +166,8 @@ def _continuation_negative(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
 
 def _continuation_neutral(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
     return (
-        f"Just to make this concrete — what would a useful next step look like "
-        f"from your side?"
+        f"To make this concrete: a thirty-minute scoping call, a one-page "
+        f"brief beforehand, and you decide from there."
     )
 
 

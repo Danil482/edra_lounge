@@ -12,6 +12,8 @@ Public surface:
     render(template_name, **fields)       → str   (loads prompts/<name>.txt)
 """
 
+import logging
+import time
 from pathlib import Path
 from typing import AsyncIterator
 
@@ -19,6 +21,8 @@ import httpx
 
 from backend.config import settings
 
+
+log = logging.getLogger(__name__)
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
@@ -30,13 +34,41 @@ def render(template_name: str, **fields) -> str:
     return template.format(**fields)
 
 
-async def complete(prompt: str, *, system: str | None = None) -> str:
-    """Non-streaming completion. Returns full response text."""
+def _model_label() -> str:
     if settings.llm_mode == "local":
-        return await _ollama_complete(prompt, system)
+        return f"ollama:{settings.ollama_model}"
     if settings.llm_mode == "openai":
-        return await _openai_complete(prompt, system)
-    return await _anthropic_complete(prompt, system)
+        return f"openai:{settings.openai_model}"
+    return f"anthropic:{settings.anthropic_model}"
+
+
+async def complete(prompt: str, *, system: str | None = None) -> str:
+    """Non-streaming completion. Returns full response text.
+
+    Wraps the provider-specific call in a single timed log line so the booth
+    operator can see at a glance whether OpenAI/Ollama is responsive and how
+    long each turn took.
+    """
+    label = _model_label()
+    log.info("LLM call → %s (prompt=%d chars)", label, len(prompt))
+    t0 = time.perf_counter()
+    try:
+        if settings.llm_mode == "local":
+            text = await _ollama_complete(prompt, system)
+        elif settings.llm_mode == "openai":
+            text = await _openai_complete(prompt, system)
+        else:
+            text = await _anthropic_complete(prompt, system)
+    except Exception as e:
+        dt_ms = (time.perf_counter() - t0) * 1000
+        log.warning(
+            "LLM call ✗ %s in %.0fms — %s: %s",
+            label, dt_ms, e.__class__.__name__, str(e)[:200],
+        )
+        raise
+    dt_ms = (time.perf_counter() - t0) * 1000
+    log.info("LLM call ✓ %s in %.0fms (reply=%d chars)", label, dt_ms, len(text))
+    return text
 
 
 async def stream(prompt: str, *, system: str | None = None) -> AsyncIterator[str]:

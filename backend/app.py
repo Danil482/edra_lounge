@@ -10,11 +10,22 @@ This module is the DI root: it picks the active ProfileSource implementation
 Orchestrator with it, and mounts the routers and the static frontend.
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+
+# App-level logging so module loggers (LLM client, pitch generator, profile
+# source) actually surface — without this, INFO/WARNING from our code is
+# swallowed and only uvicorn's access log appears on stdout.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 from backend.config import PROJECT_ROOT, settings
 from backend.db import async_session_factory, init_db
