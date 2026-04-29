@@ -5,8 +5,8 @@ Two acceptance criteria are validated here:
   1. The two shipped implementations conform to the ProfileSource Protocol.
      Concretely: SyntheticProfileSource resolves every archetype id to a
      well-formed Profile; LinkedInRapidAPISource maps mocked RapidAPI
-     responses to a Profile; missing API keys surface as
-     ProfileSourceUnavailable so the booth UI can fall back.
+     responses (two endpoints: profile + posts) to a Profile; missing API
+     keys surface as ProfileSourceUnavailable so the booth UI can fall back.
 
   2. **No core module imports any concrete ProfileSource implementation.**
      The Protocol in `backend/profile_source/__init__.py` is the single
@@ -18,7 +18,6 @@ Two acceptance criteria are validated here:
 from __future__ import annotations
 
 import ast
-import re
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -94,29 +93,67 @@ async def test_linkedin_no_api_key_raises_unavailable():
 # ── LinkedIn live-fetch path (mocked httpx) ─────────────────────────────
 
 
-def _ok_payload() -> dict:
-    """Fresh-linkedin-profile-data success shape, abridged."""
+def _profile_payload() -> dict:
+    """linkedin-data-api success shape (top-level, not wrapped in `data`).
+
+    Modeled on the real Adam Selipsky response — director-level title,
+    multi-decade career, computer-software industry.
+    """
     return {
-        "data": {
-            "full_name": "Maya Chen",
-            "headline": "Director of ML Research at Defy.group",
-            "job_title": "Director of ML Research",
-            "industry": "Computer Software",
-            "years_of_experience": 12,
-            "company": {"name": "Defy.group", "industry": "Computer Software"},
-            "experiences": [
-                {
-                    "title": "Director of ML Research",
-                    "description": "Lead retrieval-augmented agents team",
-                    "duration": {"years": 3},
-                }
-            ],
-            "posts": [
-                {"text": "Excited about open-source RAG benchmarks landing this Q2."},
-                {"text": "Recruiting two staff researchers — DM me."},
-                {"text": "Filler post that should be skipped because cap=3."},
-            ],
-        }
+        "firstName": "Maya",
+        "lastName": "Chen",
+        "username": "maya-chen",
+        "headline": "Director of ML Research at Defy.group",
+        "summary": "Leading the retrieval-augmented agents team at Defy.group.",
+        "geo": {"country": "United States"},
+        "position": [
+            {
+                "title": "Director of ML Research",
+                "companyName": "Defy.group",
+                "companyIndustry": "Computer Software",
+                "description": "Leading retrieval-augmented agents team",
+                "start": {"year": 2021, "month": 5},
+                "end": {"year": 0, "month": 0},
+            },
+            {
+                "title": "Senior Research Engineer",
+                "companyName": "Acme Labs",
+                "companyIndustry": "Computer Software",
+                "description": "Worked on scalable inference",
+                "start": {"year": 2013, "month": 0},
+                "end": {"year": 2021, "month": 4},
+            },
+        ],
+    }
+
+
+def _posts_payload() -> dict:
+    """linkedin-data-api /get-profile-posts response. The wrapper IS `data` here."""
+    return {
+        "success": True,
+        "data": [
+            {
+                "text": "Excited about open-source RAG benchmarks landing this Q2.",
+                "postedDateTimestamp": 1714000000000,
+                "reposted": False,
+            },
+            {
+                "text": "Recruiting two staff researchers — DM me.",
+                "postedDateTimestamp": 1713800000000,
+                "reposted": False,
+            },
+            # Repost should be filtered out — author here is someone else.
+            {
+                "text": "Resharing a great post by a colleague about distributed training.",
+                "postedDateTimestamp": 1713900000000,
+                "reposted": True,
+            },
+            {
+                "text": "Filler post that should be skipped because cap=3.",
+                "postedDateTimestamp": 1713600000000,
+                "reposted": False,
+            },
+        ],
     }
 
 
@@ -128,22 +165,57 @@ def _mock_response(status_code: int, json_payload: dict | None = None):
     return resp
 
 
-def _patched_async_client(get_return=None, get_side_effect=None):
-    """Patch backend.profile_source.linkedin_rapidapi.httpx.AsyncClient so the
-    module under test uses a fully-mocked client."""
+class _GetCallTracker:
+    """Async-callable that returns/raises items from a queue and counts calls.
+
+    Used to mock httpx.AsyncClient.get when we care about call ordering or
+    call counts (e.g. the cache test verifies the second fetch makes 0 calls).
+    """
+
+    def __init__(self, items):
+        self.queue = list(items)
+        self.call_count = 0
+        self.calls = []
+
+    async def __call__(self, url, **kwargs):
+        self.call_count += 1
+        self.calls.append((url, kwargs))
+        if not self.queue:
+            raise AssertionError(
+                f"Unexpected extra HTTP call to {url} (queue exhausted)"
+            )
+        item = self.queue.pop(0)
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+
+def _patched_async_client(items):
+    """Patch httpx.AsyncClient with a tracker that returns `items` in order.
+
+    Returns a (context_manager, tracker) tuple so tests can assert on
+    `tracker.call_count` / `tracker.calls` after the fetch.
+    """
     instance = MagicMock()
-    instance.get = AsyncMock(return_value=get_return, side_effect=get_side_effect)
+    tracker = _GetCallTracker(items)
+    instance.get = tracker
     instance.__aenter__ = AsyncMock(return_value=instance)
     instance.__aexit__ = AsyncMock(return_value=None)
     factory = MagicMock(return_value=instance)
-    return patch("backend.profile_source.linkedin_rapidapi.httpx.AsyncClient", factory)
+    return patch(
+        "backend.profile_source.linkedin_rapidapi.httpx.AsyncClient", factory
+    ), tracker
 
 
 @pytest.mark.asyncio
 async def test_linkedin_maps_payload_to_profile():
     src = LinkedInRapidAPISource(api_key="test-key")
-    response = _mock_response(200, _ok_payload())
-    with _patched_async_client(get_return=response):
+    items = [
+        _mock_response(200, _profile_payload()),
+        _mock_response(200, _posts_payload()),
+    ]
+    cm, tracker = _patched_async_client(items)
+    with cm:
         profile = await src.fetch("https://www.linkedin.com/in/maya-chen/")
 
     assert profile.source_kind == "linkedin_rapidapi"
@@ -152,19 +224,46 @@ async def test_linkedin_maps_payload_to_profile():
     assert profile.domain == "Computer Software"
     assert profile.seniority == "senior"  # "Director" trips the senior marker
     assert profile.headline.startswith("Director of ML Research")
-    assert profile.archetype_summary  # non-empty summary
-    assert profile.id.startswith("li:")
+    assert profile.archetype_summary
+    # Vanity username is preferred over the slugified URL for Profile.id.
+    assert profile.id == "li:maya-chen"
     assert profile.ttl_seconds == 3600
-    # We pull at most three signals — verify cap.
-    assert 1 <= len(profile.recent_signals) <= 3
+    # Top 3 posts, with the repost filtered out, ordered most-recent first.
+    assert len(profile.recent_signals) == 3
     assert any("RAG" in s for s in profile.recent_signals)
+    assert all("Resharing a great post" not in s for s in profile.recent_signals)
+    # Two HTTP calls: profile then posts.
+    assert tracker.call_count == 2
+    assert "get-profile-data-by-url" in tracker.calls[0][0]
+    assert "get-profile-posts" in tracker.calls[1][0]
+
+
+@pytest.mark.asyncio
+async def test_linkedin_falls_back_when_posts_endpoint_fails():
+    """Posts call failure must not fail the whole fetch — fall back to
+    summary + position descriptions for recent_signals."""
+    src = LinkedInRapidAPISource(api_key="test-key")
+    items = [
+        _mock_response(200, _profile_payload()),
+        _mock_response(503, {}),  # posts endpoint down
+    ]
+    cm, tracker = _patched_async_client(items)
+    with cm:
+        profile = await src.fetch("https://www.linkedin.com/in/maya-chen/")
+
+    # Both calls were attempted.
+    assert tracker.call_count == 2
+    # Fallback signals: summary first, then position descriptions.
+    assert profile.recent_signals
+    assert any("retrieval-augmented" in s for s in profile.recent_signals)
 
 
 @pytest.mark.asyncio
 async def test_linkedin_404_raises_not_found():
     src = LinkedInRapidAPISource(api_key="test-key")
-    response = _mock_response(404, {})
-    with _patched_async_client(get_return=response):
+    items = [_mock_response(404, {})]
+    cm, _ = _patched_async_client(items)
+    with cm:
         with pytest.raises(ProfileNotFound):
             await src.fetch("https://www.linkedin.com/in/ghost/")
 
@@ -172,8 +271,9 @@ async def test_linkedin_404_raises_not_found():
 @pytest.mark.asyncio
 async def test_linkedin_429_raises_unavailable():
     src = LinkedInRapidAPISource(api_key="test-key")
-    response = _mock_response(429, {})
-    with _patched_async_client(get_return=response):
+    items = [_mock_response(429, {})]
+    cm, _ = _patched_async_client(items)
+    with cm:
         with pytest.raises(ProfileSourceUnavailable, match="rate-limited"):
             await src.fetch("https://www.linkedin.com/in/over-quota/")
 
@@ -181,8 +281,9 @@ async def test_linkedin_429_raises_unavailable():
 @pytest.mark.asyncio
 async def test_linkedin_5xx_raises_unavailable():
     src = LinkedInRapidAPISource(api_key="test-key")
-    response = _mock_response(503, {})
-    with _patched_async_client(get_return=response):
+    items = [_mock_response(503, {})]
+    cm, _ = _patched_async_client(items)
+    with cm:
         with pytest.raises(ProfileSourceUnavailable, match="upstream"):
             await src.fetch("https://www.linkedin.com/in/upstream-down/")
 
@@ -195,17 +296,20 @@ async def test_linkedin_network_error_raises_unavailable():
     sure transient network failures map to the former, not the latter.
     """
     src = LinkedInRapidAPISource(api_key="test-key")
-    err = httpx.ConnectError("network unreachable")
-    with _patched_async_client(get_side_effect=err):
+    items = [httpx.ConnectError("network unreachable")]
+    cm, _ = _patched_async_client(items)
+    with cm:
         with pytest.raises(ProfileSourceUnavailable, match="ConnectError"):
             await src.fetch("https://www.linkedin.com/in/offline/")
 
 
 @pytest.mark.asyncio
 async def test_linkedin_malformed_payload_raises_unavailable():
+    """A 200 response without firstName means the API shape changed under us."""
     src = LinkedInRapidAPISource(api_key="test-key")
-    response = _mock_response(200, {"unexpected": "shape"})
-    with _patched_async_client(get_return=response):
+    items = [_mock_response(200, {"unexpected": "shape"})]
+    cm, _ = _patched_async_client(items)
+    with cm:
         with pytest.raises(ProfileSourceUnavailable, match="missing"):
             await src.fetch("https://www.linkedin.com/in/weird/")
 
@@ -216,36 +320,82 @@ async def test_linkedin_mock_key_returns_author_profile_without_http():
     demoed without a real RapidAPI subscription. The mock returns the author's
     own LinkedIn profile so the live-mode UI can be exercised end-to-end."""
     src = LinkedInRapidAPISource(api_key="mock")
-    # Patching the AsyncClient with a sentinel that *raises if called* —
-    # mock mode must not perform any HTTP.
-    sentinel_factory = MagicMock(side_effect=AssertionError("HTTP must not be called in mock mode"))
+    sentinel_factory = MagicMock(
+        side_effect=AssertionError("HTTP must not be called in mock mode")
+    )
     with patch("backend.profile_source.linkedin_rapidapi.httpx.AsyncClient", sentinel_factory):
         profile = await src.fetch("any-identifier-here")
 
     assert profile.source_kind == "linkedin_rapidapi"
     assert profile.name == "Danil Onishchenko"
+    assert profile.id == "li:danil-onishchenko-30876037a"
     assert profile.ttl_seconds == 3600
     # Identifier is rewritten to the author URL so Profile.id is stable.
     assert "danil-onishchenko" in profile.source_identifier
+    # Mock posts payload populates 3 recent signals.
+    assert len(profile.recent_signals) == 3
 
 
 @pytest.mark.asyncio
 async def test_linkedin_seniority_heuristic():
     """Title-based seniority overrides years; intern → early."""
     src = LinkedInRapidAPISource(api_key="test-key")
-    payload = {
-        "data": {
-            "full_name": "Sam Intern",
-            "headline": "Research Intern at Defy.group",
-            "job_title": "Research Intern",
-            "industry": "Research",
-            "years_of_experience": 1,
-        }
+    profile_payload = {
+        "firstName": "Sam",
+        "lastName": "Intern",
+        "username": "sam-intern",
+        "headline": "Research Intern at Defy.group",
+        "summary": "",
+        "position": [
+            {
+                "title": "Research Intern",
+                "companyName": "Defy.group",
+                "companyIndustry": "Research",
+                "start": {"year": 2024, "month": 6},
+                "end": {"year": 0, "month": 0},
+            }
+        ],
     }
-    response = _mock_response(200, payload)
-    with _patched_async_client(get_return=response):
+    items = [
+        _mock_response(200, profile_payload),
+        _mock_response(200, {"success": True, "data": []}),
+    ]
+    cm, _ = _patched_async_client(items)
+    with cm:
         profile = await src.fetch("https://www.linkedin.com/in/intern/")
     assert profile.seniority == "early"
+
+
+@pytest.mark.asyncio
+async def test_linkedin_cache_hit_skips_http(tmp_path):
+    """Second fetch of the same URL must not call HTTP.
+
+    The cache directory is a tmp_path so this test is hermetic and never
+    pollutes the real data/linkedin_cache/ directory.
+    """
+    src = LinkedInRapidAPISource(api_key="test-key", cache_dir=tmp_path)
+    items = [
+        _mock_response(200, _profile_payload()),
+        _mock_response(200, _posts_payload()),
+    ]
+    cm, tracker = _patched_async_client(items)
+    with cm:
+        profile1 = await src.fetch("https://www.linkedin.com/in/maya-chen/")
+    assert tracker.call_count == 2  # both endpoints hit on first fetch
+
+    # Cache file written.
+    cache_files = list(tmp_path.glob("*.json"))
+    assert len(cache_files) == 1
+
+    # Second fetch — patch with a sentinel that raises if called.
+    sentinel = MagicMock(side_effect=AssertionError("HTTP must not be called on cache hit"))
+    with patch("backend.profile_source.linkedin_rapidapi.httpx.AsyncClient", sentinel):
+        profile2 = await src.fetch("https://www.linkedin.com/in/maya-chen/")
+
+    # Same Profile shape served from cache.
+    assert profile2.id == profile1.id
+    assert profile2.name == profile1.name
+    assert profile2.recent_signals == profile1.recent_signals
 
 
 def test_synthetic_marks_spawnable_correctly():

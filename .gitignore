@@ -17,6 +17,12 @@ edra_lounge.db-wal
 edra_lounge.db-shm
 .cache/
 
+# RapidAPI response cache (raw JSON per profile URL slug, see
+# backend/profile_source/linkedin_rapidapi.py). Keep the directory itself
+# via .gitkeep so the cache_dir exists in fresh checkouts.
+data/linkedin_cache/*
+!data/linkedin_cache/.gitkeep
+
 # editor
 .vscode/
 .idea/

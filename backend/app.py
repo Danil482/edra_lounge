@@ -40,10 +40,14 @@ def _build_profile_source() -> ProfileSource:
 
     The orchestrator and the sessions router both read `app.state.profile_source`,
     which is set once here on startup so swapping the implementation only
-    requires bouncing the process.
+    requires bouncing the process. Live mode also gets a disk cache so repeated
+    fetches of the same URL during dev/prep don't burn the 50/mo RapidAPI quota.
     """
     if getattr(settings, "live_mode", False) and getattr(settings, "rapidapi_key", ""):
-        return LinkedInRapidAPISource(api_key=settings.rapidapi_key)
+        return LinkedInRapidAPISource(
+            api_key=settings.rapidapi_key,
+            cache_dir=PROJECT_ROOT / "data" / "linkedin_cache",
+        )
     return SyntheticProfileSource()
 
 
