@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-04-29
+date: 2026-04-30
 ---
 
 # Current Priorities
@@ -8,8 +8,9 @@ date: 2026-04-29
 Контекст пивота → [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]]
 Сессия 2026-04-28 (Phase 1B/2/3) → [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]]
 Сессия 2026-04-29 (Phase 4.1-4.4) → [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]
+Сессия 2026-04-30 (Phase 5 prep) → [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
 
-Каркас от 2026-04-21 был построен под café-метафору. После пивота 2026-04-28 проехали Phase 1B → 2 → 3 за одну сессию (booth готов в синтетике + live(mock)). 2026-04-29 — Phase 4.1 → 4.4 за одну сессию: новый RapidAPI-провайдер (после двух sunset'нувшихся), OpenAI как третий LLM-mode, переписанные промпты под 3-кнопочную UX-модель, LLM-driven continuations с историей, видимое логирование, avatar plumbing. **Booth полностью функционален с реальным LinkedIn-фетчем + OpenAI-генерацией, 71/71 теста зелёных, end-to-end сессия проверена против настоящего профиля автора.**
+Каркас от 2026-04-21 был построен под café-метафору. После пивота 2026-04-28 проехали Phase 1B → 2 → 3 за одну сессию (booth готов в синтетике + live(mock)). 2026-04-29 — Phase 4.1 → 4.4 за одну сессию: новый RapidAPI-провайдер (после двух sunset'нувшихся), OpenAI как третий LLM-mode, переписанные промпты под 3-кнопочную UX-модель, LLM-driven continuations с историей, видимое логирование, avatar plumbing. **Booth полностью функционален с реальным LinkedIn-фетчем + OpenAI-генерацией, 71/71 теста зелёных, end-to-end сессия проверена против настоящего профиля автора.** 2026-04-30 — аналитическая сессия: аудит промптов, research реального Defy, обнаружено архитектурное расхождение (EDRA-вокаб ≠ Defy ICP), сформирован questionnaire к founders.
 
 ## ✅ Phase 1A — Vocabulary swap (готово, 2026-04-28)
 
@@ -38,32 +39,80 @@ date: 2026-04-29
 
 End-to-end проверка: реальный URL автора → cache hit → OpenAI генерит опенер про "competitive pricing" → 5 unique LLM-ответов → terminate на interest=+5 = `accepted`. Сожжено ~3 RapidAPI квоты за всю сессию.
 
-## 🟡 Phase 5 — Polish + scenarios (TBD)
+## 🟡 Phase 5 — Промпты и сценарии (в работе, BLOCKED на founders)
 
-После сегодняшнего e2e-прогона приоритеты сместились с "заработает ли вообще" на "качество и устойчивость".
+После сегодняшнего e2e-прогона приоритеты сместились с "заработает ли вообще" на "качество и устойчивость". 2026-04-30 провели аудит промптов — корневая проблема не в diversity директиве, а в **отсутствии конкретики про Defy в промптах**: LLM галлюцинирует факты в каждом турне ("we partnered with major retail brand", "cohort of 20 brands") потому что в system message — единственная строка "You are a research-liaison agent." и ничего больше. Diversity-проблема — следствие: без фактов LLM выбирает единственную безопасную траекторию (enterprise sales credentials × N).
 
-### Промпты
-- [ ] **Continuation diversity** — все ответы LLM сейчас в одном русле ("ещё одна credential": партнёрство, cohort size, case study, scoping call). Нужна явная ротация типов через категории в промпте: 1) social proof, 2) personal story, 3) tool/method specific, 4) call to action. Сделать `last_category` трекинг в Session и инструктировать LLM не повторять
-- [ ] **Skeptical-ветка scenario test** — прогнать сессии где визитёр жмёт `Skeptical, why Defy?`. Промпт говорит "defuse with one specific reason Defy is legitimate" — реально ли LLM выдаёт конкретику или generic reassurance? Доработать если generic
-- [ ] **Negative — graceful close** — проверить что ответ на `Not interested` короткий и не пытается re-pitch'нуть. Промпт явно запрещает push, но проверим
-- [ ] **Opener_type=question** — сейчас редизайнен как rhetorical yes/no setup. Прогнать против разных profile signals — нет ли регрессий с открытыми вопросами
+### 🚨 Архитектурное расхождение — Путь A/B/C (решение отложено до ответов founders)
 
-### Scenario testing
-- [ ] **Mixed dialog patterns** — pos/skep/pos/neg/pos и вариации. Посмотреть что LLM делает на резкие повороты тона, как gauge ведёт себя
-- [ ] **Edge case профили** — пустой headline / без experiences / только bio / только headline. Парсер не должен падать, опенер должен gracefully degrade
-- [ ] **Длинные сессии** — поднять `MAX_TURNS` или `interest`-threshold временно и посмотреть что LLM делает на 7+ турне (не зацикливается ли)
+Реальный Defy = **AI-SaaS для creative agencies** (3 продукта: Monitor / Automate / Report; founders Ian Cassidy + Alek Farseev), а текущий EDRA-вокаб предполагает **academic outreach** (PhD / postdoc / prof архетипы, ASK_SIZE=`co-author`/`intro`/`trial`).
 
-### UI polish
+- **Путь A**: переписать архетипы под agency ICP — ломает preference matrix, drift events, тесты
+- **Путь B**: оставить research-narrative как booth-wrapper — на booth диссонанс с реальным DEFY.group в LinkedIn, skeptical-defusing невозможен без выдумок
+- **Путь C (рекомендую)**: гибрид — research-archetypes остаются в синтетике, но промпты переписаны на реальные Defy-факты, refusal behavior закрывает edge cases когда визитёр явно вне ICP
+
+### Phase 5.1 — Defy fact sheet 🔒 BLOCKED (наивысший приоритет)
+
+Ждёт ответы от founders на questionnaire (см. ниже). Когда ответы придут:
+- [ ] Создать `backend/llm/prompts/_defy_brand.txt` со всеми фактами (positioning, 3 продукта, founders, proof points, out-of-scope, engagement)
+- [ ] Загружать в `llm.client.render()` как `{defy_facts}`, инжектить в `opener.txt` + `continuation.txt`
+- [ ] Унифицировать casing (`Defy` без `.group`? или `Defy.group` везде?)
+
+### Phase 5.2 — Refactor opener/continuation промптов
+
+- [ ] Поднять `system` message до 200-300 слов: brand voice + role + boundaries + «не выдумывай факты, не названных в `{defy_facts}`»
+- [ ] Удалить из opener/continuation дублирующиеся правила про buttons (вынести в system)
+- [ ] Добавить **категории ответа** в continuation: `specific-defy-fact` / `methodology-hook` / `profile-callback` / `concrete-next-step` / `soft-personal`
+- [ ] Передавать `used_categories: list[str]` из Session → LLM требуется выбрать unused (решает diversity-проблему через state, не директиву)
+- [ ] Возвращать `category` в результате continuation → обновлять Session
+- [ ] Передавать `word_target` в continuation prompt (сейчас теряется)
+
+### Phase 5.3 — Refusal behavior
+
+- [ ] «Если профиль не имеет signal'ов релевантных Defy work — не натягивай. Скажи общо.»
+- [ ] «Если signal — только job title (не пост) — используй как hint, но не приписывай человеку убеждения/публикации.»
+- [ ] «Если визитёр уже proceeded × 4 — не предлагай больше credentials. Переходи на narrow concrete next step.»
+- [ ] «Если ask_size=`none` — никаких CTA, только soft door-open.»
+
+### Phase 5.4 — Scenario test harness
+
+- [ ] Pytest harness который замокает LLM (или прогонит реальный OpenAI) для:
+  - positive×5 (baseline)
+  - skeptical→positive→positive (defusing→advance)
+  - positive→skeptical→positive (mid-dialog skepticism)
+  - negative первым турном (immediate close)
+  - positive→negative (late close после прогресса)
+  - empty headline / no signals (graceful)
+  - mismatched domain профиль
+- [ ] Asserts: ≤35 words, no `?` в конце (кроме rhetorical), mentions Defy ≥1×, на `negative` нет CTA-глаголов, на `skeptical` есть цитата из `{defy_facts}`
+- [ ] **Можно начать ДО разблокировки 5.1** чтобы зафиксировать baseline и поймать regressions от рефакторинга
+
+### Phase 5.5 — Minor cleanup
+
+- [ ] Templates: переписать чтобы тоже использовали `_defy_brand.txt` (fallback не должен расходиться с LLM)
+- [ ] **`*.log` → .gitignore** (uvicorn.log болтается untracked со 2026-04-29)
+
+## 🔒 Открытые вопросы к founders (questionnaire 2026-04-30, на английском в session note)
+
+1. **Anonymized case examples** — 2-3 коротких anonymized client examples ("top-20 UK agency used Monitor for 6 weeks before a pitch...") для использования на booth
+2. **Permission to cite founder credentials** — public OK упоминать Ian's SHARE Creative / Samy / 50+ relationships и Alek's Singapore AI prof background?
+3. **Out-of-scope** — 3-5 явных границ (not recruiting? not consulting hours? not data licensing? not for in-house brand teams?)
+4. **Engagement format & next-step shape** — demo → trial → paid pilot? Длительность пилота, cadence, deliverables? Какой буквальный next step когда агент говорит "let's talk pilot"?
+5. **Booth ICP & lead product** — agency founders/MDs/planners/CDs/mixed? Какой из Monitor/Automate/Report — lead продукт для открытия разговора?
+6. **Conferences / shared-context anchors** — какие события Defy посещает/спонсирует (Cannes, SXSW, agency-circle)?
+
+## 🟢 UI polish (не blocked, можно делать параллельно с 5.x)
+
 - [ ] **Avatar caching strategy** — signed URLs от LinkedIn живут ~3 месяца, потом 404. Сейчас cache хранит URL forever. Парсить `e=` query param и invalidate cache при истечении, либо проксировать аватары через `/avatar/<profile_id>` endpoint
-- [ ] **`cluster_id: —` для live** — пока live-профили не классифицируются, в правой панели всегда `—`. Либо скрыть field в live-режиме, либо реализовать живую классификацию (см. ниже)
-- [ ] **Idle screen** — что показывается когда нет активной сессии? Текущий fallback на placeholder + `— no active session —` функциональный но скучный. Маленький карусель из synthetic archetypes "next visitor может быть ..."?
+- [ ] **`cluster_id: —` для live** — пока live-профили не классифицируются, в правой панели всегда `—`. Либо скрыть field в live-режиме, либо реализовать живую классификацию
+- [ ] **Idle screen** — что показывается когда нет активной сессии? Текущий fallback функциональный но скучный. Маленький карусель из synthetic archetypes "next visitor может быть ..."?
 - [ ] **Кнопки choices после terminate** — сейчас остаются enabled, юзер может кликнуть → 409. Нужно дизейблить когда `current_session.dialogue.last.visitor_choice` → не null И terminated
 
 ### Frontend bugfix
 - [ ] **`session ended` → 409 заглушка** — после terminate frontend кликает Tell me more → 409 в console. Не ломает UX но шумно. Поправить в applyChoices: если последний step имеет visitor_choice и interest на пределе — disable buttons
 
-### Архитектурный вопрос
-- [ ] **Profile classification для live + 2-уровневая кластеризация** *(отложенный диалог с юзером)* — сейчас `classify_profile` для live возвращает None, поэтому live попадает в "uncovered" и factory-loop спавнит agent stub через 30s. Без живой классификации persona-rules не применяются к real LinkedIn визитёрам. **Открытый вопрос**: эмбедить надо profile-summary (для классификации live) или episode-summary (для induction)? Может нужны два уровня кластеризации — один для профилей (поведение), один для эпизодов (что сработало). Юзер пометил это как "пока отложим, не очень понятно"
+### Отложенный архитектурный диалог
+- [ ] **Profile classification для live + 2-уровневая кластеризация** *(отложенный диалог с юзером, плюс параллельный план в `TASK_refactor_clustering.md` 2026-04-30)* — `TASK_refactor_clustering.md` уже содержит детальный план разделения profile-space и episode-space embeddings с HDBSCAN только над profile-space. Юзер: "пока отложим, не очень понятно", но план готов как референс к реализации
 
 ## Технический долг
 

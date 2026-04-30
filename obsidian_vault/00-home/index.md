@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-04-29
+date: 2026-04-30
 ---
 
 # EDRA — Vault Home
@@ -46,10 +46,12 @@ Doctoral-proposal с реальными Pipedrive-данными живёт в *
 - 2026-04-28 (утро): автор переписал TASK.md → пивот на VN Pitch Floor + research-outreach vocab; финальный мокап `edra_pitch_mockup.html` в репо. См. [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]]
 - 2026-04-28 (день): **Phase 1B → 2 → 3 завершены за одну сессию**. Booth работает в синтетике и live(mock); 62/62 теста зелёных. См. [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]]. Открытые задачи Phase 4 — в [[current priorities]]
 - 2026-04-29: **Phase 4.1 → 4.4 завершены за одну сессию**. Real LinkedIn fetch (после двух sunset'нувшихся RapidAPI провайдеров → `fresh-linkedin-scraper-api`) + OpenAI как третий LLM-mode + LLM-driven continuations с историей + visible logging + avatar plumbing. End-to-end проверено против реального профиля автора, 71/71 теста зелёных. См. [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]. Открытые задачи Phase 5 — в [[current priorities]]
+- 2026-04-30: **Phase 5 prep — аналитическая сессия, кода не трогали**. Аудит всех 6 промптов, identified корневая проблема — отсутствие конкретики про Defy в system message → галлюцинации. Public research реального DEFY.group (defygroup.ai + WebSearch): **Defy = AI-SaaS для creative agencies** (3 продукта Monitor/Automate/Report, founders Ian Cassidy + Alek Farseev) — расхождение с EDRA-вокабом (academic outreach). Сформирован questionnaire к founders (6 вопросов, английский). Phase 5 разбит на 5 sub-stages, 5.1 BLOCKED на ответы founders. См. [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
 
 ## Navigation
 
-- [[current priorities]] — статус фаз + Phase 5 backlog + tech debt
+- [[current priorities]] — статус фаз + Phase 5 backlog + questionnaire к founders + tech debt
+- [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]] — аналитическая сессия: аудит промптов + Defy research + questionnaire к founders + Путь A/B/C
 - [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]] — implementation сессия Phase 4.1/4.2/4.3/4.4 + e2e против реального LinkedIn
 - [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]] — implementation сессия Phase 1B/2/3 + UI iteration
 - [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]] — пивот-сессия, что выкидываем / что оставляем
