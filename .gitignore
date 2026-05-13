@@ -34,11 +34,5 @@ data/linkedin_raw/
 # runtime logs (uvicorn etc.)
 *.log
 
-# research dataset — kept local until cleared for publication
-research_profiles_master.csv
-
-# generated dataset dashboard (regenerable from research_profiles_master.csv)
-research_profiles_dashboard.html
-.dashboard_data.json
-.compute_stats.py
-.inject_data.py
+# research profiles dataset + tooling (moved to data/research_profiles/)
+data/research_profiles/

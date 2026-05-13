@@ -8,6 +8,7 @@ pitch dialogue against it.
 
 Spec: see [`TASK.md`](TASK.md). This repo is the implementation.
 Project rules for AI assistants: see [`CLAUDE.md`](CLAUDE.md).
+Knowledge vault: [`obsidian_vault/`](obsidian_vault/00-home/index.md).
 Status board: [`obsidian_vault/00-home/current priorities.md`](obsidian_vault/00-home/current%20priorities.md).
 
 ## Quickstart
@@ -56,7 +57,16 @@ backend/
 frontend/           index.html + styles.css + app.js (no build, polling + SSE)
 seeded_run.yaml     Pre-recorded 3-day visit schedule
 tests/              pytest (71 tests as of 2026-04-29)
-obsidian_vault/     Per-session working notes + the live status board
+data/
+  linkedin_cache/   On-disk raw JSON cache for LinkedIn fetches (gitignored)
+  linkedin_raw/     RapidAPI response dumps for parser debugging (gitignored)
+  research_profiles/  502-row candidate pool + dashboard + helper scripts (gitignored)
+obsidian_vault/     Knowledge vault — architecture, decisions, sessions, business context
+  00-home/          Index + current priorities (the live status board)
+  atlas/            Architecture, stack, DB, deploy
+  knowledge/        Integrations, decisions, debugging, patterns, business
+  sessions/         Per-session working notes
+  inbox/            Unprocessed ideas
 ```
 
 ## LLM modes
@@ -89,7 +99,7 @@ by `purge_expired_live_profiles` (called from the factory loop every
 
 ## Status
 
-- **Phases 1A → 4.4 shipped** (2026-04-28 → 2026-04-29). Booth fully
+- **Phases 1A-4.4 shipped** (2026-04-28 to 2026-04-29). Booth fully
   functional with real LinkedIn fetch + OpenAI generation, 71/71 tests
   green, end-to-end validated against a real profile.
 - **Phase 5 — prompts and scenarios** (in progress, BLOCKED on founder
@@ -100,7 +110,7 @@ by `purge_expired_live_profiles` (called from the factory loop every
 - **Phase 6 — research profiles dataset** (done, 2026-05-13). Built a
   502-row balanced candidate pool of LinkedIn profiles as the prep
   substrate for Phase 5 outreach testing. Lives at
-  `research_profiles_master.csv` (gitignored, local-only until cleared
+  `data/research_profiles/` (gitignored, local-only until cleared
   for publication).
 
 For the full phase board, see

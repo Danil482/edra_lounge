@@ -8,6 +8,7 @@ This file is the explicit contract for how Claude (and any AI assistant) works i
 - **Theme**: a visual-novel scene with an anime agent representing research collaboration from **DEFY.group**
 - **Stack**: Python 3.13 / FastAPI backend (asyncio loops, no external orchestrators) + vanilla HTML/JS frontend
 - **Spec**: `TASK.md` at repo root (living document, rewritten 2026-04-28)
+- **Knowledge vault**: `obsidian_vault/` — structured Obsidian vault (see vault structure below)
 - **Status board**: `obsidian_vault/00-home/current priorities.md` — the authoritative source of "what is done / what is next"
 - **Sessions log**: `obsidian_vault/sessions/` — one note per working session, dated `YYYY-MM-DD <slug>.md`
 
@@ -37,6 +38,30 @@ This file is the explicit contract for how Claude (and any AI assistant) works i
 5. **Never skip hooks or signing** (`--no-verify`, `--no-gpg-sign`) unless the user explicitly asks for it.
 6. **Stage by name, not `git add .` or `git add -A`** — those can accidentally include `.env`, `uvicorn.log`, raw API dumps, or generated dashboards. Always explicit paths.
 
+## Obsidian vault structure
+
+The vault at `obsidian_vault/` follows a knowledge-base structure. All notes are in **English**.
+
+| Folder | Purpose |
+|---|---|
+| `00-home/` | `index.md` (vault home + navigation) + `current priorities.md` (phase status board) |
+| `atlas/` | Architecture, stack, database, deploy — how the system is built |
+| `knowledge/integrations/` | One note per external integration or API (LinkedIn, OpenAI, Ollama, MiniLM, SSE) |
+| `knowledge/decisions/` | Architectural and process decisions with rationale |
+| `knowledge/debugging/` | Bugs encountered, root causes, and resolutions |
+| `knowledge/patterns/` | Recurring code patterns worth documenting |
+| `knowledge/business/` | Product context, audience, Defy facts |
+| `sessions/` | One note per working session, dated `YYYY-MM-DD <slug>.md` |
+| `inbox/` | Unprocessed ideas and raw notes — triage periodically |
+
+### Note-writing rules
+
+1. **File names are statements, not categories** — e.g. `LLM generates by default templates are fallback.md`, not `templates.md`.
+2. **Wiki-links** `[[note name]]` between related notes — link liberally.
+3. **Frontmatter** with `tags` and `date` on every note.
+4. **Language: English** — all vault content is in English (see Language rules above).
+5. When creating a new knowledge note, place it in the most specific subfolder. If unsure, use `inbox/`.
+
 ## Obsidian session ritual
 
 When the user signals end of a working session ("завершаем сессию", "обнови обсидиан", "wrap up the session"), do all of the following — every time, every step:
@@ -56,7 +81,7 @@ These files belong locally only, never to git:
 - `uvicorn.log`, `*.log`
 - `data/linkedin_raw/` — raw API response dumps for parser iteration
 - `data/linkedin_cache/` — disk cache for LinkedIn fetches
-- `research_profiles_dashboard.html` — generated HTML report for dataset exploration
+- `data/research_profiles/` — master CSV, dashboard HTML, helper scripts (all regenerable)
 - `123.py`, `TASK_refactor_clustering.md` — user's WIP scratch files (unless the user explicitly asks to commit one)
 
 The repo's `.gitignore` should list each of these. If you add a new generated artifact in repo root, also add it to `.gitignore` in the same commit.
