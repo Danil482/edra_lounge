@@ -30,3 +30,12 @@ data/linkedin_raw/
 .vscode/
 .idea/
 .claude/
+
+# runtime logs (uvicorn etc.)
+*.log
+
+# generated dataset dashboard (regenerable from research_profiles_master.csv)
+research_profiles_dashboard.html
+.dashboard_data.json
+.compute_stats.py
+.inject_data.py

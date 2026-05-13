@@ -5,57 +5,57 @@ date: 2026-04-21
 
 # 2026-04-21 Pivot to Lounge demo, skeleton shipped
 
-Фокус работы перенесён с доктор-пропозала (EDRA repo, Pipedrive, 635 эпизодов, куча data-quality проблем) на **3-недельную демку для research-конференции** — EDRA Lounge, бар с синтетическими визитёрами.
+Focus shifted from the doctoral proposal (EDRA repo, Pipedrive, 635 episodes, many data-quality problems) onto a **3-week demo for a research conference** — EDRA Lounge, a bar with synthetic visitors.
 
-## Решения этой сессии
+## Decisions this session
 
-1. **Отдельный репозиторий.** Сначала начали было внутри EDRA на ветке `lounge`, потом решили вынести в sibling `C:\Users\dania\PycharmProjects\edra-lounge\` — чтобы не было двойного чтения кода между research-track и demo-track. Ветку `lounge` в EDRA удалили.
-2. **Отказ от n8n.** Вся оркестрация живёт внутри FastAPI-процесса как asyncio-таски. TASK.md §§2, 6, 12 зафиксировали это жёстко.
-3. **Двухслойная архитектура:** Python backend + vanilla HTML/JS frontend. Никаких worker-ов, очередей, воркфлоу-движков.
+1. **Separate repository.** We started inside EDRA on a `lounge` branch, then decided to extract into a sibling repo at `C:\Users\dania\PycharmProjects\edra-lounge\` — to avoid double-reading code between the research track and the demo track. The `lounge` branch in EDRA was deleted.
+2. **No n8n.** All orchestration lives inside the FastAPI process as asyncio tasks. TASK.md §§2, 6, 12 lock this down.
+3. **Two-layer architecture:** Python backend + vanilla HTML/JS frontend. No workers, queues, or workflow engines.
 
-## Что построено (каркас)
+## What was built (skeleton)
 
-- Структура `backend/` ровно по TASK.md §13: `app / orchestrator / memory / clustering / induction / monitor / reflection / factory / simulator / llm / routers`
-- Все 7 Pydantic-моделей из §4 дословно (Persona, Offer, Episode, Cluster, Rule+RuleSlot, Revision, Agent)
-- SQLAlchemy ORM для 6 таблиц
-- LLM-клиент на httpx (не SDK) с двумя режимами — `LLM_MODE=local` (Ollama) и `LLM_MODE=remote` (Anthropic)
-- Симулятор: preference matrix 6×6×5×4; `topic_affinity` дословно из §5.2, остальные аффинности с заметкой TODO(author-tune)
-- Две drift-функции: `ai_bubble_pops` (swap hype↔foundations + enthusiastic↔skeptical у tech-founder) и `GradualPostdocShift` (15-шаговая линейная интерполяция)
-- Оркестратор: класс с `start()/stop()`, тремя резиентными loop-ами (tick 20s / consistency 10s / factory 30s) и реактивным хуком `on_new_episode`
-- SSE разнесён: `POST /rules/{id}/revise` возвращает `Revision{id, status=pending}` синхронно; `GET /reflections/stream/{id}` стримит
-- 5 промптов в маркетинговом словаре (§7: persona × tension → angle × expression) с fixed-tag output
-- `seeded_run.yaml` на 3 дня, триггеры drift A/B привязаны к game clock
-- Фронт-стабы (`index.html` + `styles.css` + `app.js`) — polling работает, SSE-подписка TODO
-- Тесты: `test_preferences.py` (unique top-3 invariant), `test_orchestrator.py` (§14 loop-resilience)
+- `backend/` structure exactly per TASK.md §13: `app / orchestrator / memory / clustering / induction / monitor / reflection / factory / simulator / llm / routers`
+- All 7 Pydantic models from §4 verbatim (Persona, Offer, Episode, Cluster, Rule+RuleSlot, Revision, Agent)
+- SQLAlchemy ORM for 6 tables
+- LLM client over httpx (no SDK) with two modes — `LLM_MODE=local` (Ollama) and `LLM_MODE=remote` (Anthropic)
+- Simulator: preference matrix 6×6×5×4; `topic_affinity` taken verbatim from §5.2, other affinities marked with `TODO(author-tune)` notes
+- Two drift functions: `ai_bubble_pops` (swap hype↔foundations + enthusiastic↔skeptical for tech-founder) and `GradualPostdocShift` (15-step linear interpolation)
+- Orchestrator: a class with `start()/stop()`, three resilient loops (tick 20s / consistency 10s / factory 30s) and a reactive `on_new_episode` hook
+- SSE split: `POST /rules/{id}/revise` returns `Revision{id, status=pending}` synchronously; `GET /reflections/stream/{id}` streams
+- 5 prompts in marketing vocabulary (§7: persona × tension → angle × expression) with fixed-tag output
+- `seeded_run.yaml` for 3 days, drift A/B triggers tied to game clock
+- Frontend stubs (`index.html` + `styles.css` + `app.js`) — polling works, SSE subscription TODO
+- Tests: `test_preferences.py` (unique top-3 invariant), `test_orchestrator.py` (§14 loop resilience)
 
-## Промпты — важная правка
+## Prompts — important correction
 
-§7 TASK.md требует: **внутренне** промпты оперируют маркетинговым словарём (persona, tension/pain point, angle, insight), но **выход** — фиксированный тэг-словарь (hype/foundations/.../coffee/beer/...). Сначала писал промпты в café-терминах, пришлось переписать все 5 — научный фрейминг проекта это (persona, tension) → (angle, expression), кафе-словарь только на UI.
+§7 of TASK.md requires: **internally** prompts operate on marketing vocabulary (persona, tension/pain point, angle, insight), but **output** is a fixed tag vocabulary (hype/foundations/.../coffee/beer/...). I first wrote prompts in café terms, then rewrote all 5 — the scientific framing of the project is (persona, tension) → (angle, expression), the café vocabulary lives only on the UI.
 
-## Что НЕ в каркасе (намеренно)
+## What is NOT in the skeleton (deliberately)
 
-Бизнес-логика внутри модулей стои́т на `# TODO(phase1)`:
-- Не персистим ClusterRow-ы — кластеры ре-расчитываются в памяти на каждом тике
-- `_pick_rule_for_persona` возвращает None → бармен всегда импровизирует (пока не появятся первые rule-ы)
-- SSE-хэндлер — закомментированный sketch (сама reflection.stream_revision написана и unit-тестируема)
-- UMAP-проекция в `/state.clusters_viz` пока пустой список
+Business logic inside modules sits behind `# TODO(phase1)`:
+- ClusterRows are not persisted — clusters are recomputed in memory every tick
+- `_pick_rule_for_persona` returns None → the bartender always improvises (until the first rules appear)
+- SSE handler — a commented-out sketch (the underlying `reflection.stream_revision` is written and unit-testable)
+- UMAP projection in `/state.clusters_viz` is currently an empty list
 
-Это честный Phase 1 skeleton — контракты зафиксированы, инфраструктура работает end-to-end (health check + polling + orchestrator loops), **бизнес-логика не подставлена**. Следующая сессия — снимать TODO(phase1) в порядке `induce → CS monitor → reflect SSE → factory spawn`.
+This is an honest Phase 1 skeleton — contracts fixed, infrastructure works end-to-end (health check + polling + orchestrator loops), **business logic not yet plugged in**. The next session removes TODO(phase1) in the order `induce → CS monitor → reflect SSE → factory spawn`.
 
 ## Repo hygiene
 
-- `N8N_GUIDE.md` удалён — противоречит §12 non-goals
-- Makefile больше не знает об отдельном процессе оркестратора
-- README переписан под 2-слойную модель (3 фазы вместо 4, Phase 3 теперь booth-ready а не n8n)
+- `N8N_GUIDE.md` deleted — contradicts §12 non-goals
+- The Makefile no longer knows about a separate orchestrator process
+- README rewritten around the 2-layer model (3 phases instead of 4, Phase 3 is now booth-ready, not n8n)
 
-## Следующая сессия — entry points
+## Next session — entry points
 
-1. Заполнить самое тяжёлое TODO(phase1) — `orchestrator._try_induce_all` (pull eligible clusters + persist Rule rows + generate `R.XX` ID)
-2. Реализовать `routers/clusters.py::recompute_clusters` — HDBSCAN + upsert ClusterRows + LLM-лейбл через cluster_label prompt
-3. Добить SSE-хендлер в `routers/reflections.py` — рабочий EventSourceResponse вокруг `reflection.stream_revision`
-4. Прогнать вручную `make seed && make demo`, убедиться что при пустой БД фронт не падает и польлинг крутится
+1. Fill in the heaviest TODO(phase1) — `orchestrator._try_induce_all` (pull eligible clusters + persist Rule rows + generate `R.XX` IDs)
+2. Implement `routers/clusters.py::recompute_clusters` — HDBSCAN + upsert ClusterRows + LLM label via the cluster_label prompt
+3. Finish the SSE handler in `routers/reflections.py` — a working EventSourceResponse around `reflection.stream_revision`
+4. Manually run `make seed && make demo`, confirm the frontend does not crash on an empty DB and polling spins
 
-## Файлы
+## Files
 
-- Мокап `edra_lounge_mockup.html` — автор ещё дорабатывает, пока не в репо
-- TASK.md — в репо, но untracked (автор правит итеративно)
+- Mockup `edra_lounge_mockup.html` — the author is still iterating, not in the repo yet
+- TASK.md — in the repo but untracked (the author edits iteratively)
