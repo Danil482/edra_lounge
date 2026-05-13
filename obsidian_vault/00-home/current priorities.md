@@ -10,6 +10,7 @@ Session 2026-04-28 (Phase 1B/2/3) → [[../sessions/2026-04-28 Phase 1B-2-3 ship
 Session 2026-04-29 (Phase 4.1-4.4) → [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]
 Session 2026-04-30 (Phase 5 prep) → [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
 Session 2026-05-13 (Phase 6 dataset) → [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
+Session 2026-05-13 (vault + clustering) → [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing.
 
@@ -103,6 +104,8 @@ This dataset is the prep substrate for Phase 5 outreach testing — once prompts
 
 Known quality risk: ~10-15 rows have LinkedIn slugs inferred from search snippets (LinkedIn blocks WebFetch behind auth). All flagged Medium/Low confidence — manual eyeball verification recommended before any outreach.
 
+Research profiles files moved to `data/research_profiles/` on 2026-05-13 (were cluttering repo root).
+
 ## 🔒 Open questions for founders (questionnaire 2026-04-30, in English)
 
 1. **Anonymized case examples** — 2-3 short anonymized client examples ("top-20 UK agency used Monitor for 6 weeks before a pitch...") for booth use
@@ -122,8 +125,8 @@ Known quality risk: ~10-15 rows have LinkedIn slugs inferred from search snippet
 ### Frontend bugfix
 - [ ] **`session ended` → 409 stub** — after terminate the frontend clicks Tell me more → 409 in console. Does not break UX but is noisy. Fix in `applyChoices`: if the last step has visitor_choice and interest is at the limit — disable buttons
 
-### Deferred architectural discussion
-- [ ] **Profile classification for live + 2-level clustering** *(deferred user discussion, plus parallel plan in `TASK_refactor_clustering.md` 2026-04-30)* — `TASK_refactor_clustering.md` already contains a detailed plan to split profile-space and episode-space embeddings with HDBSCAN only over profile-space. User: "park it for now, not clear yet", but the plan is ready as a reference for implementation
+### Clustering refactor — KNN-based profile clustering
+- [ ] **TASK_refactor_clustering.md rewritten 2026-05-13** — new approach: cluster LinkedIn profile summaries (not episode summaries) with HDBSCAN, apply rules via KNN vote (K=7 nearest profiles, weighted by similarity). Pipeline: LinkedIn JSON → text summary → MiniLM embedding → HDBSCAN → KNN rule lookup. Ready for implementation — not blocked on founders.
 
 ## Tech debt
 

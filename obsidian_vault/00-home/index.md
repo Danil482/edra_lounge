@@ -58,10 +58,12 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-04-28 (day): **Phase 1B-2-3 shipped** — see [[../sessions/2026-04-28 Phase 1B-2-3 shipped, live-mode booth wired]]
 - 2026-04-29: **Phase 4.1-4.4 shipped** — see [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]
 - 2026-04-30: **Phase 5 prep** — see [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
-- 2026-05-13: **Phase 6 dataset** + vault restructure — see [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
+- 2026-05-13 (AM): **Phase 6 dataset** — see [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
+- 2026-05-13 (PM): **Vault restructure + KNN clustering task** — see [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 
 ## Session log
 
+- [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 - [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
 - [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
 - [[../sessions/2026-04-29 Phase 4.1-4.4 shipped, OpenAI live-mode validated]]
