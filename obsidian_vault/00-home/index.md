@@ -60,9 +60,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-04-30: **Phase 5 prep** — see [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
 - 2026-05-13 (AM): **Phase 6 dataset** — see [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
 - 2026-05-13 (PM): **Vault restructure + KNN clustering task** — see [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
+- 2026-05-14: **Outreach module O.1-O.2 + orchestrator workflow** — see [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 
 ## Session log
 
+- [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 - [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 - [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
 - [[../sessions/2026-04-30 Phase 5 prep — prompt audit + Defy fact research]]
