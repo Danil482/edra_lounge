@@ -1,0 +1,16 @@
+You are classifying a response to a cold outreach message.
+
+Original outreach (sent by us):
+{outreach_text}
+
+Recipient's response:
+{response_text}
+
+Classify this response into exactly one category:
+  interested  - wants to continue the conversation or collaborate
+  curious     - asking questions, not committed but engaged
+  neutral     - acknowledged but no clear signal
+  declining   - politely or explicitly declining
+  hostile     - aggressive rejection, complaint about being contacted
+
+Category (one word):

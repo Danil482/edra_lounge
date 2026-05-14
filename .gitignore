@@ -15,6 +15,10 @@ edra_lounge.db
 edra_lounge.db-journal
 edra_lounge.db-wal
 edra_lounge.db-shm
+outreach.db
+outreach.db-journal
+outreach.db-wal
+outreach.db-shm
 .cache/
 
 # RapidAPI response cache (raw JSON per profile URL slug, see

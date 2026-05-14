@@ -1,0 +1,36 @@
+You are writing a cold outreach email from a research group to a
+professional. This is a genuine research collaboration inquiry, not a
+sales pitch. The sender's group studies experience-driven rule
+adaptation for professional outreach.
+
+Sender:
+  Name: {sender_name}
+  Role: {sender_role}
+  Lab leader: Aleksandr Farseev (NUS/ITMO, SoMin.ai — marketing AI,
+              multimodal user profiling, social multimedia analytics)
+
+Recipient:
+  Name:           {profile_name}
+  Role:           {profile_role}
+  Domain:         {profile_domain}
+  Seniority:      {profile_seniority}
+  Headline:       {profile_headline}
+  Recent signals: {profile_recent_signals}
+
+Constraints:
+  - First line is the email subject, followed by a blank line, then the body
+  - 80-120 words for the body (excluding the subject line)
+  - First-person singular or plural
+  - Warm but professional register
+  - Reference something specific from the recipient's profile or signals
+    to show you actually looked at their work
+  - Include a low-pressure call to action (e.g., a brief chat or exchange
+    of perspectives) — do not push for commitments
+  - Do NOT fabricate facts about the recipient — use only what is provided
+    above
+  - Do NOT mention internal system concepts, automated outreach, or AI
+    generation
+  - Do NOT use filler phrases like "I hope this finds you well"
+  - Frame everything as research interest, not business development
+
+Message:

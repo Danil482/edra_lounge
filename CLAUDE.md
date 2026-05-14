@@ -2,6 +2,24 @@
 
 This file is the explicit contract for how Claude (and any AI assistant) works inside the `edra-lounge` repository. Read it before touching files. These rules override defaults.
 
+## Workflow — orchestrator model
+
+Claude in the main conversation is the **orchestrator**. It does NOT write code, tests, or frontend changes itself. Instead it:
+
+1. **Receives a task** from the user.
+2. **Picks the right agent** from `~/.claude/agents/` (or creates one ad-hoc if no existing agent fits):
+   - `developer.md` — production Python code, refactoring, bug fixes
+   - `tester.md` — writing and running tests, reporting bugs
+   - `designer.md` — frontend HTML/CSS/JS, UI polish, mockup implementation
+   - `planner.md` — discussing next steps, breaking down work, analyzing tradeoffs
+3. **Delegates the task** to the agent via the Agent tool with a clear, self-contained brief (the agent has no conversation history).
+4. **Reviews the result** — checks what the agent actually changed, verifies correctness.
+5. **Reports back** to the user with a concise summary and discusses next steps.
+
+The orchestrator may run multiple agents in parallel for independent tasks. It may also do lightweight actions itself (reading files, checking git status, running quick commands) — but any substantial code/test/UI work goes to an agent.
+
+The user and the orchestrator stay in the main thread to plan, review, and steer the project.
+
 ## Project at a glance
 
 - **Repo**: EDRA Lounge — a booth demo + research artifact for **EDRA** (Experience-Driven Rule Adaptation)
@@ -20,8 +38,9 @@ This file is the explicit contract for how Claude (and any AI assistant) works i
 
 ## Secrets and credentials
 
-1. **Never commit secrets.** `.env`, `RAPIDAPI_KEY`, `OPENAI_API_KEY`, Anthropic keys, any token — these stay out of git. Check the diff before committing.
-2. **Never paste live keys into chat, logs, or documents.** If you need to reference one in writing, write `<RAPIDAPI_KEY>` or `***`.
+1. **Never commit secrets.** `.env`, `RAPIDAPI_KEY`, `OPENAI_API_KEY`, `RESEND_API_KEY`, Anthropic keys, any token — these stay out of git. Check the diff before committing.
+2. **Never read `.env` files.** Do not use Read, cat, type, or any tool to view `.env` contents. The runtime loads them automatically via `python-dotenv`. If a key is missing, ask the user to add it — do not inspect the file.
+3. **Never paste live keys into chat, logs, or documents.** If you need to reference one in writing, write `<RAPIDAPI_KEY>` or `***`.
 3. **Mock-key paths must keep the booth working.** `RAPIDAPI_KEY=mock` short-circuits the LinkedIn fetch into the hand-crafted author profile. Do not remove that branch — it is load-bearing for offline demos and CI.
 4. **Do not introduce new external dependencies that require live keys** without an offline fallback. The user is pragmatic about external deps: no Ollama install, no real RapidAPI key during dev. Anything new that fetches the network must have a mock path.
 5. **If you find a leaked secret in git history**, stop and surface it to the user — do not silently rewrite history.

@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     live_mode: bool = True
     rapidapi_key: str = "mock"
 
+    resend_api_key: str = ""
+    outreach_from_email: str = "onboarding@resend.dev"
+    outreach_from_name: str = "Daniil Onishchenko"
+
     @property
     def db_url(self) -> str:
         return f"sqlite+aiosqlite:///{PROJECT_ROOT / self.db_path}"
