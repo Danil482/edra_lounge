@@ -12,8 +12,9 @@ Session 2026-04-30 (Phase 5 prep) → [[../sessions/2026-04-30 Phase 5 prep — 
 Session 2026-05-13 (Phase 6 dataset) → [[../sessions/2026-05-13 Phase 6 — research profiles dataset 253 to 502]]
 Session 2026-05-13 (vault + clustering) → [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 Session 2026-05-14 (outreach module) → [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
+Session 2026-05-14 (demo paper) → [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 
-The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes, and audited edra_demo.tex for voice consistency.
+The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill.
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -117,12 +118,35 @@ CSV-to-Profile mapper (`csv_source.py`), OutreachRow state machine (`state.py`),
 
 **Blocked**: `defygroup.ai` domain not yet verified in Resend — can only send to account owner's email until DNS records are added.
 
+## 🟡 Demo paper — edra_demo.tex (in progress, 2026-05-14)
+
+Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty narrowed to cluster-conditional rule adaptation after literature verification (ExpeL, EvolveR, ReasoningBank cited). Architecture diagram generated (`EDRA_workflow.png`). Humanizer pass applied.
+
+- [x] Rewrite to 2 pages with 3 equations and 2 figures
+- [x] Fix clustering description (profiles, not episodes)
+- [x] Novelty verification: 25+ systems checked, claim narrowed
+- [x] Add ExpeL, EvolveR, ReasoningBank to positioning
+- [x] Architecture diagram generated and inserted
+- [ ] Compile in Overleaf — verify 2-page fit
+- [ ] Booth UI screenshot for Fig 2 (real screenshot or generate)
+- [ ] Fill in real author names for EvolveR and ReasoningBank bib entries
+- [ ] Create supplementary slides (10 max) or video (5 min max)
+
+## 🟡 Email enrichment (done initial pass, 2026-05-14)
+
+`data/research_profiles/research_profiles_enriched.csv` — 64 public emails found from ~375 High-confidence profiles (17% hit rate). University academics have highest availability; industry researchers (Google, Meta, OpenAI) rarely have public emails.
+
+- [x] Web-search enrichment of High-confidence profiles
+- [ ] Review found emails for accuracy
+- [ ] Search Medium-confidence profiles (~127 remaining)
+- [ ] Select 20 profiles for first outreach batch
+
 ## 🟡 Phase O.3 — CLI workflow + ingest (next)
 
 - [ ] `ingest.py` — batch ingestion into EDRA (recluster + induce with outreach-specific thresholds)
 - [ ] CLI refinements: segment balancing in `prepare`, iteration reporting
-- [ ] Verify `defygroup.ai` domain in Resend
-- [ ] Collect emails for first real batch (20 High-confidence profiles)
+- [ ] Verify `defygroup.ai` domain in Resend (blocked on founder DNS access)
+- [ ] First real outreach batch (20 High-confidence profiles with verified emails)
 
 ## 🟡 Phase 7 — Outreach data collection module (planned, 2026-05-13)
 
@@ -179,14 +203,14 @@ CSV row → thin Profile (source_kind="csv_research")
 - [ ] **O.5** — First real batch (20 profiles, High confidence, segment-balanced)
 
 ### Open questions (still need answers)
-- [ ] Email discovery service — Hunter.io, Apollo.io, or manual? CSV has LinkedIn URLs but not emails.
+- [x] ~~Email discovery service~~ — web search yielded 64 emails (17% hit rate). Hunter.io/Apollo.io still an option for remaining ~440 profiles.
+- [x] ~~Which email sending service?~~ — Resend (decided 2026-05-14)
 - [ ] IRB — does Kazan Federal University require IRB review for this type of study?
-- [ ] Which email sending service? SendGrid (free tier: 100/day) vs Mailgun vs Resend?
 - [ ] Should outreach results be visible in the booth demo frontend, or strictly separate?
 
 ### Depends on
 - Phase 6 dataset (done)
-- Email discovery solution (not started)
+- Email discovery solution (partial — 64 emails found 2026-05-14)
 - IRB decision (not started)
 - Paid RapidAPI plan decision (deferred)
 
