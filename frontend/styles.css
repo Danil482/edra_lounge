@@ -489,6 +489,7 @@ body {
   font-size: 16px;
   color: var(--cream-dim);
   line-height: 1;
+  transition: color 0.35s ease;
 }
 .gauge-end.-low { color: var(--defy-red); }
 
@@ -613,7 +614,8 @@ body {
   position: absolute;
   z-index: 30;
   background: var(--black);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
   pointer-events: none;
   opacity: 0;
@@ -1290,6 +1292,95 @@ body.expert-off .refl-proposal {
 
 /* Reflection block hidden by default until active_revision fires. */
 .reflection.-hidden { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Idle hero — editorial treatment for the "waiting" state
+   ═══════════════════════════════════════════════════════════════ */
+
+.idle-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.idle-hero.-hidden {
+  display: none;
+}
+
+.idle-eyebrow {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--defy-red);
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.idle-headline {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: var(--warm-white);
+  margin-bottom: 20px;
+}
+
+.idle-square {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: var(--defy-red);
+  margin-left: 8px;
+  vertical-align: baseline;
+}
+
+.idle-rotation {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--cream-dim);
+  line-height: 1.45;
+  min-height: 26px;
+  transition: opacity 0.6s ease;
+}
+
+.idle-rotation.-fading {
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Gauge terminal state animations
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes gaugePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.gauge.-terminal-accepted .gauge-value {
+  animation: gaugePulse 2s ease-in-out infinite;
+}
+
+.gauge.-terminal-accepted .gauge-side.-right .gauge-end {
+  color: var(--warm-white);
+}
+
+.gauge.-terminal-accepted .gauge-cell.-on.-warm,
+.gauge.-terminal-accepted .gauge-cell.-on.-hot {
+  animation: gaugePulse 2s ease-in-out infinite;
+}
+
+.gauge.-terminal-rejected .gauge-value {
+  color: var(--mid-grey) !important;
+}
+
+.gauge.-terminal-rejected .gauge-cell.-on {
+  opacity: 0.5;
+}
 
 /* ──────────────────────────────────────────────────────────────────
    Live-visit modal (Phase 3) — opens on click of the "Start Live"

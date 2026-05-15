@@ -15,6 +15,14 @@ const POLL_MS = 1000;
 const TYPEWRITER_CPS = 30;
 const SPAWNABLE_ROTATION = ['arch_journalist_curious', 'arch_vc_investor'];
 
+const IDLE_ARCHETYPES = [
+  'Next visitor could be a Curious Journalist...',
+  'Next visitor could be a Skeptical VC...',
+  'Next visitor could be a Rising Postdoc...',
+  'Next visitor could be a Senior Professor...',
+  'Next visitor could be a Tech Founder...',
+];
+
 const state = {
   expertOn: true,
   lastUtterance: null,
@@ -27,6 +35,8 @@ const state = {
   liveMode: false,
   syntheticArchetypes: [],
   pendingLiveUrl: null,
+  idleRotationIdx: 0,
+  idleRotationTimer: null,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -134,14 +144,23 @@ function pickStep(s) {
 function applyTextbox(s) {
   const step = pickStep(s);
   const utter = $('#utterance');
+  const idleHero = $('#idle-hero');
+  const thoughtBlock = $('#thought-block');
 
   if (!step) {
-    setText('#thought-text', '— waiting for the first visitor —');
-    setText('#utterance-text', '');
-    setHidden('#thought-tag', true);
-    utter.classList.add('-waiting');
+    if (idleHero) idleHero.classList.remove('-hidden');
+    if (thoughtBlock) thoughtBlock.style.display = 'none';
+    utter.style.display = 'none';
+    $('#continue-marker').style.display = 'none';
+    startIdleRotation();
     return;
   }
+
+  if (idleHero) idleHero.classList.add('-hidden');
+  if (thoughtBlock) thoughtBlock.style.display = '';
+  utter.style.display = '';
+  $('#continue-marker').style.display = '';
+  stopIdleRotation();
 
   utter.classList.remove('-waiting');
   setText('#thought-text', step.agent_thought || '');
@@ -156,6 +175,28 @@ function applyTextbox(s) {
     state.lastUtterance = step.agent_reply;
     typewrite('#utterance-text', step.agent_reply || '');
   }
+}
+
+function startIdleRotation() {
+  if (state.idleRotationTimer) return;
+  const el = $('#idle-rotation');
+  if (!el) return;
+  el.textContent = IDLE_ARCHETYPES[state.idleRotationIdx % IDLE_ARCHETYPES.length];
+  el.classList.remove('-fading');
+  state.idleRotationTimer = setInterval(() => {
+    el.classList.add('-fading');
+    setTimeout(() => {
+      state.idleRotationIdx = (state.idleRotationIdx + 1) % IDLE_ARCHETYPES.length;
+      el.textContent = IDLE_ARCHETYPES[state.idleRotationIdx];
+      el.classList.remove('-fading');
+    }, 600);
+  }, 4000);
+}
+
+function stopIdleRotation() {
+  if (!state.idleRotationTimer) return;
+  clearInterval(state.idleRotationTimer);
+  state.idleRotationTimer = null;
 }
 
 function typewrite(sel, text) {
@@ -214,6 +255,13 @@ function applyGauge(s) {
     if (Math.abs(val) >= 4) cell.classList.add('-warm');
     if (Math.abs(val) === 5) cell.classList.add('-hot');
   });
+
+  const gauge = $('.gauge');
+  if (gauge) {
+    gauge.classList.remove('-terminal-accepted', '-terminal-rejected');
+    if (interest >= 5) gauge.classList.add('-terminal-accepted');
+    if (interest <= -5) gauge.classList.add('-terminal-rejected');
+  }
 
   setText('#agent-emotion', `current — ${getEmotion(interest)}`);
 }
