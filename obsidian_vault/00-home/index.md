@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-14
+date: 2026-05-15
 ---
 
 # EDRA — Vault Home
@@ -62,9 +62,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-13 (PM): **Vault restructure + KNN clustering task** — see [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 - 2026-05-14 (AM): **Outreach module O.1-O.2 + orchestrator workflow** — see [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 - 2026-05-14 (PM): **Demo paper rewrite + email enrichment** — see [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
+- 2026-05-15: **Frontend polish + evaluation discussion** — see [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 
 ## Session log
 
+- [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 - [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 - [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 - [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]

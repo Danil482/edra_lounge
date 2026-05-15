@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-14
+date: 2026-05-15
 ---
 
 # Current Priorities
@@ -13,8 +13,9 @@ Session 2026-05-13 (Phase 6 dataset) → [[../sessions/2026-05-13 Phase 6 — re
 Session 2026-05-13 (vault + clustering) → [[../sessions/2026-05-13 Vault restructure and KNN clustering task]]
 Session 2026-05-14 (outreach module) → [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 Session 2026-05-14 (demo paper) → [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
+Session 2026-05-15 (frontend polish) → [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 
-The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill.
+The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea.
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -227,7 +228,7 @@ CSV row → thin Profile (source_kind="csv_research")
 
 - [ ] **Avatar caching strategy** — signed URLs from LinkedIn live ~3 months and then 404. Cache currently keeps URL forever. Parse the `e=` query param and invalidate cache at expiry, or proxy avatars via a `/avatar/<profile_id>` endpoint
 - [ ] **`cluster_id: —` for live** — live profiles are not classified, so the right panel always shows `—`. Either hide the field in live mode, or implement live classification
-- [ ] **Idle screen** — what is shown when there is no active session? Current fallback is functional but boring. Maybe a small carousel of synthetic archetypes: "next visitor could be..."
+- [x] **Idle screen** — editorial hero with Defy Research eyebrow, 44px headline, rotating archetype descriptions (done 2026-05-15)
 - [ ] **Choice buttons after terminate** — currently still enabled, user can click → 409. Disable when `current_session.dialogue.last.visitor_choice` is non-null AND terminated
 
 ### Frontend bugfix
@@ -235,6 +236,10 @@ CSV row → thin Profile (source_kind="csv_research")
 
 ### Clustering refactor — KNN-based profile clustering
 - [ ] **TASK_refactor_clustering.md rewritten 2026-05-13** — new approach: cluster LinkedIn profile summaries (not episode summaries) with HDBSCAN, apply rules via KNN vote (K=7 nearest profiles, weighted by similarity). Pipeline: LinkedIn JSON → text summary → MiniLM embedding → HDBSCAN → KNN rule lookup. Ready for implementation — not blocked on founders.
+
+## 💡 Ideas bank
+
+- [ ] **Cluster visualization + visitor feedback** — after a booth session (or in the outreach flow), show the visitor where they land in the cluster space: a 2D projection (UMAP/t-SNE) of MiniLM embeddings with cluster labels, highlight the visitor's position, show the 5 nearest profiles ("people most like you"), and surface the active rule for their cluster. Turns the demo from one-way pitch into interactive self-discovery. Could also be a standalone web page visitors can share. Potential uses: booth engagement hook, outreach follow-up ("here's how our system sees your research profile"), paper figure.
 
 ## Tech debt
 
