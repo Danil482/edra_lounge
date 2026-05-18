@@ -2,11 +2,11 @@ You are at turn {turn} of a Defy.group research-collaboration pitch with a
 passing professional. Write the agent's next line, conditioned on the
 visitor's last reaction button and the conversation so far.
 
-The visitor cannot type. They will react with exactly one of three fixed
-buttons:
-  A. "Tell me more."         (positive — wants to hear more)
-  B. "Skeptical, why Defy?"  (skeptical — asking for justification)
-  C. "Not interested."       (negative — closing)
+The visitor cannot type. After your line they will see three response
+buttons. You must generate both your next line AND the three button
+labels. Each button has a sentiment: positive, skeptical, or negative.
+The button text must be a short reaction (5-15 words) that fits naturally
+as a response to your specific line.
 
 Profile:
   Name:           {profile_name}
@@ -25,7 +25,7 @@ Conversation so far:
 
 Visitor's last reaction: {last_choice}
 
-Constraints:
+Constraints for the next agent line:
   - one or two sentences, ≤ 35 words
   - first-person ("I" or "we"), addressing the contact directly
   - register matches the `tone` slot
@@ -39,13 +39,20 @@ Constraints:
                   reassurance
       negative  → graceful close in a single sentence; leave door open
                   but do NOT push or re-pitch
-  - the visitor's three replies are "Tell me more", "Skeptical, why Defy?",
-    and "Not interested" — your line must be naturally answerable by one
-    of these without sounding like a non-sequitur
   - end on a STATEMENT, OBSERVATION, or NARROW PROPOSAL — never on an
     open question that the three buttons cannot naturally answer
   - DO NOT repeat or paraphrase any line you've already said in the
     conversation above — push the dialogue forward
   - never reveal that this is automated outreach
 
-Next agent line:
+Constraints for the three response options:
+  - exactly three options, one per sentiment (positive, skeptical, negative)
+  - each option text is 5-15 words
+  - the positive option shows continued interest or agreement
+  - the skeptical option raises a doubt or asks for proof
+  - the negative option politely ends the conversation
+  - each option must read as a natural visitor reaction to your specific line
+  - do NOT reuse button text from earlier turns
+
+Respond with ONLY a JSON object, no markdown fences, no extra text:
+{{"pitch": "<your next agent line>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}

@@ -2,17 +2,11 @@ You are filling the dynamic opener slot of an active rule. Write the
 agent's spoken opener — the booth agent's opening line in a brief
 research-collaboration pitch from Defy.group to a passing professional.
 
-The visitor cannot type. They will react with exactly one of three
-fixed buttons:
-  A. "Tell me more."         (positive — wants to hear the value prop)
-  B. "Skeptical, why Defy?"  (skeptical — asking for justification)
-  C. "Not interested."       (negative — closing the conversation)
-
-Your opener must be a STATEMENT, OBSERVATION, or PROPOSAL the visitor
-can plausibly react to with one of those three buttons. Do NOT ask the
-visitor an open question that requires them to elaborate (e.g. "What
-do you think about X?", "How did you find Y?", "What surprised you?")
-— they have no way to answer those.
+The visitor cannot type. After your opener they will see three response
+buttons. You must generate both your opener line AND the three button
+labels. Each button has a sentiment: positive, skeptical, or negative.
+The button text must be a short reaction (5-15 words) that fits naturally
+as a response to your opener.
 
 Profile:
   Name:           {profile_name}
@@ -29,7 +23,7 @@ Rule slots (already chosen by induction):
   word_target:  {word_target}
   ask_size:     {ask_size}
 
-Constraints:
+Constraints for the opener:
   - one or two sentences, ≤ 35 words total
   - first-person ("I" or "we"), addressing the contact directly
   - register matches the `tone` slot
@@ -47,18 +41,17 @@ Constraints:
       credential-anchor  → lead with a credible Defy affiliation, then
                            state the value prop
       cold               → minimal preamble, straight value statement
-  - the visitor's three replies are "Tell me more", "Skeptical, why Defy?",
-    and "Not interested" — your line must be naturally answerable by one
-    of these without sounding like a non-sequitur
   - do not name the rule, do not name the slot tags, do not start with
     "Hi" or "Hey" — land on the substance immediately
   - never reveal that this is automated outreach
 
-Good shape:  "Your YOLO defect-detection work overlaps directly with a
-              Defy project on adaptive industrial QA — we'd value a
-              30-minute conversation."
-Bad shape:   "I noticed your cardboard QA work — what surprised you most
-              about scaling YOLO models?"   (open question, can't be
-              answered with the three buttons)
+Constraints for the three response options:
+  - exactly three options, one per sentiment (positive, skeptical, negative)
+  - each option text is 5-15 words
+  - the positive option shows interest or asks to hear more
+  - the skeptical option questions credibility or asks for justification
+  - the negative option politely declines or shows disinterest
+  - each option must read as a natural visitor reaction to your specific opener
 
-Opener:
+Respond with ONLY a JSON object, no markdown fences, no extra text:
+{{"pitch": "<your opener text>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}

@@ -78,6 +78,11 @@ class PitchStrategy(BaseModel):
 
 # ── Episode + DialogueStep (TASK.md §4.4) ─────────────────────────────────
 
+class ResponseOption(BaseModel):
+    text: str
+    sentiment: VISITOR_CHOICE
+
+
 class DialogueStep(BaseModel):
     turn: int
     agent_thought: str
@@ -85,6 +90,7 @@ class DialogueStep(BaseModel):
     visitor_choice: VISITOR_CHOICE | None = None
     interest_delta: int = 0  # -2..+2 effect on the gauge
     rule_applied: str | None = None
+    response_options: list[ResponseOption] | None = None
 
 
 class Episode(BaseModel):
