@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-15
+date: 2026-05-18
 ---
 
 # Current Priorities
@@ -14,8 +14,9 @@ Session 2026-05-13 (vault + clustering) → [[../sessions/2026-05-13 Vault restr
 Session 2026-05-14 (outreach module) → [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 Session 2026-05-14 (demo paper) → [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 Session 2026-05-15 (frontend polish) → [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
+Session 2026-05-18 (Phase 8 + Lemlist) → [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 
-The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea.
+The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — five frontend overhaul features (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups, generated the Edra anime avatar. **204 tests green, 0 regressions.**
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -119,6 +120,27 @@ CSV-to-Profile mapper (`csv_source.py`), OutreachRow state machine (`state.py`),
 
 **Blocked**: `defygroup.ai` domain not yet verified in Resend — can only send to account owner's email until DNS records are added.
 
+## ✅ Phase 8 — Frontend overhaul (done, 2026-05-18)
+
+See [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]].
+
+Five features shipped, 61 new tests (204 total), 0 regressions.
+
+### 8.1 — Dynamic response buttons
+LLM generates 3 contextual response options per turn (ResponseOption schema, JSON prompts, robust parser with fallback to static options).
+
+### 8.2 — Cluster visualization
+`GET /api/cluster-viz` endpoint with t-SNE 2D projection, KNN neighbors, archetype labels. Canvas API scatter plot in frontend.
+
+### 8.3 — Email auth gate
+VisitorRow table, `POST /api/visitors` with email validation/upsert, frontend auth overlay before session start.
+
+### 8.4 — End-of-dialog popup
+Success ("Collaboration Initiated") / failure ("Until Next Time") variants with appropriate messaging.
+
+### 8.5 — Avatar integration
+`edra-idle.jpg` connected, fade-in animation, `data-emotion` attribute on avatar element, emotion state map designed (12 states). Full avatar set stored at `frontend/assets/avatar/`.
+
 ## 🟡 Demo paper — edra_demo.tex (in progress, 2026-05-14)
 
 Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty narrowed to cluster-conditional rule adaptation after literature verification (ExpeL, EvolveR, ReasoningBank cited). Architecture diagram generated (`EDRA_workflow.png`). Humanizer pass applied.
@@ -133,21 +155,24 @@ Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty na
 - [ ] Fill in real author names for EvolveR and ReasoningBank bib entries
 - [ ] Create supplementary slides (10 max) or video (5 min max)
 
-## 🟡 Email enrichment (done initial pass, 2026-05-14)
+## 🟡 Email enrichment (Lemlist integration, 2026-05-18)
 
-`data/research_profiles/research_profiles_enriched.csv` — 64 public emails found from ~375 High-confidence profiles (17% hit rate). University academics have highest availability; industry researchers (Google, Meta, OpenAI) rarely have public emails.
+65 existing emails from web-search (17% hit rate from 375 High-confidence profiles). Switching to Lemlist Email Finder for remaining profiles.
 
-- [x] Web-search enrichment of High-confidence profiles
+- [x] Web-search enrichment of High-confidence profiles (64 found, 311 not_found)
+- [x] Prepared Lemlist enrichment batches: `lemlist_enrichment_priority.csv` (40 profiles, 200 credits) + `lemlist_enrichment_batch.csv` (437 profiles)
+- [ ] Run Lemlist Email Finder on priority batch (40 academic profiles)
 - [ ] Review found emails for accuracy
-- [ ] Search Medium-confidence profiles (~127 remaining)
-- [ ] Select 20 profiles for first outreach batch
+- [ ] **Investigate founders' warmed Lemlist account** — may skip warm-up period
+- [ ] Select 20 profiles for first outreach batch (factorial design)
 
 ## 🟡 Phase O.3 — CLI workflow + ingest (next)
 
 - [ ] `ingest.py` — batch ingestion into EDRA (recluster + induce with outreach-specific thresholds)
 - [ ] CLI refinements: segment balancing in `prepare`, iteration reporting
-- [ ] Verify `defygroup.ai` domain in Resend (blocked on founder DNS access)
-- [ ] First real outreach batch (20 High-confidence profiles with verified emails)
+- [ ] Rewrite `sender.py` for Lemlist API (decision: Lemlist replaces Resend — see [[../knowledge/decisions/Lemlist replaces Resend for outreach delivery]])
+- [ ] First real outreach batch (20 High-confidence profiles with verified emails, factorial design)
+- [ ] Investigate founders' warmed Lemlist account (skips 3-4 week warm-up, critical for June 11 deadline)
 
 ## 🟡 Phase 7 — Outreach data collection module (planned, 2026-05-13)
 
@@ -223,13 +248,20 @@ CSV row → thin Profile (source_kind="csv_research")
 4. **Engagement format & next-step shape** — demo → trial → paid pilot? Pilot length, cadence, deliverables? When the agent says "let's talk pilot", what is the literal next step?
 5. **Booth ICP & lead product** — agency founders/MDs/planners/CDs/mixed? Which of Monitor/Automate/Report is the lead product to open with?
 6. **Conferences / shared-context anchors** — which events does Defy attend/sponsor (Cannes, SXSW, agency circle)?
+7. **Lemlist account sharing** — can we use your warmed Lemlist domain/account for the first outreach batch? This skips 3-4 weeks of domain warm-up (critical for June 11 deadline)
 
 ## 🟢 UI polish (not blocked, can run in parallel with Phase 5.x)
 
 - [ ] **Avatar caching strategy** — signed URLs from LinkedIn live ~3 months and then 404. Cache currently keeps URL forever. Parse the `e=` query param and invalidate cache at expiry, or proxy avatars via a `/avatar/<profile_id>` endpoint
 - [ ] **`cluster_id: —` for live** — live profiles are not classified, so the right panel always shows `—`. Either hide the field in live mode, or implement live classification
 - [x] **Idle screen** — editorial hero with Defy Research eyebrow, 44px headline, rotating archetype descriptions (done 2026-05-15)
+- [x] **Dynamic response buttons** — LLM generates 3 contextual options per turn (done 2026-05-18, Phase 8.1)
+- [x] **Cluster visualization** — t-SNE 2D scatter plot with KNN neighbors and archetype labels (done 2026-05-18, Phase 8.2)
+- [x] **Email auth gate** — visitor email collection before session start (done 2026-05-18, Phase 8.3)
+- [x] **End-of-dialog popup** — success/failure variants (done 2026-05-18, Phase 8.4)
+- [x] **Avatar integration** — Edra character connected with fade-in animation and emotion state map (done 2026-05-18, Phase 8.5)
 - [ ] **Choice buttons after terminate** — currently still enabled, user can click → 409. Disable when `current_session.dialogue.last.visitor_choice` is non-null AND terminated
+- [ ] **Emotion avatar variants** — prompt ready, 8 of 12 states still need image generation
 
 ### Frontend bugfix
 - [ ] **`session ended` → 409 stub** — after terminate the frontend clicks Tell me more → 409 in console. Does not break UX but is noisy. Fix in `applyChoices`: if the last step has visitor_choice and interest is at the limit — disable buttons
@@ -239,7 +271,7 @@ CSV row → thin Profile (source_kind="csv_research")
 
 ## 💡 Ideas bank
 
-- [ ] **Cluster visualization + visitor feedback** — after a booth session (or in the outreach flow), show the visitor where they land in the cluster space: a 2D projection (UMAP/t-SNE) of MiniLM embeddings with cluster labels, highlight the visitor's position, show the 5 nearest profiles ("people most like you"), and surface the active rule for their cluster. Turns the demo from one-way pitch into interactive self-discovery. Could also be a standalone web page visitors can share. Potential uses: booth engagement hook, outreach follow-up ("here's how our system sees your research profile"), paper figure.
+- [x] **Cluster visualization + visitor feedback** — implemented in Phase 8.2 (2026-05-18): `GET /api/cluster-viz` with t-SNE 2D projection, KNN neighbors, archetype labels, Canvas API scatter plot. Remaining: standalone shareable page, outreach follow-up use case.
 
 ## Tech debt
 
@@ -263,7 +295,7 @@ CSV row → thin Profile (source_kind="csv_research")
 - [x] **import-graph test**
 - [x] **live LinkedIn URL → 5-turn dialogue** ✅ end-to-end validated 2026-04-29 against a real profile
 - [x] **privacy-purge test**
-- [x] pytest passes (71/71)
+- [x] pytest passes (204/204, updated 2026-05-18)
 
 ## What we are dropping — final archive list
 

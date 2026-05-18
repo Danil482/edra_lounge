@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-15
+date: 2026-05-18
 ---
 
 # EDRA — Vault Home
@@ -43,6 +43,7 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - [[../knowledge/decisions/Live profile PII expires after one hour]]
 - [[../knowledge/decisions/LinkedIn source is import-isolated from core]]
 - [[../knowledge/decisions/Hybrid path C balances Defy facts with research vocab]]
+- [[../knowledge/decisions/Lemlist replaces Resend for outreach delivery]]
 
 ## Business context
 
@@ -63,9 +64,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-14 (AM): **Outreach module O.1-O.2 + orchestrator workflow** — see [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 - 2026-05-14 (PM): **Demo paper rewrite + email enrichment** — see [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 - 2026-05-15: **Frontend polish + evaluation discussion** — see [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
+- 2026-05-18: **Phase 8 shipped + Lemlist decision** — see [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 
 ## Session log
 
+- [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 - [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 - [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 - [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
