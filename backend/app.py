@@ -34,6 +34,7 @@ from backend.profile_source import ProfileSource
 from backend.profile_source.linkedin_rapidapi import LinkedInRapidAPISource
 from backend.profile_source.synthetic import SyntheticProfileSource
 from backend.routers import (
+    cluster_viz,
     clusters,
     episodes,
     factory,
@@ -43,6 +44,7 @@ from backend.routers import (
     sessions,
     simulator,
     state,
+    visitors,
 )
 
 
@@ -92,12 +94,14 @@ api.add_middleware(
 api.include_router(sessions.router)
 api.include_router(episodes.router)
 api.include_router(clusters.router)
+api.include_router(cluster_viz.router)
 api.include_router(rules.router)
 api.include_router(revisions.router)
 api.include_router(reflections.router)
 api.include_router(factory.router)
 api.include_router(simulator.router)
 api.include_router(state.router)
+api.include_router(visitors.router)
 
 
 @api.get("/health")

@@ -23,6 +23,8 @@ const IDLE_ARCHETYPES = [
   'Next visitor could be a Tech Founder...',
 ];
 
+const AUTH_EMAIL_RE = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
+
 const state = {
   expertOn: true,
   lastUtterance: null,
@@ -37,6 +39,8 @@ const state = {
   pendingLiveUrl: null,
   idleRotationIdx: 0,
   idleRotationTimer: null,
+  visitorId: null,
+  visitorEmail: null,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -115,6 +119,7 @@ function applyState(s) {
   applyReflection(s.active_revision);
   applyVisitor(s.current_session, s.recent_episodes);
   applyChoices(s.current_session);
+  applyAvatar(s);
 }
 
 function applyTopStats(s) {
@@ -264,6 +269,35 @@ function applyGauge(s) {
   }
 
   setText('#agent-emotion', `current — ${getEmotion(interest)}`);
+}
+
+// ── Avatar ──────────────────────────────────────────────────────────
+
+function applyAvatar(s) {
+  const avatar = $('#edra-avatar');
+  const placeholder = $('#agent-slot-placeholder');
+  if (!avatar) return;
+
+  const hasSession = !!(s.current_session && s.current_session.dialogue && s.current_session.dialogue.length);
+
+  if (hasSession) {
+    if (!avatar.classList.contains('-visible')) {
+      avatar.classList.remove('-visible');
+      avatar.classList.add('-entering');
+      avatar.addEventListener('animationend', () => {
+        avatar.classList.remove('-entering');
+        avatar.classList.add('-visible');
+      }, { once: true });
+    }
+    if (placeholder) placeholder.style.display = 'none';
+
+    const interest = s.interest_gauge != null ? s.interest_gauge : 0;
+    avatar.setAttribute('data-emotion', getEmotion(interest));
+  } else {
+    avatar.classList.remove('-visible', '-entering');
+    if (placeholder) placeholder.style.display = '';
+    avatar.setAttribute('data-emotion', 'idle');
+  }
 }
 
 // ── Rulebook ─────────────────────────────────────────────────────────
@@ -521,16 +555,36 @@ function setVisitorAvatar(url) {
 
 // ── Choice buttons ───────────────────────────────────────────────────
 
+const STATIC_LABELS = {
+  positive: 'Tell me more.',
+  skeptical: 'Skeptical, why Defy?',
+  negative: 'Not interested.',
+};
+
 function applyChoices(currentSession) {
-  // Only enable choices when an interactive session is in flight AND its
-  // most-recent step has not yet recorded a visitor_choice (i.e., we're
-  // waiting on the visitor to react).
-  const hasOpenStep = currentSession
+  const lastStep = currentSession
     && currentSession.dialogue
     && currentSession.dialogue.length
-    && currentSession.dialogue[currentSession.dialogue.length - 1].visitor_choice == null;
+    ? currentSession.dialogue[currentSession.dialogue.length - 1]
+    : null;
+
+  const hasOpenStep = lastStep && lastStep.visitor_choice == null;
+
+  const optionsBySentiment = {};
+  if (lastStep && lastStep.response_options && lastStep.response_options.length === 3) {
+    for (const opt of lastStep.response_options) {
+      optionsBySentiment[opt.sentiment] = opt.text;
+    }
+  }
 
   $$('.choice').forEach(btn => {
+    const sentiment = btn.dataset.choice;
+    const label = optionsBySentiment[sentiment] || STATIC_LABELS[sentiment] || sentiment;
+    const labelSpan = btn.querySelector('span:last-child');
+    if (labelSpan && labelSpan.textContent !== label) {
+      labelSpan.textContent = label;
+    }
+
     if (hasOpenStep) {
       btn.removeAttribute('disabled');
       btn.classList.remove('-disabled');
@@ -546,12 +600,17 @@ async function handleChoice(choice) {
   try {
     const result = await postJSON(`/sessions/${state.currentSessionId}/turn`, { visitor_choice: choice });
     if (result.terminated) {
-      // Session ended — finalise the Episode so on_new_episode fires.
+      const outcome = result.outcome;
       try {
         await postJSON(`/sessions/${state.currentSessionId}/end`, {});
       } catch (e) {
         console.warn('end after terminate failed', e);
       }
+      await poll();
+      if (outcome === 'accepted' || outcome === 'rejected') {
+        setTimeout(() => showEndDialog(outcome), 1000);
+      }
+      return;
     }
   } catch (e) {
     console.warn('turn failed', e);
@@ -765,8 +824,306 @@ $('#fallback-cancel')?.addEventListener('click', () => {
   setLiveStatus('cancelled', 'error');
 });
 
+// ── End-of-dialog popup ─────────────────────────────────────────
+
+function showEndDialog(outcome) {
+  const overlay = $('#end-dialog');
+  const card = $('#end-card');
+  if (!overlay || !card) return;
+
+  card.classList.remove('-success', '-failure');
+
+  if (outcome === 'accepted') {
+    card.classList.add('-success');
+    setText('#end-headline', 'Collaboration Initiated');
+    setText('#end-body',
+      'We\'ve sent a personalized proposal to your email based on our conversation. Looking forward to working together.');
+  } else {
+    card.classList.add('-failure');
+    setText('#end-headline', 'Until Next Time');
+    setText('#end-body',
+      'We appreciate your time. If you\'d like to explore collaboration in the future, you know where to find us.');
+  }
+
+  overlay.classList.remove('-hidden');
+}
+
+function hideEndDialog() {
+  const overlay = $('#end-dialog');
+  if (overlay) overlay.classList.add('-hidden');
+  state.lastUtterance = null;
+  state.lastInterest = null;
+  poll();
+}
+
+$('#end-btn')?.addEventListener('click', hideEndDialog);
+
+// ── Cluster visualization ────────────────────────────────────────────
+
+const CLUSTER_VIZ_POLL_MS = 5000;
+
+const clusterVizState = {
+  lastData: null,
+  animFrame: null,
+  pulsePhase: 0,
+};
+
+async function pollClusterViz() {
+  let data;
+  try {
+    data = await getJSON('/api/cluster-viz');
+  } catch (e) {
+    return;
+  }
+  clusterVizState.lastData = data;
+  renderClusterViz(data);
+}
+
+function renderClusterViz(data) {
+  const placeholder = $('#cluster-viz-placeholder');
+  const canvas = $('#cluster-viz-canvas');
+  const legend = $('#cluster-viz-legend');
+  const neighborsList = $('#neighbors-list');
+
+  if (!data || data.status !== 'ok' || !data.points || data.points.length === 0) {
+    if (placeholder) placeholder.classList.remove('-hidden');
+    if (placeholder) placeholder.textContent = data && data.status === 'no_embeddings'
+      ? 'No profile embeddings yet...'
+      : 'Clustering in progress...';
+    if (legend) legend.innerHTML = '';
+    if (neighborsList) neighborsList.innerHTML = '<div class="neighbor-empty">— awaiting visitor —</div>';
+    return;
+  }
+
+  if (placeholder) placeholder.classList.add('-hidden');
+
+  drawScatterPlot(canvas, data);
+  renderLegend(legend, data.clusters);
+  renderNeighbors(neighborsList, data.neighbors, data.archetype_label);
+
+  const archetypeVal = $('#visitor-archetype');
+  if (archetypeVal && data.archetype_label) {
+    archetypeVal.textContent = data.archetype_label;
+  }
+}
+
+function drawScatterPlot(canvas, data) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width;
+  const h = rect.height;
+
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.fillStyle = '#2D2D2D';
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = 16;
+  const plotW = w - 2 * pad;
+  const plotH = h - 2 * pad;
+
+  ctx.strokeStyle = 'rgba(243, 241, 236, 0.06)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const gx = pad + (plotW * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(gx, pad);
+    ctx.lineTo(gx, pad + plotH);
+    ctx.stroke();
+
+    const gy = pad + (plotH * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad, gy);
+    ctx.lineTo(pad + plotW, gy);
+    ctx.stroke();
+  }
+
+  const current = data.current_visitor;
+  const neighborIds = new Set((data.neighbors || []).map(n => n.id));
+
+  if (current) {
+    const cx = pad + current.x * plotW;
+    const cy = pad + current.y * plotH;
+    for (const n of (data.neighbors || [])) {
+      const np = data.points.find(p => p.id === n.id);
+      if (!np) continue;
+      const nx = pad + np.x * plotW;
+      const ny = pad + np.y * plotH;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(nx, ny);
+      ctx.strokeStyle = 'rgba(204, 0, 0, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  for (const pt of data.points) {
+    if (pt.is_current) continue;
+    const px = pad + pt.x * plotW;
+    const py = pad + pt.y * plotH;
+    const isNeighbor = neighborIds.has(pt.id);
+    const radius = isNeighbor ? 4 : 3;
+
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+    ctx.fillStyle = isNeighbor ? pt.color : hexToRGBA(pt.color, 0.5);
+    ctx.fill();
+
+    if (isNeighbor) {
+      ctx.strokeStyle = '#F3F1EC';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  if (current) {
+    const cx = pad + current.x * plotW;
+    const cy = pad + current.y * plotH;
+
+    clusterVizState.pulsePhase = (clusterVizState.pulsePhase + 0.08) % (Math.PI * 2);
+    const pulseScale = 1 + 0.3 * Math.sin(clusterVizState.pulsePhase);
+    const outerR = 8 * pulseScale;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(204, 0, 0, 0.2)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#CC0000';
+    ctx.fill();
+    ctx.strokeStyle = '#F3F1EC';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#F3F1EC';
+    ctx.font = '500 10px "DM Sans", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('YOU', cx + 9, cy + 4);
+  }
+
+  if (clusterVizState.lastData === data && current) {
+    if (clusterVizState.animFrame) cancelAnimationFrame(clusterVizState.animFrame);
+    clusterVizState.animFrame = requestAnimationFrame(() => drawScatterPlot(canvas, data));
+  }
+}
+
+function hexToRGBA(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function renderLegend(el, clusters) {
+  if (!el || !clusters) return;
+  el.innerHTML = clusters.map(c =>
+    `<div class="legend-item">
+      <div class="legend-dot" style="background:${escapeHTML(c.color)}"></div>
+      <span>${escapeHTML(c.archetype)}</span>
+    </div>`
+  ).join('');
+}
+
+function renderNeighbors(el, neighbors, archetypeLabel) {
+  if (!el) return;
+  if (!neighbors || neighbors.length === 0) {
+    el.innerHTML = '<div class="neighbor-empty">— awaiting visitor —</div>';
+    return;
+  }
+
+  el.innerHTML = neighbors.slice(0, 5).map((n, i) => {
+    const initials = (n.name || '?').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+    const avatarContent = n.avatar_url
+      ? `<img src="${escapeHTML(n.avatar_url)}" alt="" onerror="this.parentNode.innerHTML='${initials}'">`
+      : initials;
+    const simPct = Math.round(n.similarity * 100);
+    const simClass = simPct >= 90 ? '-top' : (simPct >= 70 ? '-high' : '');
+    return `<div class="neighbor-card">
+      <div class="neighbor-avatar">${avatarContent}</div>
+      <div class="neighbor-info">
+        <div class="neighbor-name">${escapeHTML(n.name)}</div>
+        <div class="neighbor-role">${escapeHTML(n.role)}</div>
+      </div>
+      <div class="neighbor-sim ${simClass}">${simPct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Auth gate ────────────────────────────────────────────────────────
+
+function initAuthGate() {
+  const overlay = $('#auth-overlay');
+  const form = $('#auth-form');
+  const input = $('#auth-email');
+  const submit = $('#auth-submit');
+  const error = $('#auth-error');
+
+  if (!overlay || !form) {
+    bootAfterAuth();
+    return;
+  }
+
+  input.addEventListener('input', () => {
+    const valid = AUTH_EMAIL_RE.test(input.value.trim());
+    submit.disabled = !valid;
+    if (valid) {
+      input.classList.remove('-invalid');
+      error.textContent = '';
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    const val = input.value.trim();
+    if (val && !AUTH_EMAIL_RE.test(val)) {
+      input.classList.add('-invalid');
+      error.textContent = 'Please enter a valid email address';
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = input.value.trim();
+    if (!AUTH_EMAIL_RE.test(email)) return;
+
+    submit.disabled = true;
+    error.textContent = '';
+
+    try {
+      const res = await postJSON('/api/visitors', { email });
+      state.visitorId = res.id;
+      state.visitorEmail = res.email;
+
+      overlay.classList.add('-fading');
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        const stage = $('#stage');
+        if (stage) stage.style.display = '';
+        bootAfterAuth();
+      }, 500);
+    } catch (err) {
+      error.textContent = 'Something went wrong. Please try again.';
+      submit.disabled = false;
+    }
+  });
+}
+
+function bootAfterAuth() {
+  bootSources();
+  poll();
+  setInterval(poll, POLL_MS);
+  pollClusterViz();
+  setInterval(pollClusterViz, CLUSTER_VIZ_POLL_MS);
+}
+
 // ── Boot ─────────────────────────────────────────────────────────────
 
-bootSources();
-poll();
-setInterval(poll, POLL_MS);
+initAuthGate();

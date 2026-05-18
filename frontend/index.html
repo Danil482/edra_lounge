@@ -10,7 +10,23 @@
 </head>
 <body>
 
-<div class="stage">
+<!-- ═══════════════ AUTH GATE ═══════════════ -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-wordmark">
+      <span class="defy-word">Defy</span>
+      <span class="defy-square"></span>
+    </div>
+    <div class="auth-heading">Enter your email to begin</div>
+    <form class="auth-form" id="auth-form" autocomplete="off">
+      <input type="email" id="auth-email" class="auth-input" placeholder="you@example.com" autocomplete="email" required />
+      <div class="auth-error" id="auth-error"></div>
+      <button type="submit" class="auth-submit" id="auth-submit" disabled>Start</button>
+    </form>
+  </div>
+</div>
+
+<div class="stage" id="stage" style="display:none;">
 
   <!-- ═══════════════ BACKGROUND ═══════════════ -->
   <div class="bg"></div>
@@ -32,7 +48,8 @@
 
   <!-- ═══════════════ AGENT SLOT ═══════════════ -->
   <div class="agent-slot">
-    <div class="agent-slot-placeholder">
+    <img id="edra-avatar" class="edra-avatar" src="assets/avatar/edra-idle.jpg" alt="Edra — AI research agent" data-emotion="idle" />
+    <div class="agent-slot-placeholder" id="agent-slot-placeholder">
       <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--defy-red);">
         <circle cx="32" cy="22" r="14"/>
         <path d="M 8 80 Q 8 50 32 44 Q 56 50 56 80"/>
@@ -169,6 +186,17 @@
     </div>
   </div>
 
+  <!-- ═══════════════ END-OF-DIALOG POPUP ═══════════════ -->
+  <div class="end-dialog -hidden" id="end-dialog">
+    <div class="end-card" id="end-card">
+      <div class="end-accent" id="end-accent"></div>
+      <div class="end-eyebrow" id="end-eyebrow">DEFY RESEARCH</div>
+      <div class="end-headline" id="end-headline"></div>
+      <div class="end-body" id="end-body"></div>
+      <button class="end-btn" id="end-btn">Back to Lobby</button>
+    </div>
+  </div>
+
   <!-- RIGHT -->
   <div class="edge-handle edge-right panel-trigger -right"></div>
   <div class="panel panel-right">
@@ -206,6 +234,21 @@
       <div class="posts-lab">Recent Signals</div>
       <div id="visitor-signals">
         <div class="post-snip">— none —</div>
+      </div>
+    </div>
+
+    <div class="cluster-viz" id="cluster-viz-section">
+      <div class="cluster-viz-lab">Cluster Space</div>
+      <div class="cluster-viz-canvas-wrap">
+        <canvas id="cluster-viz-canvas" width="328" height="240"></canvas>
+        <div class="cluster-viz-placeholder" id="cluster-viz-placeholder">Clustering in progress...</div>
+      </div>
+      <div class="cluster-viz-legend" id="cluster-viz-legend"></div>
+      <div class="cluster-viz-neighbors" id="cluster-viz-neighbors">
+        <div class="neighbors-lab">Most Similar Profiles</div>
+        <div class="neighbors-list" id="neighbors-list">
+          <div class="neighbor-empty">— awaiting visitor —</div>
+        </div>
       </div>
     </div>
   </div>
