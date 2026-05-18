@@ -151,20 +151,21 @@ async def test_generate_turn_static_rule_does_not_call_llm(monkeypatch):
     assert calls["complete"] == 0, "static-rule path must not invoke the LLM"
     assert step.turn == 1
     assert step.rule_applied == "R.07"
-    # Strategy slots come from the static rule, not the improvise default.
     assert used_strategy.framing == "knowledge-share"
     assert used_strategy.opener_type == "question"
     assert used_strategy.opener_text  # template filled
+    assert step.response_options is None
 
 
 @pytest.mark.asyncio
 async def test_generate_turn_hybrid_rule_calls_llm_for_dynamic_slot(monkeypatch):
     """Hybrid rule with dynamic opener_type triggers exactly one LLM call."""
     calls: dict[str, int] = {"complete": 0}
+    _LLM_JSON = '{"pitch": "Saw your work on parsing — keen to compare notes.", "options": [{"text": "That sounds interesting, tell me more.", "sentiment": "positive"}, {"text": "Why should I trust Defy on this?", "sentiment": "skeptical"}, {"text": "Thanks, but not for me.", "sentiment": "negative"}]}'
 
     async def _stub_complete(prompt, *, system=None):
         calls["complete"] += 1
-        return "Saw your work on parsing — keen to compare notes."
+        return _LLM_JSON
 
     monkeypatch.setattr("backend.pitch.generate.llm.complete", _stub_complete)
 
@@ -176,15 +177,20 @@ async def test_generate_turn_hybrid_rule_calls_llm_for_dynamic_slot(monkeypatch)
     assert calls["complete"] == 1
     assert step.agent_reply == "Saw your work on parsing — keen to compare notes."
     assert used.opener_text == "Saw your work on parsing — keen to compare notes."
+    assert step.response_options is not None
+    assert len(step.response_options) == 3
+    sentiments = {o.sentiment for o in step.response_options}
+    assert sentiments == {"positive", "skeptical", "negative"}
 
 
 @pytest.mark.asyncio
 async def test_generate_turn_no_rule_calls_llm_with_default_strategy(monkeypatch):
     calls: dict[str, int] = {"complete": 0}
+    _LLM_JSON = '{"pitch": "Improvised opener.", "options": [{"text": "Interesting, go on.", "sentiment": "positive"}, {"text": "What makes you credible?", "sentiment": "skeptical"}, {"text": "No thanks.", "sentiment": "negative"}]}'
 
     async def _stub_complete(prompt, *, system=None):
         calls["complete"] += 1
-        return "Improvised opener."
+        return _LLM_JSON
 
     monkeypatch.setattr("backend.pitch.generate.llm.complete", _stub_complete)
 
@@ -198,6 +204,8 @@ async def test_generate_turn_no_rule_calls_llm_with_default_strategy(monkeypatch
         update={"opener_text": "Improvised opener."}
     )
     assert step.rule_applied is None
+    assert step.response_options is not None
+    assert len(step.response_options) == 3
 
 
 @pytest.mark.asyncio
@@ -214,9 +222,9 @@ async def test_generate_turn_llm_failure_falls_back_to_template(monkeypatch):
         history=[],
         applicable_rule=None,
     )
-    # We get a non-empty templated opener even though the LLM exploded.
     assert step.agent_reply
     assert used.opener_text
+    assert step.response_options is None
 
 
 @pytest.mark.asyncio
@@ -225,11 +233,12 @@ async def test_generate_turn_continuation_calls_llm_with_history(monkeypatch):
     vary per turn instead of cycling through 5 hardcoded templates."""
     calls: dict[str, int] = {"complete": 0}
     captured_prompts: list[str] = []
+    _LLM_JSON = '{"pitch": "Continuation reply from LLM.", "options": [{"text": "That cohort sounds promising.", "sentiment": "positive"}, {"text": "How do I know this is legit?", "sentiment": "skeptical"}, {"text": "I will pass, thanks.", "sentiment": "negative"}]}'
 
     async def _stub_complete(prompt, *, system=None):
         calls["complete"] += 1
         captured_prompts.append(prompt)
-        return "Continuation reply from LLM."
+        return _LLM_JSON
 
     monkeypatch.setattr("backend.pitch.generate.llm.complete", _stub_complete)
 
@@ -255,9 +264,12 @@ async def test_generate_turn_continuation_calls_llm_with_history(monkeypatch):
     assert calls["complete"] == 1, "continuation must call the LLM"
     assert step.agent_reply == "Continuation reply from LLM."
     assert step.rule_applied == "R.07"
-    # Prompt must include the prior turn so the LLM can avoid repeating.
     assert "Opener line." in captured_prompts[0]
     assert "[Tell me more.]" in captured_prompts[0]
+    assert step.response_options is not None
+    assert len(step.response_options) == 3
+    sentiments = {o.sentiment for o in step.response_options}
+    assert sentiments == {"positive", "skeptical", "negative"}
 
 
 @pytest.mark.asyncio
@@ -288,3 +300,50 @@ async def test_generate_turn_continuation_falls_back_to_template_on_llm_failure(
     )
     assert step.turn == 2
     assert step.agent_reply  # template fallback fired
+    assert step.response_options is None
+
+
+# ── _parse_llm_json edge cases ──────────────────────────────────────────
+
+def test_parse_llm_json_valid():
+    raw = '{"pitch": "Hello world.", "options": [{"text": "Go on.", "sentiment": "positive"}, {"text": "Prove it.", "sentiment": "skeptical"}, {"text": "No thanks.", "sentiment": "negative"}]}'
+    text, options = generate._parse_llm_json(raw)
+    assert text == "Hello world."
+    assert options is not None
+    assert len(options) == 3
+    assert {o.sentiment for o in options} == {"positive", "skeptical", "negative"}
+
+
+def test_parse_llm_json_plain_text_fallback():
+    raw = "Just a plain text response."
+    text, options = generate._parse_llm_json(raw)
+    assert text == "Just a plain text response."
+    assert options is None
+
+
+def test_parse_llm_json_markdown_fences():
+    raw = '```json\n{"pitch": "Fenced.", "options": [{"text": "Yes.", "sentiment": "positive"}, {"text": "Why?", "sentiment": "skeptical"}, {"text": "No.", "sentiment": "negative"}]}\n```'
+    text, options = generate._parse_llm_json(raw)
+    assert text == "Fenced."
+    assert options is not None
+
+
+def test_parse_llm_json_duplicate_sentiment():
+    raw = '{"pitch": "Dup.", "options": [{"text": "A.", "sentiment": "positive"}, {"text": "B.", "sentiment": "positive"}, {"text": "C.", "sentiment": "negative"}]}'
+    text, options = generate._parse_llm_json(raw)
+    assert text == "Dup."
+    assert options is None
+
+
+def test_parse_llm_json_missing_options():
+    raw = '{"pitch": "No opts."}'
+    text, options = generate._parse_llm_json(raw)
+    assert text == "No opts."
+    assert options is None
+
+
+def test_parse_llm_json_wrong_option_count():
+    raw = '{"pitch": "Two.", "options": [{"text": "A.", "sentiment": "positive"}, {"text": "B.", "sentiment": "skeptical"}]}'
+    text, options = generate._parse_llm_json(raw)
+    assert text == "Two."
+    assert options is None
