@@ -42,6 +42,9 @@ const state = {
   visitorId: null,
   visitorEmail: null,
   lastEmotion: null,
+  dialogMode: 'panel',
+  lastBubbleText: null,
+  bubbleTypewriterTimer: null,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -136,6 +139,7 @@ async function poll() {
 function applyState(s) {
   applyTopStats(s);
   applyTextbox(s);
+  applyBubble(s);
   applyGauge(s);
   applyRulebook(s.rules || []);
   applyReflection(s.active_revision);
@@ -173,12 +177,22 @@ function applyTextbox(s) {
   const utter = $('#utterance');
   const idleHero = $('#idle-hero');
   const thoughtBlock = $('#thought-block');
+  const textbox = $('.textbox');
+
+  // In bubble mode the textbox container stays hidden, but we still
+  // track the latest utterance so switching back to panel is seamless.
+  const isBubble = state.dialogMode === 'bubble';
+  if (isBubble && textbox) textbox.classList.add('-bubble-hidden');
 
   if (!step) {
     if (idleHero) idleHero.classList.remove('-hidden');
     if (thoughtBlock) thoughtBlock.style.display = 'none';
     utter.style.display = 'none';
     $('#continue-marker').style.display = 'none';
+    // In bubble mode, also hide the bubble when idle
+    const bubble = $('#speech-bubble');
+    if (bubble) bubble.classList.add('-hidden');
+    state.lastBubbleText = null;
     startIdleRotation();
     return;
   }
@@ -248,6 +262,97 @@ function typewrite(sel, text) {
     el.textContent += text.charAt(i++);
   }, step);
 }
+
+// ── Speech bubble ────────────────────────────────────────────────────
+
+function applyBubble(s) {
+  const bubble = $('#speech-bubble');
+  if (!bubble) return;
+
+  const step = pickStep(s);
+
+  if (!step || !step.agent_reply) {
+    bubble.classList.add('-hidden');
+    state.lastBubbleText = null;
+    return;
+  }
+
+  if (state.dialogMode !== 'bubble') {
+    bubble.classList.add('-hidden');
+    return;
+  }
+
+  bubble.classList.remove('-hidden');
+
+  if (step.agent_reply !== state.lastBubbleText) {
+    state.lastBubbleText = step.agent_reply;
+    bubbleTransition(step.agent_reply);
+  }
+}
+
+function bubbleTransition(text) {
+  const bubble = $('#speech-bubble');
+  const textEl = $('#speech-bubble-text');
+  if (!bubble || !textEl) return;
+
+  if (state.bubbleTypewriterTimer) {
+    clearInterval(state.bubbleTypewriterTimer);
+    state.bubbleTypewriterTimer = null;
+  }
+
+  bubble.classList.remove('-fade-in');
+  bubble.classList.add('-fade-out');
+
+  setTimeout(() => {
+    textEl.textContent = '';
+    bubble.classList.remove('-fade-out');
+    bubble.classList.add('-fade-in');
+
+    let i = 0;
+    const step = 1000 / TYPEWRITER_CPS;
+    state.bubbleTypewriterTimer = setInterval(() => {
+      if (i >= text.length) {
+        clearInterval(state.bubbleTypewriterTimer);
+        state.bubbleTypewriterTimer = null;
+        return;
+      }
+      textEl.textContent += text.charAt(i++);
+    }, step);
+  }, 300);
+}
+
+function toggleDialogMode() {
+  const bubble = $('#speech-bubble');
+  const textbox = $('.textbox');
+  const toggle = $('#dialog-mode-toggle');
+  const icon = $('#dialog-mode-icon');
+
+  if (state.dialogMode === 'panel') {
+    state.dialogMode = 'bubble';
+    if (textbox) textbox.classList.add('-bubble-hidden');
+    if (bubble && state.lastBubbleText) {
+      bubble.classList.remove('-hidden');
+    }
+    if (toggle) toggle.classList.add('-active');
+    if (icon) icon.textContent = 'PANEL';
+
+    // Immediately populate bubble with current text if available
+    if (state.lastUtterance) {
+      state.lastBubbleText = state.lastUtterance;
+      const textEl = $('#speech-bubble-text');
+      if (bubble) bubble.classList.remove('-hidden');
+      if (textEl) textEl.textContent = state.lastUtterance;
+    }
+  } else {
+    state.dialogMode = 'panel';
+    if (textbox) textbox.classList.remove('-bubble-hidden');
+    if (bubble) bubble.classList.add('-hidden');
+    if (toggle) toggle.classList.remove('-active');
+    if (icon) icon.textContent = 'BUBBLE';
+  }
+}
+
+$('#dialog-mode-toggle')?.addEventListener('click', toggleDialogMode);
 
 function applyGauge(s) {
   let interest = s.interest_gauge;
@@ -888,6 +993,9 @@ function hideEndDialog() {
   if (overlay) overlay.classList.add('-hidden');
   state.lastUtterance = null;
   state.lastInterest = null;
+  state.lastBubbleText = null;
+  const bubble = $('#speech-bubble');
+  if (bubble) bubble.classList.add('-hidden');
   poll();
 }
 
@@ -924,7 +1032,7 @@ function renderClusterViz(data) {
     if (placeholder) placeholder.classList.remove('-hidden');
     if (placeholder) placeholder.textContent = data && data.status === 'no_embeddings'
       ? 'No profile embeddings yet...'
-      : 'Clustering in progress...';
+      : `Need ${5 - (data?.points?.length || 0)} more visitors to cluster`;
     if (legend) legend.innerHTML = '';
     if (neighborsList) neighborsList.innerHTML = '<div class="neighbor-empty">— awaiting visitor —</div>';
     return;

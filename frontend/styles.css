@@ -313,6 +313,7 @@ body {
   display: none;
   opacity: 0;
   transition: opacity 0.15s ease;
+  mix-blend-mode: lighten;
 }
 
 .edra-avatar.-visible {
@@ -393,6 +394,121 @@ body {
   letter-spacing: 4px;
   text-transform: uppercase;
   color: var(--defy-red);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SPEECH BUBBLE — comic/manga style, Defy brand adaptation
+   ═══════════════════════════════════════════════════════════════ */
+
+.speech-bubble {
+  position: absolute;
+  /* Positioned to the right of the avatar, vertically in the upper third (face area) */
+  top: 18%;
+  left: calc(50% + 12%);
+  z-index: 6;
+  max-width: 350px;
+  min-width: 200px;
+  padding: 22px 26px;
+  background: var(--charcoal);
+  border: 1px solid var(--cream-line);
+  border-top: 3px solid var(--defy-red);
+  /* 2px border-radius — the ONE exception for speech bubbles */
+  border-radius: 2px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.speech-bubble.-hidden {
+  display: none;
+}
+
+.speech-bubble.-fade-out {
+  opacity: 0;
+}
+
+.speech-bubble.-fade-in {
+  opacity: 0;
+  animation: bubbleFadeIn 0.35s ease forwards;
+}
+
+@keyframes bubbleFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.speech-bubble-text {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--warm-white);
+  letter-spacing: -0.2px;
+}
+
+/* Triangular tail pointing LEFT toward the avatar */
+.speech-bubble-tail {
+  position: absolute;
+  left: -12px;
+  top: 28px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 12px solid var(--charcoal);
+}
+
+/* Outer tail for the border effect */
+.speech-bubble-tail::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -9px;
+  width: 0;
+  height: 0;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-right: 13px solid var(--cream-line);
+  z-index: -1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DIALOG MODE TOGGLE — small button, bottom-right above gauge
+   ═══════════════════════════════════════════════════════════════ */
+
+.dialog-mode-toggle {
+  position: absolute;
+  bottom: 98px;
+  right: 48px;
+  z-index: 15;
+  background: var(--charcoal);
+  border: 1px solid var(--cream-line);
+  color: var(--cream-dim);
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.dialog-mode-toggle:hover {
+  border-color: var(--defy-red);
+  color: var(--warm-white);
+}
+
+.dialog-mode-toggle.-active {
+  background: var(--defy-red);
+  border-color: var(--defy-red);
+  color: var(--warm-white);
+}
+
+/* When bubble mode is active, hide the textbox */
+.textbox.-bubble-hidden {
+  display: none;
 }
 
 /* ═══════════════════════════════════════════════════════════════
