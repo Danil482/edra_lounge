@@ -64,7 +64,7 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-14 (AM): **Outreach module O.1-O.2 + orchestrator workflow** — see [[../sessions/2026-05-14 Outreach module and orchestrator workflow]]
 - 2026-05-14 (PM): **Demo paper rewrite + email enrichment** — see [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 - 2026-05-15: **Frontend polish + evaluation discussion** — see [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
-- 2026-05-18: **Phase 8 shipped + Lemlist decision** — see [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
+- 2026-05-18: **Phase 8 shipped (8 commits) + Lemlist decision + E2E verified** — see [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 
 ## Session log
 

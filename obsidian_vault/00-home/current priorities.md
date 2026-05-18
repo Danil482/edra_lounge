@@ -16,7 +16,7 @@ Session 2026-05-14 (demo paper) → [[../sessions/2026-05-14 Demo paper rewrite 
 Session 2026-05-15 (frontend polish) → [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 Session 2026-05-18 (Phase 8 + Lemlist) → [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 
-The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — five frontend overhaul features (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups, generated the Edra anime avatar. **204 tests green, 0 regressions.**
+The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.**
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -124,7 +124,7 @@ CSV-to-Profile mapper (`csv_source.py`), OutreachRow state machine (`state.py`),
 
 See [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]].
 
-Five features shipped, 61 new tests (204 total), 0 regressions.
+Eight commits shipped, 61 new tests (204 total), 0 regressions. Full E2E verification: auth -> session -> 6 turns -> acceptance.
 
 ### 8.1 — Dynamic response buttons
 LLM generates 3 contextual response options per turn (ResponseOption schema, JSON prompts, robust parser with fallback to static options).
@@ -140,6 +140,12 @@ Success ("Collaboration Initiated") / failure ("Until Next Time") variants with 
 
 ### 8.5 — Avatar integration
 `edra-idle.jpg` connected, fade-in animation, `data-emotion` attribute on avatar element, emotion state map designed (12 states). Full avatar set stored at `frontend/assets/avatar/`.
+
+### 8.6 — Avatar emotion system
+12 PNG emotion states generated and wired. Crossfade transitions between states. Background normalized to `#0A0A0A`. 3 images regenerated for visual consistency (hair length).
+
+### 8.7 — Speech bubble dialog mode + fixes
+Agent text renders in speech bubble anchored to avatar. Avatar `mix-blend-mode` fix for compositing. Cluster visualization UX fix.
 
 ## 🟡 Demo paper — edra_demo.tex (in progress, 2026-05-14)
 
@@ -261,7 +267,8 @@ CSV row → thin Profile (source_kind="csv_research")
 - [x] **End-of-dialog popup** — success/failure variants (done 2026-05-18, Phase 8.4)
 - [x] **Avatar integration** — Edra character connected with fade-in animation and emotion state map (done 2026-05-18, Phase 8.5)
 - [ ] **Choice buttons after terminate** — currently still enabled, user can click → 409. Disable when `current_session.dialogue.last.visitor_choice` is non-null AND terminated
-- [ ] **Emotion avatar variants** — prompt ready, 8 of 12 states still need image generation
+- [x] **Speech bubble dialog mode** — agent text in speech bubble, avatar mix-blend-mode fix (done 2026-05-18, Phase 8.7)
+- [x] **Emotion avatar variants** — all 12 states generated as PNG, crossfade transitions, BG normalized (done 2026-05-18, Phase 8.6)
 
 ### Frontend bugfix
 - [ ] **`session ended` → 409 stub** — after terminate the frontend clicks Tell me more → 409 in console. Does not break UX but is noisy. Fix in `applyChoices`: if the last step has visitor_choice and interest is at the limit — disable buttons
