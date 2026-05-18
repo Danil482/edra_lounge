@@ -41,6 +41,7 @@ const state = {
   idleRotationTimer: null,
   visitorId: null,
   visitorEmail: null,
+  lastEmotion: null,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -85,13 +86,34 @@ function formatGaugeValue(n) {
   return String(n);
 }
 
-function getEmotion(interest) {
-  if (interest >= 4) return 'confident';
-  if (interest >= 1) return 'pleased';
-  if (interest === 0) return 'neutral';
-  if (interest >= -2) return 'thoughtful';
-  if (interest >= -4) return 'concerned';
-  return 'disappointed';
+function getEmotion(session) {
+  if (!session || !session.dialogue || session.dialogue.length === 0) return 'idle';
+
+  const steps = session.dialogue;
+  const lastStep = steps[steps.length - 1];
+  const prevStep = steps.length >= 2 ? steps[steps.length - 2] : null;
+  const interest = session.interest !== undefined ? session.interest : 0;
+  const lastChoice = lastStep.visitor_choice;
+  const prevChoice = prevStep ? prevStep.visitor_choice : null;
+
+  if (interest >= 5) return 'excited';
+  if (interest <= -5) return 'sad';
+
+  if (steps.length === 1 && !lastChoice) return 'greeting';
+
+  if (lastChoice === 'positive' && prevChoice === 'negative') return 'surprised';
+
+  if (lastChoice === 'skeptical') {
+    if (prevChoice === 'skeptical') return 'skeptical-high';
+    return 'skeptical-low';
+  }
+
+  if (interest >= 3) return 'interested-high';
+  if (interest >= 1) return 'interested-low';
+  if (interest <= -3) return 'disappointed-high';
+  if (interest <= -1) return 'disappointed-low';
+
+  return 'greeting';
 }
 
 function pad2(n) {
@@ -268,21 +290,23 @@ function applyGauge(s) {
     if (interest <= -5) gauge.classList.add('-terminal-rejected');
   }
 
-  setText('#agent-emotion', `current — ${getEmotion(interest)}`);
 }
 
 // ── Avatar ──────────────────────────────────────────────────────────
 
 function applyAvatar(s) {
   const avatar = $('#edra-avatar');
-  const placeholder = $('#agent-slot-placeholder');
   if (!avatar) return;
+  const placeholder = $('#agent-slot-placeholder');
 
-  const hasSession = !!(s.current_session && s.current_session.dialogue && s.current_session.dialogue.length);
+  const session = s.current_session;
+  const emotion = getEmotion(session);
 
-  if (hasSession) {
+  setText('#agent-emotion', `current — ${emotion}`);
+
+  if (session && session.dialogue && session.dialogue.length > 0) {
+    avatar.style.display = '';
     if (!avatar.classList.contains('-visible')) {
-      avatar.classList.remove('-visible');
       avatar.classList.add('-entering');
       avatar.addEventListener('animationend', () => {
         avatar.classList.remove('-entering');
@@ -291,13 +315,24 @@ function applyAvatar(s) {
     }
     if (placeholder) placeholder.style.display = 'none';
 
-    const interest = s.interest_gauge != null ? s.interest_gauge : 0;
-    avatar.setAttribute('data-emotion', getEmotion(interest));
+    if (emotion !== state.lastEmotion) {
+      const newSrc = `assets/avatar/edra-${emotion}.png`;
+      avatar.style.opacity = '0';
+      setTimeout(() => {
+        avatar.src = newSrc;
+        avatar.onload = () => { avatar.style.opacity = '1'; };
+      }, 150);
+      state.lastEmotion = emotion;
+    }
   } else {
     avatar.classList.remove('-visible', '-entering');
+    avatar.style.display = 'none';
+    avatar.style.opacity = '1';
     if (placeholder) placeholder.style.display = '';
-    avatar.setAttribute('data-emotion', 'idle');
+    state.lastEmotion = null;
   }
+
+  avatar.setAttribute('data-emotion', emotion);
 }
 
 // ── Rulebook ─────────────────────────────────────────────────────────
@@ -1117,6 +1152,10 @@ function initAuthGate() {
 }
 
 function bootAfterAuth() {
+  ['idle','greeting','interested-low','interested-high','excited','thinking',
+   'skeptical-low','skeptical-high','disappointed-low','disappointed-high','sad','surprised'
+  ].forEach(e => { const i = new Image(); i.src = `assets/avatar/edra-${e}.png`; });
+
   bootSources();
   poll();
   setInterval(poll, POLL_MS);
