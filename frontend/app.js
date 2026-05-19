@@ -428,7 +428,7 @@ function applyAvatar(s) {
     if (placeholder) placeholder.style.display = 'none';
 
     if (emotion !== state.lastEmotion) {
-      const newSrc = `assets/avatar/edra-${emotion}.png`;
+      const newSrc = `assets/avatar/edra-${emotion}.png?v=2`;
       avatar.style.opacity = '0';
       setTimeout(() => {
         avatar.src = newSrc;
@@ -437,7 +437,7 @@ function applyAvatar(s) {
       state.lastEmotion = emotion;
     }
   } else {
-    avatar.src = 'assets/avatar/edra-idle.png';
+    avatar.src = 'assets/avatar/edra-idle.png?v=2';
     avatar.style.display = '';
     avatar.style.opacity = '1';
     avatar.classList.remove('-entering');
@@ -1271,7 +1271,7 @@ function initAuthGate() {
 function bootAfterAuth() {
   ['idle','greeting','interested-low','interested-high','excited','thinking',
    'skeptical-low','skeptical-high','disappointed-low','disappointed-high','sad','surprised'
-  ].forEach(e => { const i = new Image(); i.src = `assets/avatar/edra-${e}.png`; });
+  ].forEach(e => { const i = new Image(); i.src = `assets/avatar/edra-${e}.png?v=2`; });
 
   bootSources();
   poll();

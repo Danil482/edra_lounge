@@ -644,11 +644,11 @@ body {
 }
 .stage:has(.panel-trigger.-right:hover) .agent-slot,
 .stage:has(.panel-right:hover) .agent-slot {
-  left: calc(50% - 184px);
+  left: calc(50% - 320px);
 }
 .stage:has(.panel-trigger.-right:hover) .speech-bubble,
 .stage:has(.panel-right:hover) .speech-bubble {
-  left: calc(50% + 12% - 368px);
+  left: calc(50% + 12% - 420px);
 }
 
 /* same for left panel: push choices and textbox right */
