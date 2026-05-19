@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-18
+date: 2026-05-19
 ---
 
 # Current Priorities
@@ -15,8 +15,9 @@ Session 2026-05-14 (outreach module) → [[../sessions/2026-05-14 Outreach modul
 Session 2026-05-14 (demo paper) → [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 Session 2026-05-15 (frontend polish) → [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 Session 2026-05-18 (Phase 8 + Lemlist) → [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
+Session 2026-05-19 (Avatar regen + Phase 5 prompts) → [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 
-The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.**
+The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.**
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -45,7 +46,7 @@ All four subphases plus diagnostic logging:
 
 End-to-end verification: real author URL → cache hit → OpenAI generates an opener about "competitive pricing" → 5 unique LLM responses → terminate at interest=+5 = `accepted`. Burned ~3 RapidAPI quota units across the entire session.
 
-## 🟡 Phase 5 — Prompts and scenarios (in progress, BLOCKED on founders)
+## 🟡 Phase 5 — Prompts and scenarios (in progress, 5.1-5.3 done)
 
 After the 2026-04-29 e2e run the priority shifted from "will it work" to "quality and robustness". On 2026-04-30 we audited the prompts — the root cause is not the diversity directive, it is **the absence of concrete Defy facts in the prompts**: the LLM hallucinates facts every turn ("we partnered with major retail brand", "cohort of 20 brands") because the system message contains a single line — "You are a research-liaison agent." — and nothing else. The diversity issue is a consequence: without facts, the LLM picks the single safe trajectory (enterprise sales credentials × N).
 
@@ -57,28 +58,17 @@ The real Defy = **AI-SaaS for creative agencies** (3 products: Monitor / Automat
 - **Path B**: keep the research narrative as a booth-only wrapper — but at the booth, mismatch with the real DEFY.group on LinkedIn is uncomfortable; skeptical-defusing impossible without making things up
 - **Path C (recommended)**: hybrid — research archetypes remain in synthetic mode, but prompts are rewritten on real Defy facts, refusal behaviour handles edge cases when a visitor is clearly out of ICP
 
-### Phase 5.1 — Defy fact sheet 🔒 BLOCKED (highest priority)
+### ✅ Phase 5.1 — Lab fact sheet (done, 2026-05-19)
 
-Waiting for founders to answer the questionnaire (see below). When the answers arrive:
-- [ ] Create `backend/llm/prompts/_defy_brand.txt` with all the facts (positioning, 3 products, founders, proof points, out-of-scope, engagement)
-- [ ] Load via `llm.client.render()` as `{defy_facts}`, inject into `opener.txt` + `continuation.txt`
-- [ ] Unify casing (`Defy` without `.group`? Or `Defy.group` everywhere?)
+Unblocked by analyzing 5 lab papers instead of waiting for founder questionnaire — see [[../knowledge/decisions/Prompt improvement plan based on lab papers]]. Created `_lab_facts.txt` with concrete facts extracted from publications. Loaded into prompts via `generate.py`.
 
-### Phase 5.2 — Refactor opener/continuation prompts
+### ✅ Phase 5.2 — Refactor opener/continuation prompts (done, 2026-05-19)
 
-- [ ] Expand `system` message to 200-300 words: brand voice + role + boundaries + "do not invent facts not listed in `{defy_facts}`"
-- [ ] Remove duplicated button rules from opener/continuation (move into system)
-- [ ] Add **response categories** to continuation: `specific-defy-fact` / `methodology-hook` / `profile-callback` / `concrete-next-step` / `soft-personal`
-- [ ] Pass `used_categories: list[str]` from Session → LLM is required to pick an unused one (solves diversity via state, not via directive)
-- [ ] Return `category` in the continuation result → update Session
-- [ ] Pass `word_target` into the continuation prompt (currently lost)
+System prompt expanded to ~450 words (`_system.txt`) with brand voice, role, anti-hallucination boundaries, refusal rules. 6 response categories implemented with rotation tracking per session. `opener.txt` and `continuation.txt` rewritten to consume fact sheet and system message.
 
-### Phase 5.3 — Refusal behaviour
+### ✅ Phase 5.3 — Refusal behaviour (done, 2026-05-19)
 
-- [ ] "If the profile has no signals relevant to Defy work — do not force fit. Speak generally."
-- [ ] "If the only signal is a job title (not a post) — use as a hint, but do not attribute beliefs/publications to the person."
-- [ ] "If visitor has proceeded × 4 — do not offer more credentials. Pivot to a narrow concrete next step."
-- [ ] "If ask_size=`none` — no CTAs at all, only a soft door-open."
+Refusal rules integrated into `_system.txt`: no-signal profiles get general talk, title-only profiles use hints without attribution, 4+ proceed turns pivot to concrete next step, `ask_size=none` suppresses CTAs.
 
 ### Phase 5.4 — Scenario test harness
 
@@ -95,7 +85,7 @@ Waiting for founders to answer the questionnaire (see below). When the answers a
 
 ### Phase 5.5 — Minor cleanup
 
-- [ ] Templates: rewrite to also consume `_defy_brand.txt` (the fallback must not diverge from the LLM)
+- [x] Templates: rewritten to use real facts from fact sheet (done 2026-05-19)
 - [ ] **`*.log` → .gitignore** (uvicorn.log has been untracked since 2026-04-29)
 
 ## ✅ Phase 6 — Research profiles dataset (done, 2026-05-13)
@@ -169,8 +159,8 @@ Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty na
 - [x] Prepared Lemlist enrichment batches: `lemlist_enrichment_priority.csv` (40 profiles, 200 credits) + `lemlist_enrichment_batch.csv` (437 profiles)
 - [ ] Run Lemlist Email Finder on priority batch (40 academic profiles)
 - [ ] Review found emails for accuracy
-- [ ] **Investigate founders' warmed Lemlist account** — may skip warm-up period
-- [ ] Select 20 profiles for first outreach batch (factorial design)
+- [ ] ~~Investigate founders' warmed Lemlist account~~ — warm-up started on user's own account (2026-05-19), ready ~2026-05-26
+- [ ] Select 20 profiles for first outreach batch (factorial design) — can proceed once warm-up completes
 
 ## 🟡 Phase O.3 — CLI workflow + ingest (next)
 
@@ -178,7 +168,7 @@ Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty na
 - [ ] CLI refinements: segment balancing in `prepare`, iteration reporting
 - [ ] Rewrite `sender.py` for Lemlist API (decision: Lemlist replaces Resend — see [[../knowledge/decisions/Lemlist replaces Resend for outreach delivery]])
 - [ ] First real outreach batch (20 High-confidence profiles with verified emails, factorial design)
-- [ ] Investigate founders' warmed Lemlist account (skips 3-4 week warm-up, critical for June 11 deadline)
+- [ ] ~~Investigate founders' warmed Lemlist account~~ — warm-up started on user's own account (2026-05-19, ready ~2026-05-26)
 
 ## 🟡 Phase 7 — Outreach data collection module (planned, 2026-05-13)
 
@@ -302,7 +292,7 @@ CSV row → thin Profile (source_kind="csv_research")
 - [x] **import-graph test**
 - [x] **live LinkedIn URL → 5-turn dialogue** ✅ end-to-end validated 2026-04-29 against a real profile
 - [x] **privacy-purge test**
-- [x] pytest passes (204/204, updated 2026-05-18)
+- [x] pytest passes (206/206, updated 2026-05-19)
 
 ## What we are dropping — final archive list
 

@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-18
+date: 2026-05-19
 ---
 
 # EDRA — Vault Home
@@ -44,6 +44,7 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - [[../knowledge/decisions/LinkedIn source is import-isolated from core]]
 - [[../knowledge/decisions/Hybrid path C balances Defy facts with research vocab]]
 - [[../knowledge/decisions/Lemlist replaces Resend for outreach delivery]]
+- [[../knowledge/decisions/Prompt improvement plan based on lab papers]]
 
 ## Business context
 
@@ -65,9 +66,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-14 (PM): **Demo paper rewrite + email enrichment** — see [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
 - 2026-05-15: **Frontend polish + evaluation discussion** — see [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 - 2026-05-18: **Phase 8 shipped (8 commits) + Lemlist decision + E2E verified** — see [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
+- 2026-05-19: **Avatar regen + Phase 5.1-5.3 prompts + clustering fix** — see [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 
 ## Session log
 
+- [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 - [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 - [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 - [[../sessions/2026-05-14 Demo paper rewrite and email enrichment]]
