@@ -41,8 +41,8 @@ const state = {
   idleRotationTimer: null,
   visitorId: null,
   visitorEmail: null,
-  lastEmotion: null,
-  dialogMode: 'panel',
+  lastEmotion: 'idle',
+  dialogMode: 'bubble',
   lastBubbleText: null,
   bubbleTypewriterTimer: null,
 };
@@ -354,6 +354,13 @@ function toggleDialogMode() {
 
 $('#dialog-mode-toggle')?.addEventListener('click', toggleDialogMode);
 
+if (state.dialogMode === 'bubble') {
+  const tb = $('.textbox');
+  if (tb) tb.classList.add('-bubble-hidden');
+  const tgl = $('#dialog-mode-toggle');
+  if (tgl) tgl.classList.add('-active');
+}
+
 function applyGauge(s) {
   let interest = s.interest_gauge;
   if (interest == null) {
@@ -430,11 +437,13 @@ function applyAvatar(s) {
       state.lastEmotion = emotion;
     }
   } else {
-    avatar.classList.remove('-visible', '-entering');
-    avatar.style.display = 'none';
+    avatar.src = 'assets/avatar/edra-idle.png';
+    avatar.style.display = '';
     avatar.style.opacity = '1';
-    if (placeholder) placeholder.style.display = '';
-    state.lastEmotion = null;
+    avatar.classList.remove('-entering');
+    avatar.classList.add('-visible');
+    if (placeholder) placeholder.style.display = 'none';
+    state.lastEmotion = 'idle';
   }
 
   avatar.setAttribute('data-emotion', emotion);

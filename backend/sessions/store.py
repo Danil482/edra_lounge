@@ -42,6 +42,7 @@ class Session:
     day: int = 1
     ended: bool = False
     outcome: schemas.OUTCOME | None = None
+    used_categories: list[str] = field(default_factory=list)
 
     def to_snapshot(self) -> schemas.SessionSnapshot:
         return schemas.SessionSnapshot(

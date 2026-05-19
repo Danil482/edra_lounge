@@ -207,6 +207,7 @@ async def take_turn(
         history=sess.dialogue,
         applicable_rule=None if sess.applicable_rule_id is None else _stub_rule(sess),
         pitch_strategy=sess.pitch_strategy,
+        used_categories=sess.used_categories,
     )
     sess.dialogue.append(next_step)
     log.info(

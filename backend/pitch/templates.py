@@ -29,37 +29,39 @@ def render_opener(
 
     if strategy.opener_type == "question":
         return (
-            f"Quick one for someone working on {domain} as a {role.lower()} — "
-            f"what's the part of your current line of work that you wish more "
-            f"people were paying attention to?"
+            f"We run HDBSCAN clustering over marketing episodes to find "
+            f"which outreach strategies survive domain drift. Your "
+            f"{domain} work probably overlaps with what we're seeing."
         )
     if strategy.opener_type == "reference-to-signal":
         if signal:
             return (
-                f"Saw your note — \"{_truncate(signal, 80)}\" — and it's been "
-                f"sitting with me. We're putting together a cohort of {domain} "
-                f"researchers willing to push on exactly that thread; would you "
-                f"be open to comparing notes?"
+                f"Noticed your post — \"{_truncate(signal, 80)}\" — it "
+                f"connects to our ToucHire system, a multi-agent setup "
+                f"that cut outreach time by 85% in production."
             )
         return (
-            f"Your work on {domain} keeps surfacing in our internal threads. "
-            f"Would you be open to comparing notes?"
+            f"Your {domain} work keeps coming up in our group's threads. "
+            f"We have three papers at SIGIR '26 in Melbourne, and the "
+            f"overlap with your area is hard to ignore."
         )
     if strategy.opener_type == "shared-context":
         return (
-            f"We're both circling the same question in {domain} — how to make "
-            f"the next round of work hold up under scrutiny. I'd love a short "
-            f"conversation to see where the angles overlap."
+            f"We're both working at the {domain} / applied AI boundary. "
+            f"Our group just published a Dynamic RAG system that beat "
+            f"ChatGPT and Gemini on professional content ranking."
         )
     if strategy.opener_type == "credential-anchor":
         return (
-            f"I run research liaison for DEFY.group; we're scoping a small "
-            f"{domain} cohort and your name came up twice in the same week. "
-            f"Worth a fifteen-minute exchange?"
+            f"I'm with Farseev's group — ten-plus papers at MM, SIGIR, "
+            f"WSDM, two hundred citations. We're looking at a {domain} "
+            f"collaboration worth a fifteen-minute conversation."
         )
     # cold
     return (
-        f"Quick reach — interested in a brief exchange on {domain}?"
+        f"Quick one — our lab runs five research streams in marketing AI "
+        f"and multimedia analytics, and {domain} is one of the threads "
+        f"we want to push on."
     )
 
 
@@ -91,83 +93,82 @@ def render_continuation(
 def _continuation_positive(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
     if s.tone == "socratic":
         return (
-            f"Glad that lands. The shape: a small cohort, three or four people, "
-            f"meeting once a week for a focused thread."
+            f"Glad that tracks. Concrete example: ToucHire runs nine "
+            f"agents on a shared blackboard and cut outreach time by "
+            f"85% in a live deployment."
         )
     if s.tone == "warm":
         return (
-            f"That's the response I was hoping for. The cohort is intentionally "
-            f"small — three or four people who'd push each other. I can send "
-            f"the brief."
+            f"Good to hear. We're presenting at SIGIR and MM this year, "
+            f"three papers in Melbourne alone. I can send the abstracts "
+            f"so you can judge the overlap yourself."
         )
     if s.tone == "direct":
         return (
-            f"Good. Concrete next step: a thirty-minute scoping call this week, "
-            f"with a one-page brief beforehand."
+            f"Good. Next step: a thirty-minute scoping call this week. "
+            f"I'll send our SOINSPIRE and ToucHire papers first so we "
+            f"can talk specifics."
         )
     if s.tone == "playful":
         return (
-            f"Excellent — refreshing to find someone who doesn't squint at the "
-            f"word 'collaboration'. I'll send the brief."
+            f"Nice. Our Dynamic RAG system hit nDCG@10 of 0.829, above "
+            f"ChatGPT and Gemini on content ranking. Worth fifteen "
+            f"minutes to walk through it."
         )
     return (
-        f"Good. I'll write up a short brief on the cohort and send it your way."
+        f"Good. I'll send our recent papers on video memorability, "
+        f"agent architectures, and Dynamic RAG so you can see the "
+        f"research threads."
     )
 
 
 def _continuation_skeptical(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
     if s.tone == "socratic":
         return (
-            f"Fair. The honest framing: this is exploratory, no contract, no "
-            f"recruiting hook — one scoping call to decide together."
+            f"Fair. Verifiable version: ten-plus papers at ACM venues, "
+            f"two hundred citations, five papers accepted at MM '26 and "
+            f"SIGIR '26. Research group, not a sales team."
         )
     if s.tone == "warm":
         return (
-            f"That's reasonable — most outreach sounds like recruiting in a "
-            f"trench coat. We're a Defy.group research liaison, not a sourcer; "
-            f"happy to share two past collaborations as proof."
+            f"Reasonable — most outreach sounds like recruiting in a "
+            f"trench coat. We publish at MM and SIGIR; the ToucHire and "
+            f"SOINSPIRE papers are public and citable."
         )
     if s.tone == "direct":
         return (
-            f"Fair point. The honest version: this is exploratory, no contract, "
-            f"no equity ask. One scoping call and you decide if a second one "
-            f"is worth your time."
+            f"Fair point. Numbers: 85% reduction in outreach time on "
+            f"ToucHire, nDCG@10 of 0.829 on SOINSPIRE, five conference "
+            f"papers this year. One scoping call, you decide."
         )
     if s.tone == "playful":
         return (
-            f"Skeptical is the right opening move — I'd be worried if you "
-            f"weren't. The justification fits in one line: Defy is a research "
-            f"collective, this is collaboration scouting, not recruitment."
+            f"Skepticism is the right default. The justification: "
+            f"200,000+ influencer profiles indexed, results published "
+            f"at SIGIR."
         )
     return (
-        f"That's a fair pushback. Defy is a research collective; this is "
-        f"a scoping conversation, not a recruiting pitch."
+        f"Fair pushback. We publish at ACM Multimedia and SIGIR. "
+        f"This is a research conversation, not a recruiting pitch."
     )
 
 
 def _continuation_negative(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
-    # Negative path = graceful close, no follow-up question that re-engages.
     if s.tone == "socratic":
-        return f"Understood. Won't push — door stays open if the framing shifts."
+        return f"Understood. Door stays open if the framing shifts."
     if s.tone == "warm":
-        return (
-            f"Heard. I won't push — if anything shifts, the door stays open."
-        )
+        return f"Heard. If anything changes, the door stays open."
     if s.tone == "direct":
-        return (
-            f"OK. Closing the loop here. Thanks for the time."
-        )
+        return f"OK. Thanks for the time."
     if s.tone == "playful":
-        return (
-            f"Read loud and clear. I'll let you get back to actual work."
-        )
+        return f"Loud and clear. Back to actual work."
     return f"Understood. Thanks for the candor."
 
 
 def _continuation_neutral(p: schemas.Profile, s: schemas.PitchStrategy) -> str:
     return (
-        f"To make this concrete: a thirty-minute scoping call, a one-page "
-        f"brief beforehand, and you decide from there."
+        f"To make this concrete: a thirty-minute scoping call. I'll send "
+        f"our recent SIGIR and MM papers beforehand, you decide from there."
     )
 
 

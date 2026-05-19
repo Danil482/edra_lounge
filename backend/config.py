@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
-    n_min: int = 5
+    n_min: int = 3
     theta_induce: float = 0.6
     theta_revise: float = 0.5
     recluster_every: int = 3

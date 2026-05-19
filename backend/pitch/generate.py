@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
 import httpx
 
@@ -30,6 +31,20 @@ _LLM_OFFLINE_EXCEPTIONS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadT
 OPENER_LLM_PATHS = ("hybrid", "improvise")
 
 _EXPECTED_SENTIMENTS = {"positive", "skeptical", "negative"}
+
+RESPONSE_CATEGORIES = [
+    "lab-paper-reference",
+    "methodology-hook",
+    "deployment-result",
+    "profile-callback",
+    "concrete-next-step",
+    "honest-framing",
+]
+
+_PROMPTS_DIR = Path(__file__).resolve().parent.parent / "llm" / "prompts"
+_LAB_FACTS = (_PROMPTS_DIR / "_lab_facts.txt").read_text(encoding="utf-8")
+_SYSTEM_TEMPLATE = (_PROMPTS_DIR / "_system.txt").read_text(encoding="utf-8")
+_SYSTEM_MESSAGE = _SYSTEM_TEMPLATE.format(lab_facts=_LAB_FACTS)
 
 
 def _parse_llm_json(raw: str) -> tuple[str, list[schemas.ResponseOption] | None]:
@@ -85,6 +100,7 @@ async def generate_turn(
     applicable_rule: schemas.Rule | None,
     *,
     pitch_strategy: schemas.PitchStrategy | None = None,
+    used_categories: list[str] | None = None,
 ) -> tuple[schemas.DialogueStep, schemas.PitchStrategy]:
     strat = pitch_strategy or strategy_mod.assemble_strategy(applicable_rule)
     is_opener = len(history) == 0
@@ -94,7 +110,7 @@ async def generate_turn(
         strat = strat.model_copy(update={"opener_text": opener_text})
         reply = opener_text
     else:
-        reply, options, path = await _produce_continuation(profile, strat, history)
+        reply, options, path = await _produce_continuation(profile, strat, history, used_categories)
 
     rule_id = applicable_rule.id if applicable_rule is not None else None
     thought = templates.render_thought(strat, rule_id, is_opener)
@@ -154,7 +170,7 @@ async def _opener_via_llm(
             word_target=strat.word_target,
             ask_size=strat.ask_size,
         )
-        raw = await llm.complete(prompt, system="You are a research-liaison agent. Respond with valid JSON only.")
+        raw = await llm.complete(prompt, system=_SYSTEM_MESSAGE)
         text, options = _parse_llm_json(raw)
         if text:
             return text, options
@@ -169,8 +185,10 @@ async def _produce_continuation(
     profile: schemas.Profile,
     strat: schemas.PitchStrategy,
     history: list[schemas.DialogueStep],
+    used_categories: list[str] | None = None,
 ) -> tuple[str, list[schemas.ResponseOption] | None, str]:
     last = history[-1]
+    remaining = _remaining_categories(used_categories)
     try:
         prompt = llm.render(
             "continuation",
@@ -185,10 +203,13 @@ async def _produce_continuation(
             framing=strat.framing,
             tone=strat.tone,
             ask_size=strat.ask_size,
+            word_target=strat.word_target,
             history_block=_format_history_for_prompt(history),
             last_choice=last.visitor_choice or "neutral",
+            used_categories=", ".join(used_categories) if used_categories else "(none)",
+            remaining_categories=", ".join(remaining),
         )
-        raw = await llm.complete(prompt, system="You are a research-liaison agent. Respond with valid JSON only.")
+        raw = await llm.complete(prompt, system=_SYSTEM_MESSAGE)
         text, options = _parse_llm_json(raw)
         if text:
             return text, options, "continuation-llm"
@@ -200,6 +221,13 @@ async def _produce_continuation(
     except Exception:  # noqa: BLE001
         log.exception("continuation LLM call failed; falling back to template")
     return templates.render_continuation(profile, strat, history), None, "continuation-template"
+
+
+def _remaining_categories(used: list[str] | None) -> list[str]:
+    if not used:
+        return list(RESPONSE_CATEGORIES)
+    remaining = [c for c in RESPONSE_CATEGORIES if c not in used]
+    return remaining if remaining else list(RESPONSE_CATEGORIES)
 
 
 def _format_history_for_prompt(history: list[schemas.DialogueStep]) -> str:

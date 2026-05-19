@@ -1,0 +1,56 @@
+LAB: Aleksandr Farseev's research group
+  Affiliations: SoMin.ai Research (Singapore), ITMO University; collaborators at NUS, HSE University (UK), Kazan Federal University, TUSUR University
+  Industry arm: DEFY.group — AI-SaaS for creative agencies
+  Co-founder: Ian Cassidy — 20 years in agencies (SHARE Creative, Samy Alliance, Formosa)
+  Publication record: 10+ papers at ACM Multimedia, SIGIR, WSDM, TOIS; 200+ citations
+
+RESEARCH STREAMS:
+
+1. Video memorability prediction
+   - Segment-aware multimodal framework: predicts which video moments stick in memory
+   - 5%+ improvement in Spearman rank correlation on LAMBDA benchmark over whole-video baselines
+   - Luxury brand case study: creatives with highest predicted memorability got 76% higher CTR
+   - Techniques: temporal binning, rank-aware supervision, residual fusion, shared multimodal encoder
+
+2. Self-improving LLM agents (EDRA)
+   - Doctoral research targeting MM '26: Experience-Driven Rule Adaptation for LLM agents
+   - Episodic memory with temporal alignment, HDBSCAN clustering, LLM-driven rule induction, consistency-triggered revision
+   - Proposed SOMIN-Drift benchmark from real longitudinal marketing data
+   - Addresses a gap in TRAD, MetaFlowLLM, NeSyPR: none does online rule revision under domain drift
+
+3. Influencer marketing automation (ToucHire)
+   - SIGIR '26 Industrial Talk: multi-agent system for end-to-end influencer marketing
+   - 9 agents on Model Context Protocol (MCP) with shared blackboard
+   - 200,000+ influencer profiles across Instagram, YouTube, TikTok
+   - Deployed numbers: 85% reduction in time-to-first-outreach, 54% increase in creator response rates, 12x campaign capacity per marketer, 68% reduction in contract completion time
+   - Techniques: dense semantic search, HNSW vector indexing, 768-dim marketing-tuned embeddings, RAG-driven outreach
+
+4. Professional content generation (SOINSPIRE)
+   - SIGIR '26 Demo Track: agentic marketing ideation platform
+   - Dynamic RAG (DRAG) grounded in near-real-time LinkedIn thought-leadership corpus
+   - Content scoring: nDCG@10 = 0.829 vs. ChatGPT (0.750) and Gemini (0.769)
+   - Decomposes successful content into personas, narrative tensions, relevance signals, strategic themes
+   - Autonomous pipeline via Zapier for daily LinkedIn publishing
+
+5. Privacy-compliant contextual advertising
+   - SIGIR '26 Doctoral Consortium: dual-stream multimodal retrieval for cookie-less video ad placement
+   - BERTopic on visual keyframes (CLIP-ViT) and audio transcripts (multilingual MiniLM)
+   - GDPR/PIPEDA compliant — no behavioral tracking
+   - Goal: real-time in-stream Dynamic Creative Optimization (DCO)
+
+6. Marketing strategy co-creation
+   - ACM TOIS 2025: fusing predictive models with LLMs for actionable creative recommendations
+   - ACM MM '23: explainable AI for digital advertising
+   - Multi-year work on personality-driven content recommendation (MM '22, WSDM '21, CLEF '18)
+
+7. Multimodal profiling
+   - SoMin.ai platform demo at MM '18 and WSDM '21
+   - Cross-platform personality profiling from social media behavior
+
+CONFERENCE PRESENCE 2025-2026:
+  - ACM Multimedia 2026 (Dublin + Rio de Janeiro): 2 papers (doctoral + BNI track)
+  - ACM SIGIR 2026 (Melbourne): 3 papers (industrial talk + demo + doctoral)
+  - ACM TOIS 2025, ACM MM '23, WSDM '21
+
+RECURRING TECHNIQUES:
+  HDBSCAN clustering, sentence embeddings (MiniLM, CLIP-ViT-B/32), HNSW vector indexing, multi-agent architectures (MCP), RAG / Dynamic RAG, BERTopic, multimodal cross-attention fusion

@@ -1,6 +1,4 @@
-You are filling the dynamic opener slot of an active rule. Write the
-agent's spoken opener — the booth agent's opening line in a brief
-research-collaboration pitch from Defy.group to a passing professional.
+Write the agent's opening line for a research-collaboration pitch at the booth.
 
 The visitor cannot type. After your opener they will see three response
 buttons. You must generate both your opener line AND the three button
@@ -24,25 +22,22 @@ Rule slots (already chosen by induction):
   ask_size:     {ask_size}
 
 Constraints for the opener:
-  - one or two sentences, ≤ 35 words total
-  - first-person ("I" or "we"), addressing the contact directly
+  - one or two sentences, within the word_target ({word_target})
   - register matches the `tone` slot
+  - shape matches the `opener_type` slot:
+      question           → rhetorical yes/no framing, then pivot to
+                           your own statement
+      reference-to-signal → name something specific from recent_signals,
+                           connect it to a lab research stream
+      shared-context     → invoke a context you both share, then state
+                           what you offer
+      credential-anchor  → lead with a lab affiliation or result, then
+                           state what you offer
+      cold               → no preamble, straight to the point
   - end on a STATEMENT, OBSERVATION, or NARROW PROPOSAL — never on an
     open question that the three buttons cannot naturally answer
-  - shape matches the `opener_type` slot:
-      question           → a *rhetorical* yes/no framing that immediately
-                           pivots to your own statement (e.g. "Ever wished
-                           cardboard-defect QA scaled past one model? We
-                           hit that exact wall last quarter.")
-      reference-to-signal → name something specific from recent_signals
-                           and connect it to relevant Defy work — without
-                           asking the visitor to expand on it
-      shared-context     → invoke a context both share, then state value
-      credential-anchor  → lead with a credible Defy affiliation, then
-                           state the value prop
-      cold               → minimal preamble, straight value statement
   - do not name the rule, do not name the slot tags, do not start with
-    "Hi" or "Hey" — land on the substance immediately
+    "Hi" or "Hey"
   - never reveal that this is automated outreach
 
 Constraints for the three response options:

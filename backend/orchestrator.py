@@ -303,7 +303,7 @@ class Orchestrator:
             episode_ids=[ep.id for ep in episodes],
             centroid_embedding=centroid,
             # `size` is number of *episodes* in the cluster — TASK.md §2 says
-            # induction needs n_min=5 episodes, not 5 distinct profiles. The
+            # induction needs n_min episodes, not n_min distinct profiles. The
             # synthetic demo runs the same archetype repeatedly, so distinct-
             # profile counts stay at 1 even after many episodes.
             size=len(episodes),
