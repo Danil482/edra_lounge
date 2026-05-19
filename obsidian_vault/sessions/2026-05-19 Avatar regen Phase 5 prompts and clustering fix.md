@@ -12,11 +12,12 @@ Regenerated all 12 avatar PNGs with chroma key pipeline, overhauled avatar CSS f
 ### Avatar idle fix and regeneration
 1. **Avatar idle visibility** — `app.js`: avatar now renders in idle state (before session start), not only during dialogue.
 2. **Avatar regeneration** — all 12 emotion PNGs regenerated with green screen (#00FF00) background, then chroma-keyed to transparent PNGs at 533x800 (2:3 ratio). Pipeline script: `scripts/chromakey_avatars.py`.
-3. **Avatar CSS overhaul** — container `aspect-ratio: 0.667` (was 0.7), `object-fit: contain` (was `cover`), `bottom: 26%` (was 18%), `height: 60%` (was 64%), removed `mix-blend-mode: lighten`.
+3. **Avatar CSS overhaul** — container `aspect-ratio: 0.667` (was 0.7), `object-fit: contain` (was `cover`), `bottom: 22%`, `height: 64%`, removed `mix-blend-mode: lighten`.
 
 ### Speech bubble and UI fixes
 4. **Speech bubble as default** — `dialogMode: 'bubble'` is now the default mode, button label shows "PANEL".
-5. **Speech bubble panel collision fix** — bubble shifts left when right panel opens (CSS transition).
+5. **Speech bubble panel collision fix** — avatar and bubble shift left together when right panel opens (CSS transition, avatar 320px, bubble 420px).
+6. **Avatar cache-busting** — added `?v=2` to all avatar image paths to force browser reload after green-screen regen.
 
 ### Clustering fix
 6. **`n_min` lowered from 5 to 3** in `config.py` — rules now appear after ~8 episodes instead of never during early demos. Previous threshold was too high for booth-scale demonstrations.
@@ -40,7 +41,7 @@ Regenerated all 12 avatar PNGs with chroma key pipeline, overhauled avatar CSS f
 - **Demo paper compilation in Overleaf** — still pending
 - **First outreach batch** — blocked on Lemlist warm-up (~May 26)
 - **Phase 5.4 — Scenario test harness** — not started this session
-- **Prompt humanizer pass** — in progress, not completed
+- **Prompt humanizer pass** — completed (anti-AI-slop sweep on all templates)
 
 ## Key decisions
 
@@ -60,8 +61,7 @@ Regenerated all 12 avatar PNGs with chroma key pipeline, overhauled avatar CSS f
 ## Next session — entry points
 
 1. **Phase 5.4 — Scenario test harness** — lock in prompt quality baseline with pytest scenarios
-2. **Prompt humanizer pass** — finish anti-AI-slop sweep on rewritten prompts
-3. **Compile demo paper in Overleaf** — verify 2-page fit, insert booth screenshot
+2. **Compile demo paper in Overleaf** — verify 2-page fit, insert booth screenshot
 4. **Select first 20 profiles** for Batch 1 outreach (factorial design, segment-balanced)
 5. **Phase O.3** — rewrite `sender.py` for Lemlist API (once warm-up completes ~May 26)
 6. **Choice button disable on terminate** — frontend bug still open (409 in console)
