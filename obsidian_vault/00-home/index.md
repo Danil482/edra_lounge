@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-19
+date: 2026-05-20
 ---
 
 # EDRA — Vault Home
@@ -67,9 +67,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-15: **Frontend polish + evaluation discussion** — see [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
 - 2026-05-18: **Phase 8 shipped (8 commits) + Lemlist decision + E2E verified** — see [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 - 2026-05-19: **Avatar regen + Phase 5.1-5.3 prompts + clustering fix** — see [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
+- 2026-05-20: **Phase 10 — demo paper rewrite, KNN classify, seed_demo, rulebook UI** — see [[../sessions/2026-05-20 Demo paper rewrite and live clustering]]
 
 ## Session log
 
+- [[../sessions/2026-05-20 Demo paper rewrite and live clustering]]
 - [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 - [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 - [[../sessions/2026-05-15 Frontend polish and evaluation discussion]]
