@@ -38,5 +38,8 @@ data/linkedin_raw/
 # runtime logs (uvicorn etc.)
 *.log
 
+# local MiniLM model weights (~80MB)
+backend/models/
+
 # research profiles dataset + tooling (moved to data/research_profiles/)
 data/research_profiles/

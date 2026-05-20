@@ -23,6 +23,21 @@ const IDLE_ARCHETYPES = [
   'Next visitor could be a Tech Founder...',
 ];
 
+const ARCHETYPE_LABELS = {
+  arch_phd_nlp_introvert: 'The Researcher',
+  arch_postdoc_cv_ambitious: 'The Rising Star',
+  arch_tech_founder_applied: 'The Founder',
+  arch_senior_prof_meta: 'The Professor',
+  arch_industry_pm_pragmatic: 'The Pragmatist',
+  arch_research_engineer_skeptic: 'The Skeptic',
+  arch_vc_investor: 'The Strategist',
+  arch_journalist_curious: 'The Explorer',
+  arch_professor_skeptic: 'The Skeptic',
+  arch_postdoc_eager: 'The Rising Star',
+  arch_industry_pragmatist: 'The Pragmatist',
+  arch_student_enthusiast: 'The Enthusiast',
+};
+
 const AUTH_EMAIL_RE = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
 
 const state = {
@@ -494,12 +509,14 @@ function renderRule(rule) {
   if (rule.status === 'under_revision') cls.push('-revising');
   if (rule.status === 'deprecated') cls.push('-deprecated');
 
+  const clusterLabel = ARCHETYPE_LABELS[rule.cluster_id] || rule.cluster_id;
+
   if (rule.status === 'deprecated') {
     return `
       <div class="${cls.join(' ')}">
         <div class="rule-num">${num}</div>
         <div class="rule-body">
-          <span class="if">If</span><span class="clu">${escapeHTML(rule.cluster_id)} <em>(replaced by ${escapeHTML(rule.deprecated_by || '—')})</em></span>
+          <span class="if">If</span><span class="clu">${escapeHTML(clusterLabel)} <em>(replaced by ${escapeHTML(rule.deprecated_by || '—')})</em></span>
         </div>
         <div class="rule-cs"><div class="cs-num" style="opacity:0.4;">—</div></div>
       </div>
@@ -516,17 +533,24 @@ function renderRule(rule) {
 
   const slotChip = (name) => {
     const s = slots[name];
-    if (!s) return '<span class="slot">—</span>';
-    if (s.kind === 'dynamic') return `<span class="slot">dynamic</span>`;
-    return `<span class="slot">${escapeHTML(s.value || '—')}</span>`;
+    if (!s) return '<span class="slot-val">—</span>';
+    if (s.kind === 'dynamic') return `<span class="slot-val -dynamic">dynamic</span>`;
+    return `<span class="slot-val">${escapeHTML(s.value || '—')}</span>`;
   };
 
   return `
     <div class="${cls.join(' ')}">
       <div class="rule-num">${num}</div>
       <div class="rule-body">
-        <span class="if">If</span><span class="clu">${escapeHTML(rule.cluster_id)}</span><br>
-        <span class="then">Then</span>framing ${slotChip('framing')} · tone ${slotChip('tone')} · opener ${slotChip('opener_type')} · words ${slotChip('word_target')} · ask ${slotChip('ask_size')}
+        <span class="if">If</span><span class="clu">${escapeHTML(clusterLabel)}</span><br>
+        <span class="then">Then</span>
+        <div class="slot-grid">
+          <span class="slot-pair"><span class="slot-label">framing</span>${slotChip('framing')}</span>
+          <span class="slot-pair"><span class="slot-label">tone</span>${slotChip('tone')}</span>
+          <span class="slot-pair"><span class="slot-label">opener</span>${slotChip('opener_type')}</span>
+          <span class="slot-pair"><span class="slot-label">words</span>${slotChip('word_target')}</span>
+          <span class="slot-pair"><span class="slot-label">ask</span>${slotChip('ask_size')}</span>
+        </div>
         ${dynLine}
       </div>
       <div class="rule-cs">
@@ -657,12 +681,13 @@ function applyVisitor(currentSession, recentEpisodes) {
   }
 
   if (meta) {
-    meta.textContent = `${profile.source_kind} · classified ${currentSession.cluster_id || '—'}`;
+    const clLabel = ARCHETYPE_LABELS[currentSession.cluster_id] || currentSession.cluster_id || '—';
+    meta.textContent = `${profile.source_kind} · ${clLabel}`;
   }
   setText('#visitor-name', profile.name);
   setText('#visitor-role', profile.role);
-  setText('#visitor-archetype', profile.id);
-  setText('#visitor-cluster', currentSession.cluster_id || '—');
+  setText('#visitor-archetype', ARCHETYPE_LABELS[currentSession.cluster_id] || profile.id);
+  setText('#visitor-cluster', ARCHETYPE_LABELS[currentSession.cluster_id] || currentSession.cluster_id || '—');
   setText('#visitor-seniority', profile.seniority);
   setText('#visitor-domain', profile.domain);
   setText('#visitor-source', profile.source_kind);

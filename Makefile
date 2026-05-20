@@ -1,4 +1,4 @@
-.PHONY: demo reset booth test install seed health
+.PHONY: demo reset booth test install seed seed-demo health
 
 PORT ?= 8000
 HOST ?= 127.0.0.1
@@ -9,6 +9,12 @@ install:
 
 seed:
 	@python -m backend.seed
+
+seed-demo:
+	@echo "→ seeding demo DB (profiles + episodes + clusters + rules)"
+	@rm -f edra_lounge.db edra_lounge.db-shm edra_lounge.db-wal
+	@python -m backend.seed_demo
+	@echo "✓ demo DB ready — run 'make demo' with LIVE_MODE=false"
 
 # Reset DB and re-seed in a single fast pass — TASK.md acceptance: <5s.
 reset:

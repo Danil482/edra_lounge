@@ -16,12 +16,17 @@ revision pipeline deprecates old rules when accepting new ones.
 
 from __future__ import annotations
 
+from collections import defaultdict
+
+import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend import schemas
 from backend.memory import models
 from backend.memory import store
+
+_KNN_K = 7
 
 
 async def classify_profile(
@@ -35,10 +40,39 @@ async def classify_profile(
         # immediately to every visitor of that archetype, with no warmup.
         return profile.id
 
-    # Live mode (Phase 3): nearest-centroid lookup against ClusterRows.
-    # Until embeddings + clustering fully wire, return None — this lets the
-    # session take the improvise path rather than mis-applying a rule.
-    return None
+    if not profile.embedding:
+        return None
+
+    episodes = await store.all_episodes(session)
+    profile_cluster: dict[str, str] = {}
+    for ep in sorted(episodes, key=lambda e: e.timestamp):
+        if ep.cluster_id is not None:
+            profile_cluster[ep.profile_id] = ep.cluster_id
+
+    if not profile_cluster:
+        return None
+
+    all_profiles = await store.list_profiles(session)
+    candidates = [
+        p for p in all_profiles
+        if p.embedding and p.id in profile_cluster and p.id != profile.id
+    ]
+    if not candidates:
+        return None
+
+    query_vec = np.asarray(profile.embedding, dtype=np.float64)
+    candidate_vecs = np.asarray([c.embedding for c in candidates], dtype=np.float64)
+    similarities = candidate_vecs @ query_vec
+
+    k = min(_KNN_K, len(candidates))
+    top_indices = np.argpartition(similarities, -k)[-k:]
+
+    cluster_scores: dict[str, float] = defaultdict(float)
+    for idx in top_indices:
+        cid = profile_cluster[candidates[idx].id]
+        cluster_scores[cid] += float(similarities[idx])
+
+    return max(cluster_scores, key=cluster_scores.get)
 
 
 async def lookup_applicable_rule(

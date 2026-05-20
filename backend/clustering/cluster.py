@@ -9,6 +9,7 @@ the import cost.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 
 
 _embedder = None
+_LOCAL_MODEL_PATH = Path(__file__).parent.parent / "models" / "all-MiniLM-L6-v2"
 
 
 def _get_embedder():
@@ -27,7 +29,8 @@ def _get_embedder():
     if _embedder is None:
         from sentence_transformers import SentenceTransformer
 
-        _embedder = SentenceTransformer(settings.embedding_model)
+        model_path = str(_LOCAL_MODEL_PATH) if _LOCAL_MODEL_PATH.exists() else settings.embedding_model
+        _embedder = SentenceTransformer(model_path)
     return _embedder
 
 

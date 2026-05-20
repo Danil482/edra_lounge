@@ -93,6 +93,12 @@ async def start_session(
         )
 
     profile = await profile_source.fetch(identifier)
+
+    if not profile.embedding:
+        from backend.clustering.cluster import embed
+        text = f"{profile.name}, {profile.role}. {profile.headline}. {profile.archetype_summary}"
+        profile.embedding = embed([text])[0]
+
     log.info(
         "session.profile-fetched id=%s name=%r role=%r avatar_url=%s",
         profile.id,

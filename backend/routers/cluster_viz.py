@@ -25,12 +25,14 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["cluster-viz"])
 
 ARCHETYPE_LABELS = {
-    "arch_professor_skeptic": "The Skeptic",
-    "arch_postdoc_eager": "The Rising Star",
-    "arch_industry_pragmatist": "The Pragmatist",
-    "arch_journalist_curious": "The Explorer",
+    "arch_phd_nlp_introvert": "The Researcher",
+    "arch_postdoc_cv_ambitious": "The Rising Star",
+    "arch_tech_founder_applied": "The Founder",
+    "arch_senior_prof_meta": "The Professor",
+    "arch_industry_pm_pragmatic": "The Pragmatist",
+    "arch_research_engineer_skeptic": "The Skeptic",
     "arch_vc_investor": "The Strategist",
-    "arch_student_enthusiast": "The Enthusiast",
+    "arch_journalist_curious": "The Explorer",
 }
 
 CLUSTER_COLORS = [
@@ -66,7 +68,7 @@ def _project_tsne(embeddings: np.ndarray) -> list[tuple[float, float]]:
         n_components=2,
         perplexity=perplexity,
         random_state=42,
-        n_iter=500,
+        max_iter=500,
         init="pca",
     )
     coords = reducer.fit_transform(embeddings)
