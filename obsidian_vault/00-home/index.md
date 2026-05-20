@@ -68,9 +68,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-18: **Phase 8 shipped (8 commits) + Lemlist decision + E2E verified** — see [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
 - 2026-05-19: **Avatar regen + Phase 5.1-5.3 prompts + clustering fix** — see [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 - 2026-05-20: **Phase 10 — demo paper rewrite, KNN classify, seed_demo, rulebook UI** — see [[../sessions/2026-05-20 Demo paper rewrite and live clustering]]
+- 2026-05-20 (PM): **Evaluation methodology discussion** — see [[../sessions/2026-05-20 Evaluation methodology discussion with supervisor]]
 
 ## Session log
 
+- [[../sessions/2026-05-20 Evaluation methodology discussion with supervisor]]
 - [[../sessions/2026-05-20 Demo paper rewrite and live clustering]]
 - [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 - [[../sessions/2026-05-18 Phase 8 frontend overhaul and Lemlist decision]]
