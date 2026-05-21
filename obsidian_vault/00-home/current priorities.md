@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-20
+date: 2026-05-21
 ---
 
 # Current Priorities
@@ -18,9 +18,11 @@ Session 2026-05-18 (Phase 8 + Lemlist) → [[../sessions/2026-05-18 Phase 8 fron
 Session 2026-05-19 (Avatar regen + Phase 5 prompts) → [[../sessions/2026-05-19 Avatar regen Phase 5 prompts and clustering fix]]
 Session 2026-05-20 (Demo paper + live clustering) → [[../sessions/2026-05-20 Demo paper rewrite and live clustering]]
 Session 2026-05-20 (Evaluation methodology) → [[../sessions/2026-05-20 Evaluation methodology discussion with supervisor]]
+Session 2026-05-21 (Pipedrive mail API) → [[../sessions/2026-05-21 Pipedrive mail API exploration for evaluation data]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
+On 2026-05-21 we explored Pipedrive mail API as a source for evaluation data. Documented 6 mail endpoints, wrote `explore_pipedrive_mail.py` (discovery) and `extract_outreach_mail.py` (resumable extraction with 60% daily budget cap) in the EDRA project. Extracted 64 rows. **Data quality concern**: most extracted emails are credential-sharing and scheduling, not varied outreach pitches. WhatsApp conversations invisible to API. Stage progression may be a better reward signal than email reply. Active deals CSV analyzed (63 deals, 8 lead source categories).
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -171,6 +173,12 @@ Three-level evaluation framework designed:
 - [ ] Off-policy evaluation using Philipp's historical outreach data (replay method, Li et al. WSDM 2011)
 - [ ] Baselines: no-personalization, random strategy, static rules (no adaptation), ExpeL-style (no clustering)
 - [ ] Metric: response rate (replied / not replied)
+- [x] Pipedrive mail API explored (2026-05-21): 6 endpoints documented, extraction scripts written in EDRA project
+- [ ] **Data quality problem**: extracted emails are mostly credential-sharing/scheduling, not varied outreach pitches
+- [ ] **Alternative reward signal**: use deal stage progression instead of email reply (captures WhatsApp interactions)
+- [ ] Re-run extraction with `--budget` fix, filter to first-contact pitches only
+- [ ] Add archived/lost deals as negative examples
+- [ ] Profile enrichment via `GET /persons/{id}` for context features
 
 ### Level 3 — Adaptive learning curve (needs own outreach data)
 - [ ] Prequential evaluation over outreach batches (Gama et al. 2013)
