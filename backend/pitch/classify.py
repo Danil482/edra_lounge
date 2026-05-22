@@ -35,41 +35,36 @@ async def classify_profile(
 ) -> str | None:
     """Return the cluster_id this profile belongs to, or None if uncovered."""
     if profile.source_kind == "synthetic":
-        # Synthetic archetype id is stable across the demo run — use it as
-        # the cluster identifier so rules induced for an archetype apply
-        # immediately to every visitor of that archetype, with no warmup.
         return profile.id
 
     if not profile.embedding:
         return None
 
-    episodes = await store.all_episodes(session)
-    profile_cluster: dict[str, str] = {}
-    for ep in sorted(episodes, key=lambda e: e.timestamp):
-        if ep.cluster_id is not None:
-            profile_cluster[ep.profile_id] = ep.cluster_id
-
+    profile_cluster = await store.profile_cluster_map(session)
     if not profile_cluster:
         return None
 
-    all_profiles = await store.list_profiles(session)
-    candidates = [
-        p for p in all_profiles
-        if p.embedding and p.id in profile_cluster and p.id != profile.id
-    ]
-    if not candidates:
+    all_embeddings = await store.profiles_with_embeddings(session)
+    candidate_ids: list[str] = []
+    candidate_vecs: list[list[float]] = []
+    for pid, emb in all_embeddings:
+        if pid in profile_cluster and pid != profile.id:
+            candidate_ids.append(pid)
+            candidate_vecs.append(emb)
+
+    if not candidate_ids:
         return None
 
     query_vec = np.asarray(profile.embedding, dtype=np.float64)
-    candidate_vecs = np.asarray([c.embedding for c in candidates], dtype=np.float64)
-    similarities = candidate_vecs @ query_vec
+    mat = np.asarray(candidate_vecs, dtype=np.float64)
+    similarities = mat @ query_vec
 
-    k = min(_KNN_K, len(candidates))
+    k = min(_KNN_K, len(candidate_ids))
     top_indices = np.argpartition(similarities, -k)[-k:]
 
     cluster_scores: dict[str, float] = defaultdict(float)
     for idx in top_indices:
-        cid = profile_cluster[candidates[idx].id]
+        cid = profile_cluster[candidate_ids[idx]]
         cluster_scores[cid] += float(similarities[idx])
 
     return max(cluster_scores, key=cluster_scores.get)

@@ -34,6 +34,15 @@ def _get_embedder():
     return _embedder
 
 
+def preload_embedder() -> bool:
+    """Eagerly load the MiniLM model. Returns True on success, False if unavailable."""
+    try:
+        _get_embedder()
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def embed(texts: list[str]) -> list[list[float]]:
     model = _get_embedder()
     vecs = model.encode(texts, show_progress_bar=False)

@@ -131,15 +131,16 @@ def test_render_thought_carries_rule_id_when_present():
 # ── generate_turn — three paths ──────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_generate_turn_static_rule_does_not_call_llm(monkeypatch):
-    """Static rule path should produce a turn from templates only."""
+async def test_generate_turn_static_rule_calls_llm_for_response_options(monkeypatch):
+    """Static rule path now uses LLM to generate opener with response options."""
+    _LLM_JSON = '{"pitch": "Your parsing work is exactly what our benchmark needs.", "options": [{"text": "Tell me more about those benchmarks.", "sentiment": "positive"}, {"text": "What makes your lab different?", "sentiment": "skeptical"}, {"text": "Not really my area, thanks.", "sentiment": "negative"}]}'
     calls: dict[str, int] = {"complete": 0}
 
-    async def _no_llm(*args, **kwargs):
+    async def _fake_llm(*args, **kwargs):
         calls["complete"] += 1
-        return "should not be reached"
+        return _LLM_JSON
 
-    monkeypatch.setattr("backend.pitch.generate.llm.complete", _no_llm)
+    monkeypatch.setattr("backend.pitch.generate.llm.complete", _fake_llm)
 
     profile = _phd_profile()
     rule = _static_rule()
@@ -148,13 +149,12 @@ async def test_generate_turn_static_rule_does_not_call_llm(monkeypatch):
         history=[],
         applicable_rule=rule,
     )
-    assert calls["complete"] == 0, "static-rule path must not invoke the LLM"
+    assert calls["complete"] == 1
     assert step.turn == 1
     assert step.rule_applied == "R.07"
     assert used_strategy.framing == "knowledge-share"
-    assert used_strategy.opener_type == "question"
-    assert used_strategy.opener_text  # template filled
-    assert step.response_options is None
+    assert step.response_options is not None
+    assert len(step.response_options) == 3
 
 
 @pytest.mark.asyncio
@@ -307,7 +307,7 @@ async def test_generate_turn_continuation_falls_back_to_template_on_llm_failure(
 
 def test_parse_llm_json_valid():
     raw = '{"pitch": "Hello world.", "options": [{"text": "Go on.", "sentiment": "positive"}, {"text": "Prove it.", "sentiment": "skeptical"}, {"text": "No thanks.", "sentiment": "negative"}]}'
-    text, options = generate._parse_llm_json(raw)
+    text, _thought, options = generate._parse_llm_json(raw)
     assert text == "Hello world."
     assert options is not None
     assert len(options) == 3
@@ -316,34 +316,34 @@ def test_parse_llm_json_valid():
 
 def test_parse_llm_json_plain_text_fallback():
     raw = "Just a plain text response."
-    text, options = generate._parse_llm_json(raw)
+    text, _thought, options = generate._parse_llm_json(raw)
     assert text == "Just a plain text response."
     assert options is None
 
 
 def test_parse_llm_json_markdown_fences():
     raw = '```json\n{"pitch": "Fenced.", "options": [{"text": "Yes.", "sentiment": "positive"}, {"text": "Why?", "sentiment": "skeptical"}, {"text": "No.", "sentiment": "negative"}]}\n```'
-    text, options = generate._parse_llm_json(raw)
+    text, _thought, options = generate._parse_llm_json(raw)
     assert text == "Fenced."
     assert options is not None
 
 
 def test_parse_llm_json_duplicate_sentiment():
     raw = '{"pitch": "Dup.", "options": [{"text": "A.", "sentiment": "positive"}, {"text": "B.", "sentiment": "positive"}, {"text": "C.", "sentiment": "negative"}]}'
-    text, options = generate._parse_llm_json(raw)
+    text, _thought, options = generate._parse_llm_json(raw)
     assert text == "Dup."
     assert options is None
 
 
 def test_parse_llm_json_missing_options():
     raw = '{"pitch": "No opts."}'
-    text, options = generate._parse_llm_json(raw)
+    text, _thought, options = generate._parse_llm_json(raw)
     assert text == "No opts."
     assert options is None
 
 
 def test_parse_llm_json_wrong_option_count():
     raw = '{"pitch": "Two.", "options": [{"text": "A.", "sentiment": "positive"}, {"text": "B.", "sentiment": "skeptical"}]}'
-    text, options = generate._parse_llm_json(raw)
+    text, _thought, options = generate._parse_llm_json(raw)
     assert text == "Two."
     assert options is None

@@ -67,6 +67,13 @@ def _build_profile_source() -> ProfileSource:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+
+    from backend.clustering.cluster import preload_embedder
+    if preload_embedder():
+        logging.getLogger(__name__).info("MiniLM embedding model preloaded")
+    else:
+        logging.getLogger(__name__).warning("MiniLM embedding model unavailable; will retry on first embed()")
+
     profile_source = _build_profile_source()
     app.state.profile_source = profile_source
 

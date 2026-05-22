@@ -40,6 +40,14 @@ Constraints for the opener:
     "Hi" or "Hey"
   - never reveal that this is automated outreach
 
+Constraints for the inner thought:
+  - one sentence, first-person, 10-20 words
+  - the agent's private reasoning about HOW to approach this specific visitor
+  - reference something from the visitor's profile or signals
+  - reads like a visual-novel character's inner monologue before speaking
+  - examples: "Their parsing work aligns with our benchmarking pipeline — I should lead with that."
+              "A senior professor... better open with credentials, not hype."
+
 Constraints for the three response options:
   - exactly three options, one per sentiment (positive, skeptical, negative)
   - each option text is 5-15 words
@@ -49,4 +57,4 @@ Constraints for the three response options:
   - each option must read as a natural visitor reaction to your specific opener
 
 Respond with ONLY a JSON object, no markdown fences, no extra text:
-{{"pitch": "<your opener text>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}
+{{"thought": "<inner monologue>", "pitch": "<your opener text>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}

@@ -310,10 +310,11 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  object-position: top center;
+  object-position: bottom center;
+  object-position: bottom center;
   display: none;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.45s ease;
 }
 
 .edra-avatar.-visible {
@@ -444,6 +445,33 @@ body {
   line-height: 1.5;
   color: var(--warm-white);
   letter-spacing: -0.2px;
+}
+
+.speech-bubble.-thought {
+  border-color: var(--mid-grey);
+}
+.speech-bubble.-thought .speech-bubble-text {
+  color: var(--cream);
+  font-style: italic;
+}
+.speech-bubble.-thought .speech-bubble-tail {
+  border-right-color: var(--mid-grey);
+}
+
+.bubble-continue-hint {
+  margin-top: 12px;
+  font-family: var(--f-body);
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  animation: hintPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 /* Triangular tail pointing LEFT toward the avatar */
@@ -1814,6 +1842,90 @@ body.expert-off .refl-proposal {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Welcome session-start dialog — choose LinkedIn URL or synthetic
+   ═══════════════════════════════════════════════════════════════ */
+.session-start-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.session-start-dialog.-hidden { display: none; }
+.session-start-card {
+  background: var(--black);
+  border: 1px solid var(--defy-red);
+  padding: 2rem 2.4rem;
+  width: 34rem;
+  max-width: calc(100vw - 4rem);
+  font-family: var(--f-body);
+  color: var(--warm-white);
+}
+.session-start-eyebrow {
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.32em;
+  color: var(--defy-red);
+  margin-bottom: 0.8rem;
+}
+.session-start-title {
+  font-family: var(--f-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.01em;
+  margin-bottom: 1.4rem;
+}
+.session-start-section {
+  margin-bottom: 0.4rem;
+}
+.session-start-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  margin-bottom: 0.5rem;
+}
+.session-start-live-btn,
+.session-start-synth-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+.session-start-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+.session-start-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--cream-line);
+}
+.session-start-divider-text {
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+}
+.session-start-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.2rem;
+}
+.session-start-section .live-status {
+  margin-bottom: 0;
+}
+/* Hide the LinkedIn section when live mode is off (toggled by JS) */
+#session-start-live-section.-unavailable {
+  display: none;
+}
+#session-start-live-section.-unavailable + .session-start-divider {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    End-of-dialog popup — shown when interest reaches +5 or -5
    ═══════════════════════════════════════════════════════════════ */
 
@@ -2099,4 +2211,91 @@ body.expert-off .refl-proposal {
 
 .neighbor-sim.-top {
   color: var(--defy-red);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESOLVE BUTTONS — Accept (left of choices) / Decline (right of choices)
+   ═══════════════════════════════════════════════════════════════ */
+
+.resolve-btn {
+  position: absolute;
+  bottom: 110px;
+  z-index: 10;
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 18px 20px;
+  cursor: pointer;
+  border: 1px solid;
+  line-height: 1;
+  transition: all 0.15s ease,
+              left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.resolve-btn.-accept {
+  right: calc(88% + 16px);
+  background: transparent;
+  color: #4a9;
+  border-color: #4a9;
+}
+
+.resolve-btn.-accept:not(:disabled):hover {
+  background: #4a9;
+  color: var(--black);
+}
+
+.resolve-btn.-decline {
+  left: calc(88% + 16px);
+  background: transparent;
+  color: var(--defy-red);
+  border-color: var(--defy-red);
+}
+
+.resolve-btn.-decline:not(:disabled):hover {
+  background: var(--defy-red);
+  color: var(--warm-white);
+}
+
+.resolve-btn.-disabled,
+.resolve-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Push resolve buttons when panels open */
+.stage:has(.panel-trigger.-right:hover) .resolve-btn.-decline,
+.stage:has(.panel-right:hover) .resolve-btn.-decline {
+  left: calc(88% + 16px - 368px);
+}
+.stage:has(.panel-trigger.-left:hover) .resolve-btn.-accept,
+.stage:has(.panel-left:hover) .resolve-btn.-accept {
+  right: calc(88% + 16px - 408px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WELCOME STATE — greeting before pitch starts
+   ═══════════════════════════════════════════════════════════════ */
+
+.welcome-cta {
+  display: inline-block;
+  margin-top: 24px;
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  padding: 16px 36px;
+  background: var(--defy-red);
+  color: var(--warm-white);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  line-height: 1;
+}
+
+.welcome-cta:hover {
+  opacity: 0.85;
 }

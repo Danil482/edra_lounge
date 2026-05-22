@@ -17,6 +17,7 @@ manager exposes that pointer to the /state polling endpoint.
 
 from backend.sessions.lifecycle import (
     end_session,
+    resolve_session,
     run_synthetic_session,
     start_session,
     take_turn,
@@ -36,6 +37,7 @@ __all__ = [
     "SessionStore",
     "end_session",
     "get_active_session",
+    "resolve_session",
     "run_synthetic_session",
     "session_store",
     "start_session",

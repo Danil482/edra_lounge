@@ -47,11 +47,10 @@ _SYSTEM_TEMPLATE = (_PROMPTS_DIR / "_system.txt").read_text(encoding="utf-8")
 _SYSTEM_MESSAGE = _SYSTEM_TEMPLATE.format(lab_facts=_LAB_FACTS)
 
 
-def _parse_llm_json(raw: str) -> tuple[str, list[schemas.ResponseOption] | None]:
-    """Extract pitch text and response options from LLM JSON output.
+def _parse_llm_json(raw: str) -> tuple[str, str | None, list[schemas.ResponseOption] | None]:
+    """Extract pitch text, inner thought, and response options from LLM JSON.
 
-    Returns (pitch_text, options_or_none). On any parse issue, tries to
-    salvage the pitch text and returns None for options.
+    Returns (pitch_text, thought_or_none, options_or_none).
     """
     text = raw.strip()
     if text.startswith("```"):
@@ -64,34 +63,36 @@ def _parse_llm_json(raw: str) -> tuple[str, list[schemas.ResponseOption] | None]
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        return raw.strip().strip('"').strip(), None
+        return raw.strip().strip('"').strip(), None, None
 
     if not isinstance(data, dict) or "pitch" not in data:
-        return raw.strip().strip('"').strip(), None
+        return raw.strip().strip('"').strip(), None, None
 
     pitch = str(data["pitch"]).strip().strip('"').strip()
+    thought = str(data["thought"]).strip() if data.get("thought") else None
+
     raw_options = data.get("options")
     if not isinstance(raw_options, list) or len(raw_options) != 3:
-        return pitch, None
+        return pitch, thought, None
 
     options: list[schemas.ResponseOption] = []
     seen_sentiments: set[str] = set()
     for opt in raw_options:
         if not isinstance(opt, dict):
-            return pitch, None
+            return pitch, thought, None
         opt_text = str(opt.get("text", "")).strip()
         sentiment = str(opt.get("sentiment", "")).strip().lower()
         if not opt_text or sentiment not in _EXPECTED_SENTIMENTS:
-            return pitch, None
+            return pitch, thought, None
         if sentiment in seen_sentiments:
-            return pitch, None
+            return pitch, thought, None
         seen_sentiments.add(sentiment)
         options.append(schemas.ResponseOption(text=opt_text, sentiment=sentiment))
 
     if seen_sentiments != _EXPECTED_SENTIMENTS:
-        return pitch, None
+        return pitch, thought, None
 
-    return pitch, options
+    return pitch, thought, options
 
 
 async def generate_turn(
@@ -106,14 +107,14 @@ async def generate_turn(
     is_opener = len(history) == 0
 
     if is_opener:
-        opener_text, options, path = await _produce_opener(profile, strat, applicable_rule)
+        opener_text, llm_thought, options, path = await _produce_opener(profile, strat, applicable_rule)
         strat = strat.model_copy(update={"opener_text": opener_text})
         reply = opener_text
     else:
-        reply, options, path = await _produce_continuation(profile, strat, history, used_categories)
+        reply, llm_thought, options, path = await _produce_continuation(profile, strat, history, used_categories)
 
     rule_id = applicable_rule.id if applicable_rule is not None else None
-    thought = templates.render_thought(strat, rule_id, is_opener)
+    thought = llm_thought or templates.render_thought(strat, rule_id, is_opener)
     log.debug(
         "pitch.generate_turn turn=%d path=%s rule=%s",
         len(history) + 1,
@@ -137,22 +138,19 @@ async def _produce_opener(
     profile: schemas.Profile,
     strat: schemas.PitchStrategy,
     applicable_rule: schemas.Rule | None,
-) -> tuple[str, list[schemas.ResponseOption] | None, str]:
-    if applicable_rule is None:
-        text, options = await _opener_via_llm(profile, strat)
-        return text, options, "improvise"
+) -> tuple[str, str | None, list[schemas.ResponseOption] | None, str]:
+    path = "improvise"
+    if applicable_rule is not None:
+        path = "hybrid" if strategy_mod.has_dynamic_slot(applicable_rule, "opener_type") else "static"
 
-    if strategy_mod.has_dynamic_slot(applicable_rule, "opener_type"):
-        text, options = await _opener_via_llm(profile, strat)
-        return text, options, "hybrid"
-
-    return templates.render_opener(profile, strat), None, "static"
+    text, thought, options = await _opener_via_llm(profile, strat)
+    return text, thought, options, path
 
 
 async def _opener_via_llm(
     profile: schemas.Profile,
     strat: schemas.PitchStrategy,
-) -> tuple[str, list[schemas.ResponseOption] | None]:
+) -> tuple[str, str | None, list[schemas.ResponseOption] | None]:
     try:
         prompt = llm.render(
             "opener",
@@ -171,14 +169,14 @@ async def _opener_via_llm(
             ask_size=strat.ask_size,
         )
         raw = await llm.complete(prompt, system=_SYSTEM_MESSAGE)
-        text, options = _parse_llm_json(raw)
+        text, thought, options = _parse_llm_json(raw)
         if text:
-            return text, options
+            return text, thought, options
     except _LLM_OFFLINE_EXCEPTIONS as e:
         log.warning("opener LLM unavailable (%s); using template fallback", e.__class__.__name__)
     except Exception:  # noqa: BLE001
         log.exception("opener LLM call failed; falling back to template")
-    return templates.render_opener(profile, strat), None
+    return templates.render_opener(profile, strat), None, None
 
 
 async def _produce_continuation(
@@ -186,7 +184,7 @@ async def _produce_continuation(
     strat: schemas.PitchStrategy,
     history: list[schemas.DialogueStep],
     used_categories: list[str] | None = None,
-) -> tuple[str, list[schemas.ResponseOption] | None, str]:
+) -> tuple[str, str | None, list[schemas.ResponseOption] | None, str]:
     last = history[-1]
     remaining = _remaining_categories(used_categories)
     try:
@@ -210,9 +208,9 @@ async def _produce_continuation(
             remaining_categories=", ".join(remaining),
         )
         raw = await llm.complete(prompt, system=_SYSTEM_MESSAGE)
-        text, options = _parse_llm_json(raw)
+        text, thought, options = _parse_llm_json(raw)
         if text:
-            return text, options, "continuation-llm"
+            return text, thought, options, "continuation-llm"
     except _LLM_OFFLINE_EXCEPTIONS as e:
         log.warning(
             "continuation LLM unavailable (%s); using template fallback",
@@ -220,7 +218,7 @@ async def _produce_continuation(
         )
     except Exception:  # noqa: BLE001
         log.exception("continuation LLM call failed; falling back to template")
-    return templates.render_continuation(profile, strat, history), None, "continuation-template"
+    return templates.render_continuation(profile, strat, history), None, None, "continuation-template"
 
 
 def _remaining_categories(used: list[str] | None) -> list[str]:

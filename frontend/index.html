@@ -108,10 +108,10 @@
     </button>
   </div>
 
-  <!-- ═══════════════ DIALOG MODE TOGGLE ═══════════════ -->
-  <button class="dialog-mode-toggle" id="dialog-mode-toggle" title="Switch between panel and speech bubble">
-    <span class="dialog-mode-icon" id="dialog-mode-icon">PANEL</span>
-  </button>
+  <!-- ═══════════════ RESOLVE BUTTONS (flanking choices) ═══════════════ -->
+  <button class="resolve-btn -accept -disabled" id="resolve-accept" disabled>Accept</button>
+  <button class="resolve-btn -decline -disabled" id="resolve-decline" disabled>Decline</button>
+
 
   <!-- ═══════════════ INTEREST GAUGE ═══════════════ -->
   <div class="gauge">
@@ -158,41 +158,25 @@
     <div class="top-controls">
       <button class="btn-op -danger" id="op-drift">AI Bubble Pops</button>
       <button class="btn-op" id="op-segment">+ Segment</button>
-      <button class="btn-op" id="op-live-toggle" style="display:none;">Start Live</button>
       <button class="btn-op" id="op-expert">Expert · On</button>
     </div>
   </div>
 
-  <!-- ═══════════════ LIVE-VISIT MODAL (hidden until operator clicks Start Live) ═══════════════ -->
-  <div class="live-dialog -hidden" id="live-dialog">
+
+  <!-- ═══════════════ SESSION-START DIALOG ═══════════════ -->
+  <div class="live-dialog -hidden" id="session-start-dialog">
     <div class="live-card">
       <div class="live-card-eyebrow">LIVE VISIT</div>
       <div class="live-card-title">Start a LinkedIn-fetched session</div>
       <div class="live-card-body">
-        Paste a public LinkedIn profile URL. The orchestrator will fetch via RapidAPI,
-        classify into a cluster, and open a multi-turn pitch session. If the network
-        is down, the booth will offer a synthetic archetype fallback.
+        Paste a public LinkedIn profile URL. The system will fetch the profile,
+        classify into a cluster, and open a multi-turn pitch session.
       </div>
-      <input type="text" id="live-url" class="live-input" placeholder="https://www.linkedin.com/in/…"/>
-      <span class="live-status" id="live-status"></span>
+      <input type="text" id="session-start-url" class="live-input" placeholder="https://www.linkedin.com/in/…"/>
+      <span class="live-status" id="session-start-status"></span>
       <div class="live-actions">
-        <button class="btn-sm -go" id="op-live-start">Start Live</button>
-        <button class="btn-sm -no" id="op-live-cancel">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ FALLBACK DIALOG ═══════════════ -->
-  <div class="fallback-dialog -hidden" id="fallback-dialog">
-    <div class="fallback-card">
-      <div class="fallback-title">LinkedIn fetch unavailable</div>
-      <div class="fallback-body" id="fallback-body">
-        Wi-Fi or RapidAPI is offline. Pick a synthetic archetype to continue the demo.
-      </div>
-      <select class="fallback-select" id="fallback-select"></select>
-      <div class="fallback-actions">
-        <button class="btn-sm -go" id="fallback-go">Use synthetic</button>
-        <button class="btn-sm -no" id="fallback-cancel">Cancel</button>
+        <button class="btn-sm -go" id="session-start-live-go">Fetch &amp; Start</button>
+        <button class="btn-sm -no" id="session-start-cancel">Cancel</button>
       </div>
     </div>
   </div>

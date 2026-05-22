@@ -18,6 +18,8 @@ reference.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,6 +60,18 @@ class TurnOut(BaseModel):
     interest: int
     terminated: bool
     outcome: schemas.OUTCOME | None = None
+
+
+class ResolveIn(BaseModel):
+    decision: Literal["accept", "decline"]
+
+
+class ResolveOut(BaseModel):
+    episode_id: str
+    summary: str
+    final_interest: int
+    outcome: schemas.OUTCOME
+    terminated: bool = True
 
 
 class EndOut(BaseModel):
@@ -159,6 +173,40 @@ async def turn(
         interest=sess.interest,
         terminated=terminated,
         outcome=sess.outcome,
+    )
+
+
+@router.post("/{session_id}/resolve", response_model=ResolveOut)
+async def resolve(
+    session_id: str,
+    body: ResolveIn,
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+):
+    orch = getattr(request.app.state, "orchestrator", None)
+    on_new_episode = orch.on_new_episode if orch is not None else None
+
+    try:
+        episode, outcome = await lifecycle.resolve_session(
+            db=db,
+            session_id=session_id,
+            decision=body.decision,
+            on_new_episode=on_new_episode,
+        )
+    except lifecycle.SessionNotFound:
+        raise HTTPException(status_code=404, detail="session not found")
+    except lifecycle.SessionAlreadyEnded:
+        raise HTTPException(status_code=409, detail="session already ended")
+
+    if orch is not None:
+        orch.live_session_active = False
+        orch.active_session = None
+
+    return ResolveOut(
+        episode_id=episode.id,
+        summary=episode.summary,
+        final_interest=episode.final_interest,
+        outcome=outcome,
     )
 
 

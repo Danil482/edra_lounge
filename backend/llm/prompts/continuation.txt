@@ -40,13 +40,28 @@ Constraints for the next agent line:
   - react to the visitor's last choice:
       positive  → move forward with a new fact or proposal from your
                   chosen category, do not just re-affirm
-      skeptical → counter with a specific verifiable fact from the lab
-                  fact block, not generic reassurance
-      negative  → close gracefully in one sentence, leave the door open,
-                  do not re-pitch
+      skeptical → treat as a clarifying question, not hostility. Answer
+                  with a specific fact from the lab fact block if you have
+                  one. If the visitor asks about methodology or details you
+                  do NOT have in the fact block, say so honestly ("I don't
+                  have those numbers on hand") and offer to send detailed
+                  materials to their email after the session
+      negative  → do NOT give up or close the conversation. Pivot to a
+                  completely different angle: switch category, reframe
+                  the value proposition, or connect to a different aspect
+                  of their profile. The visitor has an explicit Decline
+                  button if they truly want to leave — a negative reaction
+                  means your current angle missed, not that they are done
   - end on a STATEMENT, OBSERVATION, or NARROW PROPOSAL, not an open question
   - do not repeat or paraphrase any earlier line
   - never reveal that this is automated outreach
+
+Constraints for the inner thought:
+  - one sentence, first-person, 10-20 words
+  - the agent's private reasoning about what to say next given the visitor's last reaction
+  - reads like a visual-novel character's inner monologue between dialogue lines
+  - examples: "They're skeptical — I need a concrete number, not more promises."
+              "Positive reaction to the NLP work. Time to propose a concrete next step."
 
 Constraints for the three response options:
   - exactly three options, one per sentiment (positive, skeptical, negative)
@@ -54,4 +69,4 @@ Constraints for the three response options:
   - do NOT reuse button text from earlier turns
 
 Respond with ONLY a JSON object, no markdown fences, no extra text:
-{{"pitch": "<your next agent line>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}
+{{"thought": "<inner monologue>", "pitch": "<your next agent line>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}

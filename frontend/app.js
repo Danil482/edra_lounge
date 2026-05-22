@@ -40,6 +40,8 @@ const ARCHETYPE_LABELS = {
 
 const AUTH_EMAIL_RE = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
 
+const WELCOME_TEXT = "Hi! I'm Edra, a research liaison from the DEFY Lab. I help connect researchers with collaborative opportunities. Ready to learn about what we can offer based on your profile?";
+
 const state = {
   expertOn: true,
   lastUtterance: null,
@@ -57,9 +59,14 @@ const state = {
   visitorId: null,
   visitorEmail: null,
   lastEmotion: 'idle',
-  dialogMode: 'bubble',
   lastBubbleText: null,
   bubbleTypewriterTimer: null,
+  bubbleGeneration: 0,
+  welcomeActive: false,
+  sessionResolved: false,
+  awaitingLLM: false,
+  thoughtPending: false,
+  pendingReply: null,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -188,16 +195,15 @@ function pickStep(s) {
 }
 
 function applyTextbox(s) {
+  if (state.welcomeActive) return;
+
   const step = pickStep(s);
   const utter = $('#utterance');
   const idleHero = $('#idle-hero');
   const thoughtBlock = $('#thought-block');
   const textbox = $('.textbox');
 
-  // In bubble mode the textbox container stays hidden, but we still
-  // track the latest utterance so switching back to panel is seamless.
-  const isBubble = state.dialogMode === 'bubble';
-  if (isBubble && textbox) textbox.classList.add('-bubble-hidden');
+  if (textbox) textbox.classList.add('-bubble-hidden');
 
   if (!step) {
     if (idleHero) idleHero.classList.remove('-hidden');
@@ -281,8 +287,12 @@ function typewrite(sel, text) {
 // ── Speech bubble ────────────────────────────────────────────────────
 
 function applyBubble(s) {
+  if (state.welcomeActive) return;
+
   const bubble = $('#speech-bubble');
   if (!bubble) return;
+
+  if (state.thoughtPending) return;
 
   const step = pickStep(s);
 
@@ -292,17 +302,87 @@ function applyBubble(s) {
     return;
   }
 
-  if (state.dialogMode !== 'bubble') {
-    bubble.classList.add('-hidden');
-    return;
-  }
-
   bubble.classList.remove('-hidden');
 
   if (step.agent_reply !== state.lastBubbleText) {
-    state.lastBubbleText = step.agent_reply;
-    bubbleTransition(step.agent_reply);
+    if (step.agent_thought && !step.agent_thought.startsWith('(')) {
+      state.thoughtPending = true;
+      state.pendingReply = step.agent_reply;
+      state.lastBubbleText = step.agent_reply;
+      showThoughtThenReply(step.agent_thought, step.agent_reply);
+    } else {
+      state.lastBubbleText = step.agent_reply;
+      bubbleTransition(step.agent_reply);
+    }
   }
+}
+
+function showThoughtThenReply(thought, reply) {
+  const bubble = $('#speech-bubble');
+  const textEl = $('#speech-bubble-text');
+  if (!bubble || !textEl) return;
+
+  if (state.bubbleTypewriterTimer) {
+    clearInterval(state.bubbleTypewriterTimer);
+    state.bubbleTypewriterTimer = null;
+  }
+
+  const gen = ++state.bubbleGeneration;
+
+  bubble.classList.remove('-fade-in', '-fade-out');
+  bubble.classList.add('-thought');
+
+  textEl.innerHTML = '';
+  const em = document.createElement('em');
+  textEl.appendChild(em);
+
+  let i = 0;
+  const charStep = 1000 / TYPEWRITER_CPS;
+  state.bubbleTypewriterTimer = setInterval(() => {
+    if (gen !== state.bubbleGeneration) {
+      clearInterval(state.bubbleTypewriterTimer);
+      state.bubbleTypewriterTimer = null;
+      return;
+    }
+    if (i >= thought.length) {
+      clearInterval(state.bubbleTypewriterTimer);
+      state.bubbleTypewriterTimer = null;
+      const hint = document.createElement('div');
+      hint.className = 'bubble-continue-hint';
+      hint.textContent = '▸ Click to continue';
+      textEl.appendChild(hint);
+      waitForContinue(() => {
+        if (gen !== state.bubbleGeneration) return;
+        state.thoughtPending = false;
+        state.pendingReply = null;
+        bubble.classList.remove('-thought');
+        bubbleTransition(reply);
+      });
+      return;
+    }
+    em.textContent += thought.charAt(i++);
+  }, charStep);
+}
+
+function waitForContinue(callback) {
+  function onClick(e) {
+    if (e.target.closest('.choice') || e.target.closest('.resolve-btn')) return;
+    cleanup();
+    callback();
+  }
+  function onKey(e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      cleanup();
+      callback();
+    }
+  }
+  function cleanup() {
+    document.removeEventListener('click', onClick);
+    document.removeEventListener('keydown', onKey);
+  }
+  document.addEventListener('click', onClick);
+  document.addEventListener('keydown', onKey);
 }
 
 function bubbleTransition(text) {
@@ -315,10 +395,14 @@ function bubbleTransition(text) {
     state.bubbleTypewriterTimer = null;
   }
 
+  const gen = ++state.bubbleGeneration;
+
   bubble.classList.remove('-fade-in');
   bubble.classList.add('-fade-out');
 
   setTimeout(() => {
+    if (gen !== state.bubbleGeneration) return;
+
     textEl.textContent = '';
     bubble.classList.remove('-fade-out');
     bubble.classList.add('-fade-in');
@@ -326,7 +410,7 @@ function bubbleTransition(text) {
     let i = 0;
     const step = 1000 / TYPEWRITER_CPS;
     state.bubbleTypewriterTimer = setInterval(() => {
-      if (i >= text.length) {
+      if (gen !== state.bubbleGeneration || i >= text.length) {
         clearInterval(state.bubbleTypewriterTimer);
         state.bubbleTypewriterTimer = null;
         return;
@@ -336,44 +420,10 @@ function bubbleTransition(text) {
   }, 300);
 }
 
-function toggleDialogMode() {
-  const bubble = $('#speech-bubble');
-  const textbox = $('.textbox');
-  const toggle = $('#dialog-mode-toggle');
-  const icon = $('#dialog-mode-icon');
-
-  if (state.dialogMode === 'panel') {
-    state.dialogMode = 'bubble';
-    if (textbox) textbox.classList.add('-bubble-hidden');
-    if (bubble && state.lastBubbleText) {
-      bubble.classList.remove('-hidden');
-    }
-    if (toggle) toggle.classList.add('-active');
-    if (icon) icon.textContent = 'PANEL';
-
-    // Immediately populate bubble with current text if available
-    if (state.lastUtterance) {
-      state.lastBubbleText = state.lastUtterance;
-      const textEl = $('#speech-bubble-text');
-      if (bubble) bubble.classList.remove('-hidden');
-      if (textEl) textEl.textContent = state.lastUtterance;
-    }
-  } else {
-    state.dialogMode = 'panel';
-    if (textbox) textbox.classList.remove('-bubble-hidden');
-    if (bubble) bubble.classList.add('-hidden');
-    if (toggle) toggle.classList.remove('-active');
-    if (icon) icon.textContent = 'BUBBLE';
-  }
-}
-
-$('#dialog-mode-toggle')?.addEventListener('click', toggleDialogMode);
-
-if (state.dialogMode === 'bubble') {
+// Bubble mode is always on — hide the panel textbox on init
+{
   const tb = $('.textbox');
   if (tb) tb.classList.add('-bubble-hidden');
-  const tgl = $('#dialog-mode-toggle');
-  if (tgl) tgl.classList.add('-active');
 }
 
 function applyGauge(s) {
@@ -421,7 +471,22 @@ function applyGauge(s) {
 
 // ── Avatar ──────────────────────────────────────────────────────────
 
+function setAvatarEmotion(emotion) {
+  const avatar = $('#edra-avatar');
+  if (!avatar || emotion === state.lastEmotion) return;
+  const newSrc = `assets/avatar/edra-${emotion}.png?v=2`;
+  avatar.style.opacity = '0';
+  setTimeout(() => {
+    avatar.src = newSrc;
+    avatar.onload = () => { avatar.style.opacity = '1'; };
+  }, 450);
+  state.lastEmotion = emotion;
+  avatar.setAttribute('data-emotion', emotion);
+}
+
 function applyAvatar(s) {
+  if (state.welcomeActive || state.awaitingLLM) return;
+
   const avatar = $('#edra-avatar');
   if (!avatar) return;
   const placeholder = $('#agent-slot-placeholder');
@@ -448,7 +513,7 @@ function applyAvatar(s) {
       setTimeout(() => {
         avatar.src = newSrc;
         avatar.onload = () => { avatar.style.opacity = '1'; };
-      }, 150);
+      }, 450);
       state.lastEmotion = emotion;
     }
   } else {
@@ -736,13 +801,16 @@ const STATIC_LABELS = {
 };
 
 function applyChoices(currentSession) {
+  if (state.welcomeActive) return;
+
   const lastStep = currentSession
     && currentSession.dialogue
     && currentSession.dialogue.length
     ? currentSession.dialogue[currentSession.dialogue.length - 1]
     : null;
 
-  const hasOpenStep = lastStep && lastStep.visitor_choice == null;
+  const hasOpenStep = lastStep && lastStep.visitor_choice == null && !state.thoughtPending;
+  const sessionActive = !!currentSession && !state.sessionResolved;
 
   const optionsBySentiment = {};
   if (lastStep && lastStep.response_options && lastStep.response_options.length === 3) {
@@ -759,7 +827,7 @@ function applyChoices(currentSession) {
       labelSpan.textContent = label;
     }
 
-    if (hasOpenStep) {
+    if (hasOpenStep && !state.sessionResolved) {
       btn.removeAttribute('disabled');
       btn.classList.remove('-disabled');
     } else {
@@ -767,13 +835,28 @@ function applyChoices(currentSession) {
       btn.classList.add('-disabled');
     }
   });
+
+  const acceptBtn = $('#resolve-accept');
+  const declineBtn = $('#resolve-decline');
+  if (sessionActive && !state.sessionResolved) {
+    if (acceptBtn) { acceptBtn.disabled = false; acceptBtn.classList.remove('-disabled'); }
+    if (declineBtn) { declineBtn.disabled = false; declineBtn.classList.remove('-disabled'); }
+  } else {
+    if (acceptBtn) { acceptBtn.disabled = true; acceptBtn.classList.add('-disabled'); }
+    if (declineBtn) { declineBtn.disabled = true; declineBtn.classList.add('-disabled'); }
+  }
 }
 
 async function handleChoice(choice) {
-  if (!state.currentSessionId) return;
+  if (!state.currentSessionId || state.sessionResolved) return;
+  state.awaitingLLM = true;
+  setAvatarEmotion('thinking');
   try {
     const result = await postJSON(`/sessions/${state.currentSessionId}/turn`, { visitor_choice: choice });
+    state.awaitingLLM = false;
     if (result.terminated) {
+      state.sessionResolved = true;
+      disableAllButtons();
       const outcome = result.outcome;
       try {
         await postJSON(`/sessions/${state.currentSessionId}/end`, {});
@@ -787,6 +870,7 @@ async function handleChoice(choice) {
       return;
     }
   } catch (e) {
+    state.awaitingLLM = false;
     console.warn('turn failed', e);
   }
   await poll();
@@ -795,6 +879,40 @@ async function handleChoice(choice) {
 $$('.choice').forEach(btn => {
   btn.addEventListener('click', () => handleChoice(btn.dataset.choice));
 });
+
+// ── Resolve buttons (Accept / Decline) ──────────────────────────────
+
+async function handleResolve(decision) {
+  if (!state.currentSessionId || state.sessionResolved) return;
+
+  state.sessionResolved = true;
+  disableAllButtons();
+
+  try {
+    await postJSON(`/sessions/${state.currentSessionId}/resolve`, { decision });
+  } catch (e) {
+    console.warn('resolve failed', e);
+  }
+
+  await poll();
+
+  const outcome = decision === 'accept' ? 'accepted' : 'rejected';
+  setTimeout(() => showEndDialog(outcome), 600);
+}
+
+function disableAllButtons() {
+  $$('.choice').forEach(btn => {
+    btn.setAttribute('disabled', '');
+    btn.classList.add('-disabled');
+  });
+  const acceptBtn = $('#resolve-accept');
+  const declineBtn = $('#resolve-decline');
+  if (acceptBtn) { acceptBtn.disabled = true; acceptBtn.classList.add('-disabled'); }
+  if (declineBtn) { declineBtn.disabled = true; declineBtn.classList.add('-disabled'); }
+}
+
+$('#resolve-accept')?.addEventListener('click', () => handleResolve('accept'));
+$('#resolve-decline')?.addEventListener('click', () => handleResolve('decline'));
 
 // ── Operator buttons ─────────────────────────────────────────────────
 
@@ -865,28 +983,6 @@ async function bootSources() {
   state.liveMode = !!sources.live_mode;
   state.syntheticArchetypes = sources.synthetic_archetypes || [];
 
-  // Populate fallback dropdown.
-  const sel = $('#fallback-select');
-  if (sel) {
-    sel.innerHTML = state.syntheticArchetypes
-      .map(a => `<option value="${escapeHTML(a)}">${escapeHTML(a)}</option>`)
-      .join('');
-  }
-
-  // "Start Live" operator button is only useful when LinkedIn is the
-  // active source. The dialog itself stays in the DOM (hidden) either way
-  // so the fallback flow can still re-use its input.
-  const toggle = $('#op-live-toggle');
-  if (toggle) toggle.style.display = state.liveMode ? '' : 'none';
-}
-
-function setLiveStatus(msg, kind) {
-  const el = $('#live-status');
-  if (!el) return;
-  el.textContent = msg || '';
-  el.classList.remove('-error', '-ok');
-  if (kind === 'error') el.classList.add('-error');
-  if (kind === 'ok') el.classList.add('-ok');
 }
 
 async function startSession(sourceKind, identifier) {
@@ -895,108 +991,6 @@ async function startSession(sourceKind, identifier) {
     identifier: identifier,
   });
 }
-
-async function handleLiveStart() {
-  const input = $('#live-url');
-  const url = (input?.value || '').trim();
-  if (!url) {
-    setLiveStatus('paste a LinkedIn URL', 'error');
-    return;
-  }
-  setLiveStatus('fetching…', 'ok');
-  try {
-    await startSession('linkedin_rapidapi', url);
-    setLiveStatus('session live', 'ok');
-    if (input) input.value = '';
-    await poll();
-  } catch (e) {
-    const msg = String(e.message || e);
-    if (/\b503\b/.test(msg) || /unavailable/i.test(msg)) {
-      setLiveStatus('LinkedIn unavailable — falling back', 'error');
-      state.pendingLiveUrl = url;
-      hideLiveDialog();
-      showFallback(`Wanted to fetch ${url}, but the source is unavailable. Pick a synthetic archetype to continue:`);
-    } else if (/\b404\b/.test(msg) || /not found/i.test(msg)) {
-      setLiveStatus('profile not found', 'error');
-    } else {
-      setLiveStatus('error: ' + msg.slice(0, 60), 'error');
-    }
-  }
-}
-
-function showFallback(body) {
-  const dlg = $('#fallback-dialog');
-  if (!dlg) return;
-  if (body) setText('#fallback-body', body);
-  dlg.classList.remove('-hidden');
-}
-
-function hideFallback() {
-  const dlg = $('#fallback-dialog');
-  if (dlg) dlg.classList.add('-hidden');
-}
-
-async function handleFallbackGo() {
-  const sel = $('#fallback-select');
-  const archetype = sel?.value;
-  if (!archetype) {
-    hideFallback();
-    return;
-  }
-  hideFallback();
-  setLiveStatus('starting synthetic ' + archetype, 'ok');
-  try {
-    await startSession('synthetic', archetype);
-    setLiveStatus('synthetic visit live', 'ok');
-    await poll();
-  } catch (e) {
-    setLiveStatus('synthetic start failed: ' + String(e.message || e).slice(0, 60), 'error');
-  }
-}
-
-function showLiveDialog() {
-  const dlg = $('#live-dialog');
-  if (!dlg) return;
-  dlg.classList.remove('-hidden');
-  setLiveStatus('', null);
-  const input = $('#live-url');
-  if (input) {
-    setTimeout(() => input.focus(), 0);
-  }
-}
-
-function hideLiveDialog() {
-  const dlg = $('#live-dialog');
-  if (dlg) dlg.classList.add('-hidden');
-}
-
-$('#op-live-toggle')?.addEventListener('click', showLiveDialog);
-$('#op-live-cancel')?.addEventListener('click', hideLiveDialog);
-$('#op-live-start')?.addEventListener('click', async () => {
-  await handleLiveStart();
-  // If start succeeded (no error in status), close the dialog.
-  const status = $('#live-status');
-  if (status && !status.classList.contains('-error')) {
-    hideLiveDialog();
-  }
-});
-$('#live-url')?.addEventListener('keydown', async (e) => {
-  if (e.key === 'Enter') {
-    await handleLiveStart();
-    const status = $('#live-status');
-    if (status && !status.classList.contains('-error')) {
-      hideLiveDialog();
-    }
-  } else if (e.key === 'Escape') {
-    hideLiveDialog();
-  }
-});
-
-$('#fallback-go')?.addEventListener('click', handleFallbackGo);
-$('#fallback-cancel')?.addEventListener('click', () => {
-  hideFallback();
-  setLiveStatus('cancelled', 'error');
-});
 
 // ── End-of-dialog popup ─────────────────────────────────────────
 
@@ -1028,9 +1022,12 @@ function hideEndDialog() {
   state.lastUtterance = null;
   state.lastInterest = null;
   state.lastBubbleText = null;
-  const bubble = $('#speech-bubble');
-  if (bubble) bubble.classList.add('-hidden');
-  poll();
+  state.sessionResolved = false;
+  state.currentSessionId = null;
+  state.thoughtPending = false;
+  state.pendingReply = null;
+  state.lastEmotion = null;
+  showWelcome();
 }
 
 $('#end-btn')?.addEventListener('click', hideEndDialog);
@@ -1293,16 +1290,169 @@ function initAuthGate() {
   });
 }
 
-function bootAfterAuth() {
+function showWelcome() {
+  state.welcomeActive = true;
+
+  const avatar = $('#edra-avatar');
+  if (avatar) {
+    avatar.src = 'assets/avatar/edra-idle.png?v=2';
+    avatar.style.display = '';
+    avatar.style.opacity = '1';
+    avatar.classList.remove('-entering');
+    avatar.classList.add('-visible');
+    avatar.setAttribute('data-emotion', 'idle');
+    const placeholder = $('#agent-slot-placeholder');
+    if (placeholder) placeholder.style.display = 'none';
+  }
+
+  const idleHero = $('#idle-hero');
+  if (idleHero) idleHero.classList.add('-hidden');
+
+  const thoughtBlock = $('#thought-block');
+  if (thoughtBlock) thoughtBlock.style.display = 'none';
+
+  const utter = $('#utterance');
+  if (utter) {
+    utter.style.display = '';
+    utter.classList.remove('-waiting');
+  }
+  const marker = $('#continue-marker');
+  if (marker) marker.style.display = 'none';
+
+  stopIdleRotation();
+
+  const bubble = $('#speech-bubble');
+  if (bubble) {
+    bubble.classList.remove('-hidden', '-thought');
+    const textEl = $('#speech-bubble-text');
+    if (textEl) textEl.innerHTML = '';
+    bubbleTransition(WELCOME_TEXT);
+  }
+
+  const choices = $('#choices');
+  if (choices) choices.style.display = 'none';
+
+  const resolveAccept = $('#resolve-accept');
+  const resolveDecline = $('#resolve-decline');
+  if (resolveAccept) resolveAccept.style.display = 'none';
+  if (resolveDecline) resolveDecline.style.display = 'none';
+
+  const welcomeBtn = document.createElement('button');
+  welcomeBtn.className = 'welcome-cta';
+  welcomeBtn.id = 'welcome-start-btn';
+  welcomeBtn.textContent = 'Start Conversation';
+
+  const choicesParent = choices ? choices.parentNode : null;
+  if (choicesParent && choices) {
+    choicesParent.insertBefore(welcomeBtn, choices);
+  }
+
+  welcomeBtn.style.position = 'absolute';
+  welcomeBtn.style.left = '50%';
+  welcomeBtn.style.transform = 'translateX(-50%)';
+  welcomeBtn.style.bottom = '130px';
+  welcomeBtn.style.zIndex = '10';
+
+  welcomeBtn.addEventListener('click', () => {
+    welcomeBtn.disabled = true;
+    welcomeBtn.style.opacity = '0.5';
+    showSessionStartDialog(welcomeBtn, choices, resolveAccept, resolveDecline);
+  });
+}
+
+// ── Session-start dialog (welcome flow) ─────────────────────────────
+
+function showSessionStartDialog(welcomeBtn, choices, resolveAccept, resolveDecline) {
+  const dlg = $('#session-start-dialog');
+  if (!dlg) return;
+
+  setSessionStartStatus('', null);
+  dlg.classList.remove('-hidden');
+
+  const urlInput = $('#session-start-url');
+  if (urlInput) setTimeout(() => urlInput.focus(), 0);
+
+  function teardown() {
+    dlg.classList.add('-hidden');
+    welcomeBtn.remove();
+    state.welcomeActive = false;
+    if (choices) choices.style.display = '';
+    if (resolveAccept) resolveAccept.style.display = '';
+    if (resolveDecline) resolveDecline.style.display = '';
+  }
+
+  function startPolling() {
+    poll();
+    setInterval(poll, POLL_MS);
+    pollClusterViz();
+    setInterval(pollClusterViz, CLUSTER_VIZ_POLL_MS);
+  }
+
+  function closeAndRestore() {
+    dlg.classList.add('-hidden');
+    welcomeBtn.disabled = false;
+    welcomeBtn.style.opacity = '';
+  }
+
+  const oldLiveGo = $('#session-start-live-go');
+  if (oldLiveGo) oldLiveGo.replaceWith(oldLiveGo.cloneNode(true));
+  const oldUrlEl = $('#session-start-url');
+  if (oldUrlEl) { const c = oldUrlEl.cloneNode(true); oldUrlEl.replaceWith(c); }
+
+  const liveGoHandler = async () => {
+    const urlEl = $('#session-start-url');
+    const btn = $('#session-start-live-go');
+    const url = (urlEl?.value || '').trim();
+    if (!url) {
+      setSessionStartStatus('paste a LinkedIn URL', 'error');
+      return;
+    }
+    setSessionStartStatus('fetching...', 'ok');
+    setAvatarEmotion('thinking');
+    if (btn) btn.disabled = true;
+    try {
+      await startSession('linkedin_rapidapi', url);
+      teardown();
+      startPolling();
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      const msg = String(e.message || e);
+      if (/\b503\b/.test(msg) || /unavailable/i.test(msg)) {
+        setSessionStartStatus('LinkedIn unavailable', 'error');
+      } else if (/\b404\b/.test(msg) || /not found/i.test(msg)) {
+        setSessionStartStatus('profile not found', 'error');
+      } else {
+        setSessionStartStatus('error: ' + msg.slice(0, 60), 'error');
+      }
+    }
+  };
+  $('#session-start-live-go')?.addEventListener('click', liveGoHandler);
+  $('#session-start-url')?.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') await liveGoHandler();
+    else if (e.key === 'Escape') closeAndRestore();
+  });
+
+  const cancelBtn = $('#session-start-cancel');
+  cancelBtn?.replaceWith(cancelBtn.cloneNode(true));
+  $('#session-start-cancel')?.addEventListener('click', closeAndRestore);
+}
+
+function setSessionStartStatus(msg, kind) {
+  const el = $('#session-start-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.classList.remove('-error', '-ok');
+  if (kind === 'error') el.classList.add('-error');
+  if (kind === 'ok') el.classList.add('-ok');
+}
+
+async function bootAfterAuth() {
   ['idle','greeting','interested-low','interested-high','excited','thinking',
    'skeptical-low','skeptical-high','disappointed-low','disappointed-high','sad','surprised'
   ].forEach(e => { const i = new Image(); i.src = `assets/avatar/edra-${e}.png?v=2`; });
 
-  bootSources();
-  poll();
-  setInterval(poll, POLL_MS);
-  pollClusterViz();
-  setInterval(pollClusterViz, CLUSTER_VIZ_POLL_MS);
+  await bootSources();
+  showWelcome();
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────

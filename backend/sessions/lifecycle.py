@@ -270,6 +270,50 @@ def _stub_rule(sess: Session) -> schemas.Rule:
     )
 
 
+# ── resolve_session (explicit accept / decline) ─────────────────────────
+
+async def resolve_session(
+    *,
+    db: AsyncSession,
+    session_id: str,
+    decision: str,
+    on_new_episode: Any | None = None,
+) -> tuple[schemas.Episode, schemas.OUTCOME]:
+    """Terminate a session via explicit visitor decision (Accept/Decline button).
+
+    Sets interest to the terminal value (+5 or -5) and immediately persists
+    the episode. Returns (episode, outcome).
+    """
+    sess = session_store.get(session_id)
+    if sess is None:
+        raise SessionNotFound(session_id)
+    if sess.ended:
+        raise SessionAlreadyEnded(session_id)
+
+    if decision == "accept":
+        sess.interest = 5
+        sess.outcome = "accepted"
+    else:
+        sess.interest = -5
+        sess.outcome = "rejected"
+    sess.ended = True
+
+    log.info(
+        "session.resolve id=%s decision=%s interest=%+d outcome=%s",
+        sess.id,
+        decision,
+        sess.interest,
+        sess.outcome,
+    )
+
+    episode = await end_session(
+        db=db,
+        session_id=sess.id,
+        on_new_episode=on_new_episode,
+    )
+    return episode, sess.outcome
+
+
 # ── end_session ──────────────────────────────────────────────────────────
 
 async def end_session(

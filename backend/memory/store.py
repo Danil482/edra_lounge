@@ -444,3 +444,35 @@ async def cluster_has_agent(session: AsyncSession, cluster_id: str) -> bool:
 async def all_episodes(session: AsyncSession) -> list[schemas.Episode]:
     result = await session.execute(select(models.EpisodeRow))
     return [_episode_from_row(r) for r in result.scalars()]
+
+
+async def profile_cluster_map(session: AsyncSession) -> dict[str, str]:
+    """Return {profile_id: cluster_id} from episodes — lightweight KNN helper.
+
+    Only fetches the two columns needed instead of full episode rows with
+    dialogue JSON and embeddings.
+    """
+    stmt = (
+        select(models.EpisodeRow.profile_id, models.EpisodeRow.cluster_id)
+        .where(models.EpisodeRow.cluster_id.is_not(None))
+        .order_by(models.EpisodeRow.timestamp)
+    )
+    result = await session.execute(stmt)
+    mapping: dict[str, str] = {}
+    for pid, cid in result.all():
+        mapping[pid] = cid
+    return mapping
+
+
+async def profiles_with_embeddings(session: AsyncSession) -> list[tuple[str, list[float]]]:
+    """Return [(profile_id, embedding)] for profiles that have an embedding.
+
+    Only fetches id + embedding columns — avoids deserialising headline,
+    signals, and other text blobs that KNN classification does not need.
+    """
+    stmt = (
+        select(models.ProfileRow.id, models.ProfileRow.embedding)
+        .where(models.ProfileRow.embedding.is_not(None))
+    )
+    result = await session.execute(stmt)
+    return [(pid, emb) for pid, emb in result.all()]
