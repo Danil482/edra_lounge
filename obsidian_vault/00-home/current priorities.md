@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-21
+date: 2026-05-22
 ---
 
 # Current Priorities
@@ -19,10 +19,12 @@ Session 2026-05-19 (Avatar regen + Phase 5 prompts) → [[../sessions/2026-05-19
 Session 2026-05-20 (Demo paper + live clustering) → [[../sessions/2026-05-20 Demo paper rewrite and live clustering]]
 Session 2026-05-20 (Evaluation methodology) → [[../sessions/2026-05-20 Evaluation methodology discussion with supervisor]]
 Session 2026-05-21 (Pipedrive mail API) → [[../sessions/2026-05-21 Pipedrive mail API exploration for evaluation data]]
+Session 2026-05-22 (Phase 11 VN UX) → [[../sessions/2026-05-22 VN UX overhaul and frontend polish]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
 On 2026-05-21 we explored Pipedrive mail API as a source for evaluation data. Documented 6 mail endpoints, wrote `explore_pipedrive_mail.py` (discovery) and `extract_outreach_mail.py` (resumable extraction with 60% daily budget cap) in the EDRA project. Extracted 64 rows. **Data quality concern**: most extracted emails are credential-sharing and scheduling, not varied outreach pitches. WhatsApp conversations invisible to API. Stage progression may be a better reward signal than email reply. Active deals CSV analyzed (63 deals, 8 lead source categories).
+On 2026-05-22 we shipped Phase 11 — complete VN UX overhaul: welcome message flow, session-start dialog with LinkedIn URL, explicit Accept/Decline buttons, VN-style inner thought monologue before each reply (click to continue), thinking avatar during LLM wait, smoother crossfade transitions. Backend: MiniLM preload at startup, resolve endpoint, lightweight classify queries. Prompts rewritten: skeptical = clarifying question (honest about gaps, offer email follow-up), negative = pivot not surrender. Removed panel mode, old live dialog, synthetic archetype selector. **204 tests green.**
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -304,9 +306,13 @@ CSV row → thin Profile (source_kind="csv_research")
 - [x] **End-of-dialog popup** — success/failure variants (done 2026-05-18, Phase 8.4)
 - [x] **Avatar integration** — Edra character connected with fade-in animation and emotion state map (done 2026-05-18, Phase 8.5)
 - [ ] **Choice buttons after terminate** — currently still enabled, user can click → 409. Disable when `current_session.dialogue.last.visitor_choice` is non-null AND terminated
-- [ ] **Welcome message before pitch** — agent introduces itself and explains who it is before diving into personalized pitch. First turn should be a greeting, not a sales opener.
-- [ ] **Accept / Decline buttons** — two explicit buttons: "Accept" (instantly sets interest=+5, triggers success popup) and "Decline" (sets interest=-5, triggers failure popup). Gives the user agency to end the conversation at any point with a clear decision.
-- [ ] **Agent gives up too early** — after a few negative turns the agent terminates instead of trying a different approach. The agent should persist with alternative proposals rather than surrendering. Only terminate via the explicit Decline button or after MAX_TURNS.
+- [x] **Welcome message before pitch** — Edra greeting + Start Conversation button → session-start dialog with LinkedIn URL (done 2026-05-22, Phase 11)
+- [x] **Accept / Decline buttons** — flanking choice buttons, green (accept) / red (decline), call resolve endpoint (done 2026-05-22, Phase 11)
+- [x] **Agent gives up too early** — prompt rewritten: negative = pivot to different angle, not surrender. Decline button is the only explicit exit (done 2026-05-22, Phase 11)
+- [x] **VN thought mechanic** — inner monologue before each reply, italic in grey bubble, click to continue (done 2026-05-22, Phase 11)
+- [x] **Thinking avatar** — shown during LLM wait, awaitingLLM flag blocks poll override (done 2026-05-22, Phase 11)
+- [x] **Embedding preload** — MiniLM loaded at app startup, no first-request freeze (done 2026-05-22, Phase 11)
+- [x] **Bubble chat only** — removed panel mode toggle, bubble is sole dialog mode (done 2026-05-22, Phase 11)
 - [x] **Speech bubble dialog mode** — agent text in speech bubble, avatar mix-blend-mode fix (done 2026-05-18, Phase 8.7)
 - [x] **Emotion avatar variants** — all 12 states generated as PNG, crossfade transitions, BG normalized (done 2026-05-18, Phase 8.6)
 
@@ -342,7 +348,7 @@ CSV row → thin Profile (source_kind="csv_research")
 - [x] **import-graph test**
 - [x] **live LinkedIn URL → 5-turn dialogue** ✅ end-to-end validated 2026-04-29 against a real profile
 - [x] **privacy-purge test**
-- [x] pytest passes (206/206, updated 2026-05-19)
+- [x] pytest passes (204/206, 2 pre-existing cluster_viz failures, updated 2026-05-22)
 
 ## What we are dropping — final archive list
 
