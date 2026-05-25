@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-22
+date: 2026-05-25
 ---
 
 # EDRA — Vault Home
@@ -71,9 +71,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-20 (PM): **Evaluation methodology discussion** — see [[../sessions/2026-05-20 Evaluation methodology discussion with supervisor]]
 - 2026-05-21: **Pipedrive mail API exploration for evaluation data** — see [[../sessions/2026-05-21 Pipedrive mail API exploration for evaluation data]]
 - 2026-05-22: **Phase 11 — VN UX overhaul** — see [[../sessions/2026-05-22 VN UX overhaul and frontend polish]]
+- 2026-05-25: **Pipedrive person mail extraction for evaluation** — see [[../sessions/2026-05-25 Pipedrive person mail extraction for evaluation]]
 
 ## Session log
 
+- [[../sessions/2026-05-25 Pipedrive person mail extraction for evaluation]]
 - [[../sessions/2026-05-22 VN UX overhaul and frontend polish]]
 - [[../sessions/2026-05-21 Pipedrive mail API exploration for evaluation data]]
 - [[../sessions/2026-05-20 Evaluation methodology discussion with supervisor]]
