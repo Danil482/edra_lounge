@@ -43,3 +43,7 @@ backend/models/
 
 # research profiles dataset + tooling (moved to data/research_profiles/)
 data/research_profiles/
+
+# evaluation generated data (CSVs, embeddings — regenerable from scripts)
+evaluation/data/*.csv
+evaluation/data/*.npy
