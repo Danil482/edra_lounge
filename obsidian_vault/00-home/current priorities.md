@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-25
+date: 2026-05-26
 ---
 
 # Current Priorities
@@ -22,6 +22,7 @@ Session 2026-05-21 (Pipedrive mail API) → [[../sessions/2026-05-21 Pipedrive m
 Session 2026-05-22 (Phase 11 VN UX) → [[../sessions/2026-05-22 VN UX overhaul and frontend polish]]
 Session 2026-05-25 (Pipedrive extraction) → [[../sessions/2026-05-25 Pipedrive person mail extraction for evaluation]]
 Session 2026-05-25 (Eval literature + presentation) → [[../sessions/2026-05-25 Evaluation literature review and presentation rewrite]]
+Session 2026-05-26 (Eval module + clustering) → [[../sessions/2026-05-26 Evaluation module and cold outreach clustering]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -29,6 +30,7 @@ On 2026-05-21 we explored Pipedrive mail API as a source for evaluation data. Do
 On 2026-05-22 we shipped Phase 11 — complete VN UX overhaul: welcome message flow, session-start dialog with LinkedIn URL, explicit Accept/Decline buttons, VN-style inner thought monologue before each reply (click to continue), thinking avatar during LLM wait, smoother crossfade transitions. Backend: MiniLM preload at startup, resolve endpoint, lightweight classify queries. Prompts rewritten: skeptical = clarifying question (honest about gaps, offer email follow-up), negative = pivot not surrender. Removed panel mode, old live dialog, synthetic archetype selector. **204 tests green.**
 On 2026-05-25 we analyzed a 29K-person Pipedrive export for evaluation data. Built person-targeted extraction pipeline (`EDRA/extract_person_mail.py`): search by email → fetch mail → extract outreach/reply pairs. Tier 1 (replied): 4,556 people, Tier 2 (no reply): 24,415. Response rates vary significantly by campaign (0.6%–34.1%), supporting the clustering hypothesis. Actual API budget: 270K tokens/day (not 450K). Test extraction of 10 people validated after fixing response format unwrapping bug. Running 150K tokens extraction today, remainder 2026-05-26.
 On 2026-05-25 (PM session) we did a deep literature review of 5 evaluation papers (Li et al. WSDM 2011, Li et al. WWW 2010/LinUCB, Gama et al. MLJ 2013, Zhao et al./ExpeL AAAI 2024, Dudik et al. ICML 2011). Crystallized a three-level evaluation framework: Level 1 = clustering quality (silhouette + human), Level 2 = off-policy via doubly robust estimator on Pipedrive data (Dudik), Level 3 = prequential test-then-train on own outreach batches (Gama). ExpeL identified as primary competitor (flat insights vs EDRA's cluster-conditional rules). LinUCB as formal baseline. All 5 PDFs organized into `papers/evaluation/`. Presentation (`papers/edra_presentation.html`) completely rewritten: 11 visual-first slides with SVG diagrams, real UI screenshot, evaluation framework, and ExpeL/LinUCB comparison table.
+On 2026-05-26 we created the standalone `evaluation/` module: filtered 4,536 Pipedrive tier 1 rows to 1,027 cold outreach in 5 types (cold_template 826, cold_personal 113, feature_announcement 37, follow_up 30, re_engagement 21). First HDBSCAN clustering on job_title+org+labels: silhouette 0.177, essentially one mega-cluster — features too sparse without LinkedIn enrichment. Also fixed Claude Code hook infrastructure (block-config-read.js), removed 60% budget cap from Pipedrive extraction scripts, and discussed production deployment on defygroup.ai (questions sent to CTO, awaiting response). Tier 2 (24K no-reply) extraction deemed unnecessary — tier 1 contains both outcomes for relative policy comparison.
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -184,12 +186,16 @@ Three-level evaluation framework designed:
 - [x] Pipedrive mail API explored (2026-05-21): 6 endpoints documented, extraction scripts written in EDRA project
 - [x] Pipedrive people export analyzed (2026-05-25): 29K people, tier 1 = 4,556 replied, tier 2 = 24,415 no reply
 - [x] Person-targeted extraction pipeline built (2026-05-25): `EDRA/extract_person_mail.py`, test run validated on 10 people
-- [ ] Complete tier 1 extraction (4,556 people, ~270K tokens, est. 2 runs: 2026-05-25 + 2026-05-26)
-- [ ] Filter cold outreach from follow-ups and credential-sharing emails
-- [ ] Annotate strategies from outreach snippets/subjects
+- [x] Complete tier 1 extraction (4,536 people extracted, 2026-05-26)
+- [x] Filter cold outreach from follow-ups and credential-sharing emails (2026-05-26): `evaluation/filter_cold_outreach.py`, 1,027 cold outreach rows in 5 types
+- [x] Annotate strategies from outreach snippets/subjects (2026-05-26): outreach_type column (cold_template/cold_personal/feature_announcement/follow_up/re_engagement)
+- [x] First clustering attempt (2026-05-26): HDBSCAN on job_title+org+labels, silhouette 0.177 — features too sparse, needs LinkedIn enrichment
+- [ ] LinkedIn enrichment for 635 profiles with URLs → re-cluster with richer features
+- [ ] Strategy × cluster significance tests (chi-squared / Fisher's exact)
+- [ ] Off-policy policy comparison: uniform vs random vs ExpeL-flat vs EDRA cluster-conditional
+- [ ] Doubly robust estimator implementation (Dudik et al. 2011)
 - [ ] **Alternative reward signal**: use deal stage progression instead of email reply (captures WhatsApp interactions)
 - [ ] Add archived/lost deals as negative examples
-- [ ] Profile enrichment via `GET /persons/{id}` for context features
 
 ### Level 3 — Adaptive learning curve (needs own outreach data)
 - [ ] Prequential evaluation over outreach batches (Gama et al. 2013)
@@ -207,7 +213,25 @@ Three-level evaluation framework designed:
 
 ### Depends on
 - ~~Philipp's historical outreach data~~ — replaced by Pipedrive people export (29K contacts with email activity)
-- Own outreach campaign data (blocked on Lemlist warm-up ~2026-05-26)
+- Own outreach campaign data (blocked on Lemlist warm-up — should be ready 2026-05-26)
+- LinkedIn enrichment for better clustering features (635 profiles with URLs)
+
+## 🟡 Production deployment on defygroup.ai (blocked, 2026-05-26)
+
+Questions sent to CTO on 2026-05-26. Blocked on response.
+
+- [ ] CTO response: access to site code, integration approach, hosting, API budget
+- [ ] Prompt injection defence (visitor LinkedIn headline/summary goes into LLM prompt)
+- [ ] GDPR consent for email storage (checkbox or text at email gate)
+- [ ] Rate limiter on RapidAPI calls (per IP/email)
+- [ ] Dockerize the app (Dockerfile + docker-compose.yml)
+- [ ] Seed state from real outreach data (clusters + rules)
+- [ ] Deploy as microservice (iframe/popup on defygroup.ai)
+
+### Key decisions (2026-05-26)
+- **Iframe/popup on own domain** — realistic path without full site access
+- **SQLite OK for demo traffic** — Postgres when real load appears
+- **No tier 2 extraction needed** — too expensive (24K × API), tier 1 has both outcomes
 
 ## 🟡 Email enrichment (Lemlist integration, 2026-05-18)
 
