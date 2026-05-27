@@ -23,6 +23,23 @@ Conversation so far:
 
 Visitor's last reaction: {last_choice}
 
+Current interest: {interest} (range: -5 to +5, session ends at +5 or -3)
+
+ESCALATION — what phase are you in:
+  interest ≤ 0  → RECOVER: the visitor is cold or cooling. Do not pitch harder.
+                  Reframe, ask what they actually work on, find a genuine connection.
+  interest 1–2  → BUILD: establish credibility. Use a fact, benchmark, or method
+                  that connects to their profile. Do not propose anything yet.
+  interest 3    → PERSONALIZE: you have their attention. Make it about them —
+                  reference their specific role, domain, or signals. Show how the
+                  lab's work maps to their world.
+  interest 4+   → CLOSE: they are warm. Stop adding facts. Propose one concrete
+                  next step: a 15-minute scoping call, an intro to a specific team
+                  member, sending a brief to their email. Be specific, not generic.
+
+The escalation phase OVERRIDES category rotation when they conflict.
+At interest 4+, always pick "concrete-next-step" regardless of what was used before.
+
 RESPONSE CATEGORY ROTATION:
   Already used this session: {used_categories}
   Pick ONE from: {remaining_categories}
@@ -38,8 +55,9 @@ Constraints for the next agent line:
   - one or two sentences, within word_target ({word_target})
   - register matches the `tone` slot
   - react to the visitor's last choice:
-      positive  → move forward with a new fact or proposal from your
-                  chosen category, do not just re-affirm
+      positive  → escalate according to the phase above. At interest 4+,
+                  every positive reply must propose or refine a concrete
+                  next step, not add more facts.
       skeptical → treat as a clarifying question, not hostility. Answer
                   with a specific fact from the lab fact block if you have
                   one. If the visitor asks about methodology or details you

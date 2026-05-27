@@ -102,6 +102,7 @@ async def generate_turn(
     *,
     pitch_strategy: schemas.PitchStrategy | None = None,
     used_categories: list[str] | None = None,
+    interest: int = 0,
 ) -> tuple[schemas.DialogueStep, schemas.PitchStrategy]:
     strat = pitch_strategy or strategy_mod.assemble_strategy(applicable_rule)
     is_opener = len(history) == 0
@@ -111,7 +112,7 @@ async def generate_turn(
         strat = strat.model_copy(update={"opener_text": opener_text})
         reply = opener_text
     else:
-        reply, llm_thought, options, path = await _produce_continuation(profile, strat, history, used_categories)
+        reply, llm_thought, options, path = await _produce_continuation(profile, strat, history, used_categories, interest=interest)
 
     rule_id = applicable_rule.id if applicable_rule is not None else None
     thought = llm_thought or templates.render_thought(strat, rule_id, is_opener)
@@ -184,6 +185,8 @@ async def _produce_continuation(
     strat: schemas.PitchStrategy,
     history: list[schemas.DialogueStep],
     used_categories: list[str] | None = None,
+    *,
+    interest: int = 0,
 ) -> tuple[str, str | None, list[schemas.ResponseOption] | None, str]:
     last = history[-1]
     remaining = _remaining_categories(used_categories)
@@ -206,6 +209,7 @@ async def _produce_continuation(
             last_choice=last.visitor_choice or "neutral",
             used_categories=", ".join(used_categories) if used_categories else "(none)",
             remaining_categories=", ".join(remaining),
+            interest=interest,
         )
         raw = await llm.complete(prompt, system=_SYSTEM_MESSAGE)
         text, thought, options = _parse_llm_json(raw)
