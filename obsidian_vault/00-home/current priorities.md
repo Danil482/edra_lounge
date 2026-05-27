@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-26
+date: 2026-05-27
 ---
 
 # Current Priorities
@@ -25,6 +25,7 @@ Session 2026-05-25 (Eval literature + presentation) → [[../sessions/2026-05-25
 Session 2026-05-26 (Eval module + clustering) → [[../sessions/2026-05-26 Evaluation module and cold outreach clustering]]
 Session 2026-05-26 (Bandit framework + presentation) → [[../sessions/2026-05-26 Bandit evaluation framework and presentation overhaul]]
 Session 2026-05-27 (Clustering integration + demo paper) → [[../sessions/2026-05-27 Clustering integration and demo paper rewrite]]
+Session 2026-05-27 (Eval cleanup + pitch escalation) → [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -35,6 +36,7 @@ On 2026-05-25 (PM session) we did a deep literature review of 5 evaluation paper
 On 2026-05-26 we created the standalone `evaluation/` module: filtered 4,536 Pipedrive tier 1 rows to 1,027 cold outreach in 5 types (cold_template 826, cold_personal 113, feature_announcement 37, follow_up 30, re_engagement 21). First HDBSCAN clustering on job_title+org+labels: silhouette 0.177, essentially one mega-cluster — features too sparse without LinkedIn enrichment. Also fixed Claude Code hook infrastructure (block-config-read.js), removed 60% budget cap from Pipedrive extraction scripts, and discussed production deployment on defygroup.ai (questions sent to CTO, awaiting response). Tier 2 (24K no-reply) extraction deemed unnecessary — tier 1 contains both outcomes for relative policy comparison.
 On 2026-05-26 (PM session) we created a comprehensive bandit evaluation explainer (`papers/bandit_evaluation_explainer.html`) covering all 5 papers with every formula explained symbol-by-symbol. Corrected the evaluation methodology: Level 1 now evaluates on 976 Pipedrive people (not 502 research profiles — those have no reward signal), Level 2 reframed as interaction effect test ("does optimal strategy differ by cluster?", not "is personalization better than templates"), Level 3 runs prequential simulation on same 976 rows in chronological batches (not blocked on real outreach). Strategy set narrowed from 5 to 3 first-contact types (removed follow_up and re_engagement). Added SOInspire landscape slide to presentation (now 12 slides) — SOInspire solves content generation (what to say), EDRA solves strategy selection (whom to say what). Presentation slide 3 polished: cluster cloud framed, Rule Store centered, Consistency Monitor cleaned up. Booth demo screenshot updated.
 On 2026-05-27 we integrated the intern's clustering refactor (cherry-picked from `origin/clustering` branch — additions only, rejected all regressions including deletion of resolve endpoint, thought mechanic, frontend, obsidian notes, and evaluation module). Profile-based clustering now live: HDBSCAN over profile embeddings, KNN rule selection, centroid-based cluster ID stability, `on_new_profile` hook. Farseev academic voice skill updated to v2.0 from 7 papers. Demo paper completely rewritten: evaluation framed as contextual bandit on 976 Pipedrive rows with DR estimator, trimmed to 2-page limit, conference location fixed to Rio de Janeiro. Embedding normalization fix applied. **220 tests green, 0 new regressions.**
+On 2026-05-27 (PM session) we built the autoreply filter (`evaluation/filter_autoreplies.py`): 202 auto-replies removed from 1027 → 825 clean rows. Reclustered with structured text extraction (seniority×function from job titles) + UMAP 15-dim reduction: **silhouette jumped from 0.177 to 0.739, 6 meaningful clusters** (CEOs, Directors, Managers, Founders, Partners/VCs, Mixed). Added 3 evaluation detail slides to presentation (Levels 1-2 as prerequisites, Level 3 as actual test). Fixed pitch agent escalation: interest level now passed to continuation prompt with 4-phase escalation ladder (RECOVER→BUILD→PERSONALIZE→CLOSE). Row count updated to 825 across all papers.
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -179,27 +181,29 @@ Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty na
 
 Three-level evaluation framework designed:
 
-### Level 1 — Clustering quality (blocked on LinkedIn enrichment)
+### Level 1 — Clustering quality (in progress)
 - [x] Pipedrive mail API explored (2026-05-21): 6 endpoints documented, extraction scripts written in EDRA project
 - [x] Pipedrive people export analyzed (2026-05-25): 29K people, tier 1 = 4,556 replied, tier 2 = 24,415 no reply
 - [x] Person-targeted extraction pipeline built (2026-05-25): `EDRA/extract_person_mail.py`, test run validated on 10 people
 - [x] Complete tier 1 extraction (4,536 people extracted, 2026-05-26)
-- [x] Filter cold outreach (2026-05-26): `evaluation/filter_cold_outreach.py`, 976 first-contact rows in 3 types (cold_template 826, cold_personal 113, feature_announcement 37)
+- [x] Filter cold outreach (2026-05-26): `evaluation/filter_cold_outreach.py`, 1027 first-contact rows
+- [x] Autoreply filter (2026-05-27): `evaluation/filter_autoreplies.py`, 202 auto-replies removed → 825 clean rows
 - [x] First clustering attempt (2026-05-26): HDBSCAN on job_title+org+labels, silhouette 0.177 — features too sparse
 - [x] Bandit evaluation explainer created (2026-05-26): `papers/bandit_evaluation_explainer.html`, all 5 papers with per-symbol formula explanations
-- [ ] LinkedIn enrichment for 635 profiles with URLs → re-cluster with richer features
-- [ ] Silhouette score on 976 Pipedrive outreach recipients (after enrichment)
-- [ ] Chi-squared test: significant reply rate differences between clusters
+- [x] ~~LinkedIn enrichment~~ — replaced by structured text extraction (seniority×function) + UMAP 15-dim (2026-05-27)
+- [x] Clustering breakthrough (2026-05-27): silhouette 0.177 → **0.739**, 6 clusters, 4 noise. No external data needed.
+- [ ] Incorporate tier 2 (no-reply) data to get realistic reply rates (currently 72-83% inflated by tier 1 selection)
+- [ ] Chi-squared test: significant reply rate differences between clusters (after tier 2 integration)
 
-### Level 2 — Interaction effect: does optimal strategy differ by cluster? (after Level 1)
+### Level 2 — Interaction effect: does optimal strategy differ by cluster? (prerequisite, after Level 1)
 - [ ] Build reward model: LogReg on (profile_embedding_384d + action_onehot_3d) → P(reply)
 - [ ] Doubly robust estimator implementation (Dudik et al. 2011)
 - [ ] Compare 4 policies: π_uniform (always cold_template), π_random, π_best_single (best single strategy for everyone), π_edra (cluster-conditional)
 - [ ] Key test: π_edra must beat π_best_single — if not, clustering adds nothing
 - [ ] Reconstruct propensity scores from Pipedrive campaign assignment
 
-### Level 3 — Learning curve: does policy improve over time? (after Level 2)
-- [ ] Prequential simulation on same 976 rows in chronological batches (Gama et al. 2013)
+### Level 3 — Learning curve: does EDRA learn? (the actual contribution test, after Level 2)
+- [ ] Prequential simulation on 825 rows in chronological batches (Gama et al. 2013)
 - [ ] Learning curve: V̂_DR per batch, EDRA vs LinUCB baseline
 - [ ] Detects: overfitting to early data, drift, generic rules, population homogeneity
 
@@ -214,8 +218,9 @@ Three-level evaluation framework designed:
 
 ### Depends on
 - ~~Philipp's historical outreach data~~ — replaced by Pipedrive people export (29K contacts with email activity)
-- ~~Own outreach campaign data~~ — all 3 levels can run on 976 Pipedrive rows; live outreach is future work
-- LinkedIn enrichment for better clustering features (635 profiles with URLs) — **sole remaining blocker for Level 1**
+- ~~Own outreach campaign data~~ — all 3 levels can run on 825 Pipedrive rows; live outreach is future work
+- ~~LinkedIn enrichment~~ — solved by structured text extraction + UMAP (2026-05-27)
+- Tier 2 (no-reply) data integration — **sole remaining blocker for realistic reply rates in Level 1**
 
 ## 🟡 Production deployment on defygroup.ai (blocked, 2026-05-26)
 

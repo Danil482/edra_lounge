@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-27
+date: 2026-05-27b
 ---
 
 # EDRA — Vault Home
@@ -76,9 +76,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-26: **Evaluation module + cold outreach clustering** — see [[../sessions/2026-05-26 Evaluation module and cold outreach clustering]]
 - 2026-05-26 (PM): **Bandit evaluation framework + presentation overhaul** — see [[../sessions/2026-05-26 Bandit evaluation framework and presentation overhaul]]
 - 2026-05-27: **Clustering integration + demo paper rewrite** — see [[../sessions/2026-05-27 Clustering integration and demo paper rewrite]]
+- 2026-05-27 (PM): **Eval cleanup + pitch escalation** — see [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
 
 ## Session log
 
+- [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
 - [[../sessions/2026-05-27 Clustering integration and demo paper rewrite]]
 - [[../sessions/2026-05-26 Bandit evaluation framework and presentation overhaul]]
 - [[../sessions/2026-05-26 Evaluation module and cold outreach clustering]]
