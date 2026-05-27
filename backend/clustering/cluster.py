@@ -45,7 +45,7 @@ def preload_embedder() -> bool:
 
 def embed(texts: list[str]) -> list[list[float]]:
     model = _get_embedder()
-    vecs = model.encode(texts, show_progress_bar=False)
+    vecs = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
     return vecs.tolist()
 
 
