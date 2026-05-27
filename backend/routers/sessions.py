@@ -116,6 +116,7 @@ async def start(
     profile_source = request.app.state.profile_source
     orch = getattr(request.app.state, "orchestrator", None)
     day = orch.clock.day if orch is not None else 1
+    on_new_profile = orch.on_new_profile if orch is not None else None
 
     try:
         sess, first_step = await lifecycle.start_session(
@@ -124,6 +125,7 @@ async def start(
             source_kind=body.source_kind,
             identifier=body.identifier,
             day=day,
+            on_new_profile=on_new_profile,
         )
     except ProfileNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e

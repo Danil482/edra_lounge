@@ -28,9 +28,11 @@ def _profile_from_row(row: models.ProfileRow) -> schemas.Profile:
         recent_signals=row.recent_signals or [],
         archetype_summary=row.archetype_summary,
         avatar_url=row.avatar_url,
+        summary_text=row.summary_text,
         embedding=row.embedding,
         fetched_at=row.fetched_at,
         ttl_seconds=row.ttl_seconds,
+        cluster_id=row.cluster_id,
     )
 
 
@@ -47,9 +49,11 @@ async def upsert_profile(session: AsyncSession, p: schemas.Profile) -> schemas.P
         existing.recent_signals = list(p.recent_signals)
         existing.archetype_summary = p.archetype_summary
         existing.avatar_url = p.avatar_url
+        existing.summary_text = p.summary_text
         existing.embedding = p.embedding
         existing.fetched_at = p.fetched_at
         existing.ttl_seconds = p.ttl_seconds
+        existing.cluster_id = p.cluster_id
     else:
         session.add(
             models.ProfileRow(
@@ -64,9 +68,11 @@ async def upsert_profile(session: AsyncSession, p: schemas.Profile) -> schemas.P
                 recent_signals=list(p.recent_signals),
                 archetype_summary=p.archetype_summary,
                 avatar_url=p.avatar_url,
+                summary_text=p.summary_text,
                 embedding=p.embedding,
                 fetched_at=p.fetched_at,
                 ttl_seconds=p.ttl_seconds,
+                cluster_id=p.cluster_id,
             )
         )
     await session.commit()
@@ -462,6 +468,21 @@ async def profile_cluster_map(session: AsyncSession) -> dict[str, str]:
     for pid, cid in result.all():
         mapping[pid] = cid
     return mapping
+
+
+async def set_profile_cluster(
+    session: AsyncSession, profile_id: str, cluster_id: str
+) -> None:
+    row = await session.get(models.ProfileRow, profile_id)
+    if row is not None:
+        row.cluster_id = cluster_id
+        await session.commit()
+
+
+async def active_rules_by_cluster(session: AsyncSession) -> dict[str, "schemas.Rule"]:
+    stmt = select(models.RuleRow).where(models.RuleRow.status == "active")
+    result = await session.execute(stmt)
+    return {_rule_from_row(r).cluster_id: _rule_from_row(r) for r in result.scalars()}
 
 
 async def profiles_with_embeddings(session: AsyncSession) -> list[tuple[str, list[float]]]:

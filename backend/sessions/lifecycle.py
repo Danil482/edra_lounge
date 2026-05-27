@@ -30,11 +30,9 @@ from backend import schemas
 from backend.llm import client as llm
 from backend.memory import store as memory_store
 from backend.memory.ids import short_id
-from backend.pitch import (
-    classify_profile,
-    generate_turn,
-    lookup_applicable_rule,
-)
+from backend.clustering.knn import select_rule_by_knn
+from backend.config import settings
+from backend.pitch import generate_turn
 from backend.pitch import strategy as strategy_mod
 from backend.profile_source import (
     Profile,
@@ -73,6 +71,7 @@ async def start_session(
     source_kind: str,
     identifier: str,
     day: int = 1,
+    on_new_profile: Any | None = None,
 ) -> tuple[Session, schemas.DialogueStep]:
     """Resolve identifier → Profile → cluster → rule → first DialogueStep.
 
@@ -95,9 +94,13 @@ async def start_session(
     profile = await profile_source.fetch(identifier)
 
     if not profile.embedding:
-        from backend.clustering.cluster import embed
-        text = f"{profile.name}, {profile.role}. {profile.headline}. {profile.archetype_summary}"
-        profile.embedding = embed([text])[0]
+        from backend.clustering.cluster import embed_single
+        from backend.clustering.summarize import summarize_profile_from_archetype
+        summary_text = summarize_profile_from_archetype(profile=profile)
+        profile.embedding = embed_single(summary_text)
+
+    if profile.source_kind == "synthetic" and not profile.cluster_id:
+        profile.cluster_id = profile.id
 
     log.info(
         "session.profile-fetched id=%s name=%r role=%r avatar_url=%s",
@@ -108,8 +111,16 @@ async def start_session(
     )
     await memory_store.upsert_profile(db, profile)
 
-    cluster_id = await classify_profile(db, profile)
-    applicable_rule = await lookup_applicable_rule(db, cluster_id)
+    if on_new_profile is not None:
+        try:
+            await on_new_profile(profile)
+        except Exception:
+            log.exception("on_new_profile hook failed for profile=%s", profile.id)
+
+    corpus = await memory_store.list_profiles(db)
+    active_rules = await memory_store.active_rules_by_cluster(db)
+    applicable_rule = select_rule_by_knn(profile, corpus, active_rules, k=settings.knn_k)
+    cluster_id = applicable_rule.cluster_id if applicable_rule else None
     pitch_strategy = strategy_mod.assemble_strategy(applicable_rule)
 
     sess = Session(

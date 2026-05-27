@@ -72,8 +72,8 @@ async def test_start_session_returns_first_step_and_persists_profile(db_factory,
             day=1,
         )
     assert sess.profile.id == "arch_phd_nlp_introvert"
-    assert sess.cluster_id == "arch_phd_nlp_introvert"  # synthetic-archetype mapping
-    assert sess.applicable_rule_id is None  # cold start, no rule yet
+    assert sess.cluster_id is None  # cold start: no rules → KNN returns None → improvise
+    assert sess.applicable_rule_id is None
     assert first_step.turn == 1
     assert first_step.agent_reply  # template path filled it
     assert sess.dialogue == [first_step]

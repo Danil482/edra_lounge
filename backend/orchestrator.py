@@ -27,6 +27,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import httpx
+import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -154,7 +155,12 @@ class Orchestrator:
                 log.exception("factory loop iteration failed")
             await asyncio.sleep(30)
 
-    # ── reactive hook ────────────────────────────────────────────────────
+    # ── reactive hooks ───────────────────────────────────────────────────
+
+    async def on_new_profile(self, profile: schemas.Profile) -> None:
+        """Called after a new profile is persisted. Triggers recluster."""
+        async with self.session_factory() as session:
+            await self._recluster(session)
 
     async def on_new_episode(self, ep: schemas.Episode) -> None:
         """Called after an episode is persisted. Triggers recluster + induction checks."""
@@ -246,23 +252,55 @@ class Orchestrator:
     # ── clustering / induction / consistency / factory ───────────────────
 
     async def _recluster(self, session) -> None:
-        """Recompute ClusterRow rows from the latest episode set.
+        from backend.clustering.cluster import cluster_profiles, match_cluster_to_existing
+        from backend.memory.ids import short_id
 
-        Phase 1B grouping is by `cluster_id` already attached to each episode
-        (synthetic profiles classify into archetype-keyed pseudo-clusters via
-        `pitch.classify`). Real HDBSCAN is only required when episodes arrive
-        with cluster_id=None (live mode). Until then we keep the path
-        deterministic and LLM-free.
-        """
-        episodes = await memory_store.all_episodes(session)
-        by_cid: dict[str, list[schemas.Episode]] = {}
-        for ep in episodes:
-            if ep.cluster_id is None:
+        profiles = await memory_store.list_profiles(session)
+        existing_clusters = await memory_store.list_clusters(session)
+        all_episodes = await memory_store.all_episodes(session)
+
+        live_profiles = [p for p in profiles if p.source_kind != "synthetic"]
+        hdbscan_result = cluster_profiles(live_profiles)
+        if not hdbscan_result:
+            return
+
+        emb_by_id = {p.id: p.embedding for p in live_profiles if p.embedding}
+        existing_by_id = {c.id: c for c in existing_clusters}
+        claimed_ids: set[str] = set()
+
+        for hdbscan_label, profile_ids in hdbscan_result.items():
+            embeddings = [emb_by_id[pid] for pid in profile_ids if pid in emb_by_id]
+            if not embeddings:
                 continue
-            by_cid.setdefault(ep.cluster_id, []).append(ep)
+            centroid = np.mean(embeddings, axis=0).tolist()
 
-        for cid, eps in by_cid.items():
-            await self._upsert_cluster_from_episodes(session, cid, eps)
+            unclaimed = [c for c in existing_clusters if c.id not in claimed_ids]
+            cluster_id = match_cluster_to_existing(
+                centroid, unclaimed, settings.cluster_merge_threshold
+            ) or short_id("cl")
+            claimed_ids.add(cluster_id)
+
+            for pid in profile_ids:
+                await memory_store.set_profile_cluster(session, pid, cluster_id)
+
+            cluster_eps = [ep for ep in all_episodes if ep.profile_id in profile_ids]
+            accepted = sum(1 for ep in cluster_eps if ep.outcome == "accepted")
+            rejected = sum(1 for ep in cluster_eps if ep.outcome == "rejected")
+            success_ratio = accepted / (accepted + rejected) if (accepted + rejected) > 0 else 0.0
+
+            existing = existing_by_id.get(cluster_id)
+
+            await memory_store.upsert_cluster(session, schemas.Cluster(
+                id=cluster_id,
+                label=existing.label if existing else "",
+                profile_ids=profile_ids,
+                episode_ids=[ep.id for ep in cluster_eps],
+                centroid_embedding=centroid,
+                size=len(profile_ids),
+                success_ratio=success_ratio,
+                created_at=existing.created_at if existing else datetime.utcnow(),
+                last_updated=datetime.utcnow(),
+            ))
 
     async def _sync_cluster_for(self, session, cluster_id: str) -> None:
         episodes = [

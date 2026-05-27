@@ -49,6 +49,68 @@ def embed(texts: list[str]) -> list[list[float]]:
     return vecs.tolist()
 
 
+def embed_single(text: str) -> list[float]:
+    return embed([text])[0]
+
+
+def cluster_profiles(
+    profiles: "list[schemas.Profile]",
+) -> dict[int, list[str]]:
+    """Run HDBSCAN over profile embeddings. Returns {label: [profile_id, ...]}."""
+    eligible = [p for p in profiles if p.embedding]
+    if len(eligible) < settings.n_min:
+        return {}
+
+    import hdbscan  # type: ignore[import-untyped]
+
+    X = np.array([p.embedding for p in eligible])
+    clusterer = hdbscan.HDBSCAN(
+        min_cluster_size=settings.n_min,
+        min_samples=max(2, settings.n_min // 2),
+    )
+    labels = clusterer.fit_predict(X)
+
+    out: dict[int, list[str]] = {}
+    for p, label in zip(eligible, labels):
+        if label == -1:
+            continue
+        out.setdefault(int(label), []).append(p.id)
+    return out
+
+
+def match_cluster_to_existing(
+    centroid: list[float],
+    existing_clusters: "list[schemas.Cluster]",
+    threshold: float,
+) -> str | None:
+    """Find existing cluster whose centroid is within `threshold` cosine similarity."""
+    if not existing_clusters or not centroid:
+        return None
+
+    query = np.array(centroid, dtype=np.float32)
+    query_norm = np.linalg.norm(query)
+    if query_norm == 0:
+        return None
+
+    best_id: str | None = None
+    best_sim = -1.0
+    for c in existing_clusters:
+        if not c.centroid_embedding:
+            continue
+        cvec = np.array(c.centroid_embedding, dtype=np.float32)
+        cvec_norm = np.linalg.norm(cvec)
+        if cvec_norm == 0:
+            continue
+        sim = float(np.dot(query, cvec) / (query_norm * cvec_norm))
+        if sim > best_sim:
+            best_sim = sim
+            best_id = c.id
+
+    if best_sim >= threshold:
+        return best_id
+    return None
+
+
 def cluster_episodes(
     episodes: "list[schemas.Episode]",
 ) -> dict[int, list[str]]:

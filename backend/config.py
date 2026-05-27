@@ -34,7 +34,12 @@ class Settings(BaseSettings):
     theta_induce: float = 0.6
     theta_revise: float = 0.5
     recluster_every: int = 3
+    knn_k: int = 7
+    cluster_merge_threshold: float = 0.85
     cs_window: int = 5
+
+    cluster_merge_threshold: float = 0.85
+    knn_k: int = 7
 
     rng_seed: int = 42
     tick_seconds: int = 20
