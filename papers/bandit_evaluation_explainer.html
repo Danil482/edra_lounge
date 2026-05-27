@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDRA — Multi-Armed Bandit Evaluation Framework</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #CC0000;
+    --red-dark: #990000;
+    --black: #0A0A0A;
+    --white: #F9F9F7;
+    --charcoal: #2D2D2D;
+    --grey: #777777;
+    --dim: rgba(249,249,247,0.4);
+    --dim-border: rgba(249,249,247,0.15);
+    --dim-bg: rgba(249,249,247,0.05);
+    --display: 'Playfair Display', Georgia, serif;
+    --body: 'DM Sans', Helvetica, Arial, sans-serif;
+    --mono: 'Courier New', Consolas, monospace;
+    --sidebar-w: 280px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background: var(--black);
+    color: var(--white);
+  }
+
+  body {
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.85;
+    background: var(--black);
+    color: rgba(249,249,247,0.88);
+    min-height: 100vh;
+  }
+
+  /* ---------- SIDEBAR TOC ---------- */
+  .toc-toggle {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 200;
+    background: var(--charcoal);
+    border: 1px solid var(--dim-border);
+    color: var(--white);
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    font-family: var(--body);
+    line-height: 1;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    overflow-y: auto;
+    background: #050505;
+    border-right: 1px solid var(--dim-border);
+    padding: 40px 24px 60px;
+    z-index: 150;
+  }
+
+  .sidebar-title {
+    font-family: var(--display);
+    font-weight: 900;
+    font-size: 18px;
+    color: var(--white);
+    margin-bottom: 24px;
+    letter-spacing: -0.3px;
+  }
+  .sidebar-title .sq {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background: var(--red);
+    margin-left: 4px;
+    vertical-align: baseline;
+  }
+
+  .toc-list {
+    list-style: none;
+  }
+  .toc-list li {
+    margin-bottom: 6px;
+  }
+  .toc-list a {
+    font-family: var(--body);
+    font-size: 13px;
+    color: var(--dim);
+    text-decoration: none;
+    display: block;
+    padding: 5px 0 5px 14px;
+    border-left: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    line-height: 1.4;
+  }
+  .toc-list a:hover,
+  .toc-list a.active {
+    color: var(--white);
+    border-left-color: var(--red);
+  }
+  .toc-list .toc-num {
+    color: var(--red);
+    font-weight: 700;
+    margin-right: 6px;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .content {
+    margin-left: var(--sidebar-w);
+    max-width: 800px;
+    padding: 60px 48px 120px;
+  }
+
+  /* ---------- TYPOGRAPHY ---------- */
+  h1 {
+    font-family: var(--display);
+    font-weight: 900;
+    font-size: 48px;
+    line-height: 1.15;
+    letter-spacing: -1px;
+    color: var(--white);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    color: var(--white);
+    margin-top: 72px;
+    margin-bottom: 24px;
+    padding-top: 20px;
+  }
+  h2 .section-num {
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: var(--red);
+    display: block;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.3;
+    color: var(--white);
+    margin-top: 40px;
+    margin-bottom: 14px;
+  }
+
+  p {
+    margin-bottom: 16px;
+  }
+
+  .lead {
+    font-size: 20px;
+    line-height: 1.7;
+    color: rgba(249,249,247,0.7);
+    margin-bottom: 32px;
+    max-width: 720px;
+  }
+
+  .accent { color: var(--red); font-weight: 700; }
+  strong { color: var(--white); font-weight: 700; }
+
+  .red-sq {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background: var(--red);
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+
+  /* ---------- FORMULA BLOCKS ---------- */
+  .eq {
+    font-family: var(--mono);
+    font-size: 18px;
+    line-height: 1.7;
+    padding: 20px 28px;
+    margin: 20px 0;
+    border-left: 4px solid var(--red);
+    background: rgba(204,0,0,0.08);
+    color: var(--white);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .eq .comment {
+    color: var(--grey);
+    font-size: 14px;
+  }
+
+  .eq-inline {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--white);
+    background: rgba(249,249,247,0.06);
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+
+  /* ---------- SYMBOL TABLE ---------- */
+  .sym-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-family: var(--body);
+    font-size: 15px;
+  }
+  .sym-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--grey);
+    border-bottom: 2px solid rgba(249,249,247,0.3);
+  }
+  .sym-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(249,249,247,0.08);
+    line-height: 1.55;
+    color: rgba(249,249,247,0.85);
+    vertical-align: top;
+  }
+  .sym-table td:first-child {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--white);
+    white-space: nowrap;
+    width: 180px;
+  }
+
+  /* ---------- LISTS ---------- */
+  ul, ol {
+    margin: 10px 0 18px 0;
+  }
+  ul { list-style: none; }
+  ul li {
+    padding-left: 22px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 7px;
+    height: 7px;
+    background: var(--red);
+  }
+  ol {
+    padding-left: 24px;
+  }
+  ol li {
+    margin-bottom: 8px;
+  }
+  ol li::marker {
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  /* ---------- CODE BLOCKS ---------- */
+  .code-block {
+    font-family: var(--mono);
+    font-size: 14px;
+    background: rgba(249,249,247,0.06);
+    color: var(--white);
+    padding: 22px 26px;
+    margin: 16px 0 24px;
+    line-height: 1.65;
+    white-space: pre;
+    overflow-x: auto;
+    border: 1px solid var(--dim-border);
+  }
+  .code-block .kw { color: var(--red); }
+  .code-block .cm { color: var(--grey); }
+
+  /* ---------- DATA TABLE ---------- */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 28px;
+    font-family: var(--body);
+    font-size: 15px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--grey);
+    border-bottom: 2px solid rgba(249,249,247,0.3);
+  }
+  .data-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(249,249,247,0.08);
+    line-height: 1.55;
+    color: rgba(249,249,247,0.85);
+    vertical-align: top;
+  }
+  .data-table td.accent-cell {
+    color: var(--red);
+    font-weight: 700;
+  }
+  .data-table td strong {
+    color: var(--white);
+  }
+
+  /* ---------- CALLOUT ---------- */
+  .callout {
+    border: 1px solid var(--dim-border);
+    background: var(--dim-bg);
+    padding: 22px 26px;
+    margin: 20px 0;
+  }
+  .callout-label {
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 10px;
+  }
+  .callout p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ---------- FORMULA PARTS (colored breakdown) ---------- */
+  .part-1 { color: #6CB4EE; }
+  .part-2 { color: #FFD700; }
+  .part-3 { color: #77DD77; }
+  .part-label {
+    display: inline-block;
+    padding: 2px 8px;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .part-label-1 { background: rgba(108,180,238,0.2); color: #6CB4EE; }
+  .part-label-2 { background: rgba(255,215,0,0.2); color: #FFD700; }
+  .part-label-3 { background: rgba(119,221,119,0.2); color: #77DD77; }
+
+  /* ---------- HR ---------- */
+  hr {
+    border: none;
+    height: 1px;
+    background: var(--dim-border);
+    margin: 48px 0;
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 1200px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .toc-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .content {
+      margin-left: 0;
+      padding: 60px 24px 120px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 32px; }
+    h2 { font-size: 26px; }
+    h3 { font-size: 20px; }
+    .eq { font-size: 14px; padding: 16px 18px; }
+    .content { padding: 48px 16px 100px; }
+    .sym-table td:first-child { width: 120px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Mobile TOC toggle -->
+<button class="toc-toggle" id="tocToggle" aria-label="Toggle table of contents">&#9776;</button>
+
+<!-- Sidebar TOC -->
+<nav class="sidebar" id="sidebar" aria-label="Table of contents">
+  <div class="sidebar-title">EDRA<span class="sq"></span> Evaluation</div>
+  <ol class="toc-list">
+    <li><a href="#sec1"><span class="toc-num">01</span> Multi-Armed Bandit</a></li>
+    <li><a href="#sec2"><span class="toc-num">02</span> Contextual Bandit</a></li>
+    <li><a href="#sec3"><span class="toc-num">03</span> Why standard ML fails</a></li>
+    <li><a href="#sec4"><span class="toc-num">04</span> Replay Method</a></li>
+    <li><a href="#sec5"><span class="toc-num">05</span> Inverse Propensity Scoring</a></li>
+    <li><a href="#sec6"><span class="toc-num">06</span> Direct Method</a></li>
+    <li><a href="#sec7"><span class="toc-num">07</span> Doubly Robust</a></li>
+    <li><a href="#sec8"><span class="toc-num">08</span> LinUCB</a></li>
+    <li><a href="#sec9"><span class="toc-num">09</span> Prequential evaluation</a></li>
+    <li><a href="#sec10"><span class="toc-num">10</span> EDRA = contextual bandit</a></li>
+    <li><a href="#sec11"><span class="toc-num">11</span> Evaluation plan</a></li>
+  </ol>
+</nav>
+
+<!-- Main content -->
+<main class="content">
+
+  <h1>Multi-Armed Bandit Framework<span class="red-sq"></span></h1>
+  <p class="lead">Математический фреймворк оценки EDRA. Каждый символ, каждая формула, каждое решение &mdash; разложено по шагам.</p>
+
+  <hr>
+
+  <!-- ===== SECTION 1 ===== -->
+  <h2 id="sec1">
+    <span class="section-num">01 &mdash; Foundations</span>
+    Задача многорукого бандита
+  </h2>
+
+  <h3>Аналогия с казино</h3>
+  <p>
+    Представь: ты стоишь перед <strong>K игровыми автоматами</strong> (slot machines). Каждый автомат выплачивает деньги с неизвестной вероятностью. У тебя есть <strong>T монет</strong> на все попытки. Цель &mdash; заработать как можно больше.
+  </p>
+  <p>
+    Ты не знаешь заранее, какой автомат лучший. Единственный способ узнать &mdash; дёргать ручки и наблюдать. Но каждая попытка стоит монету. Это классическая <span class="accent">exploration vs exploitation</span> дилемма.
+  </p>
+
+  <h3>Формальное определение</h3>
+  <p>Задано:</p>
+  <ul>
+    <li><span class="eq-inline">K</span> рук (actions), <span class="eq-inline">T</span> раундов</li>
+    <li>В каждом раунде <span class="eq-inline">t = 1, 2, ..., T</span>:
+      <ol>
+        <li>Выбрать действие <span class="eq-inline">a<sub>t</sub> &isin; {1, 2, ..., K}</span></li>
+        <li>Наблюдать награду <span class="eq-inline">r<sub>t</sub> ~ D(a<sub>t</sub>)</span> &mdash; случайная величина из неизвестного распределения руки <span class="eq-inline">a<sub>t</sub></span></li>
+      </ol>
+    </li>
+  </ul>
+
+  <p>Цель: максимизировать суммарную награду:</p>
+  <div class="eq">&Sigma;<sub>t=1</sub><sup>T</sup> r<sub>t</sub></div>
+
+  <h3>Каждый символ</h3>
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>K</td><td>Количество рук (доступных действий). В EDRA &mdash; количество стратегий outreach.</td></tr>
+      <tr><td>T</td><td>Общее число раундов (бюджет). Количество писем, которые мы можем отправить.</td></tr>
+      <tr><td>t</td><td>Индекс текущего раунда. Конкретный момент: <span class="eq-inline">t = 1, 2, ..., T</span>.</td></tr>
+      <tr><td>a<sub>t</sub></td><td>Действие, выбранное в раунде <var>t</var>. Конкретная стратегия, применённая к конкретному человеку.</td></tr>
+      <tr><td>r<sub>t</sub></td><td>Награда, наблюдаемая в раунде <var>t</var>. Скаляр: обычно 0 (нет ответа) или 1 (ответил).</td></tr>
+      <tr><td>D(a)</td><td>Неизвестное распределение наград для руки <var>a</var>. Мы не знаем его &mdash; можем только оценивать через наблюдения.</td></tr>
+      <tr><td>&mu;<sub>a</sub> = E[r | a]</td><td>Ожидаемая награда руки <var>a</var>. Истинная средняя вероятность ответа для стратегии <var>a</var> (нам неизвестна).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Regret &mdash; цена незнания</h3>
+  <p>
+    Ключевая метрика в бандитах &mdash; не сама награда, а <strong>сожаление (regret)</strong>: насколько мы проиграли по сравнению с тем, кто знал лучшую руку с самого начала.
+  </p>
+
+  <div class="eq">&mu;* = max<sub>a</sub> &mu;<sub>a</sub>
+<span class="comment">&mdash; ожидаемая награда лучшей руки (оракул)</span>
+
+Regret = T &middot; &mu;* &minus; &Sigma;<sub>t=1</sub><sup>T</sup> &mu;<sub>a<sub>t</sub></sub></div>
+
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>&mu;*</td><td>Ожидаемая награда лучшей руки. Если бы мы всегда играли оптимальную руку, получали бы <span class="eq-inline">&mu;*</span> в среднем за каждый раунд.</td></tr>
+      <tr><td>T &middot; &mu;*</td><td>Максимально возможная суммарная награда за <var>T</var> раундов.</td></tr>
+      <tr><td>&Sigma; &mu;<sub>a<sub>t</sub></sub></td><td>Сумма ожидаемых наград тех действий, которые мы фактически выбирали.</td></tr>
+      <tr><td>Regret</td><td>Разница. Всегда &ge; 0. Чем меньше &mdash; тем лучше алгоритм.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Словами: <em>regret показывает, сколько мы потеряли из-за того, что экспериментировали вместо того, чтобы всегда играть оптимальную руку</em>.</p>
+
+  <h3>Exploration vs Exploitation: конкретный пример</h3>
+
+  <div class="callout">
+    <div class="callout-label">Пример</div>
+    <p>Три руки. Текущая статистика:</p>
+    <ul>
+      <li><strong>Рука A:</strong> 6 побед из 10 попыток = 60% win rate</li>
+      <li><strong>Рука B:</strong> 2 победы из 2 попыток = 100% win rate (но всего 2 наблюдения!)</li>
+      <li><strong>Рука C:</strong> 0 попыток &mdash; ничего не знаем</li>
+    </ul>
+    <p>Что делать?</p>
+    <ul>
+      <li><strong>Exploit:</strong> играть B &mdash; у неё лучший текущий win rate. Но 2 наблюдения &mdash; это шум, не сигнал.</li>
+      <li><strong>Explore:</strong> попробовать C &mdash; мы о ней вообще ничего не знаем. Может она лучше всех.</li>
+      <li><strong>Compromise:</strong> ещё раз попробовать B, чтобы уточнить &mdash; действительно ли 100%, или просто повезло.</li>
+    </ul>
+    <p>Это и есть <span class="accent">exploration vs exploitation</span>. Любой бандитный алгоритм &mdash; это способ балансировать эту дилемму.</p>
+  </div>
+
+  <hr>
+
+  <!-- ===== SECTION 2 ===== -->
+  <h2 id="sec2">
+    <span class="section-num">02 &mdash; Extension</span>
+    Контекстный бандит
+  </h2>
+
+  <p>
+    В стандартном бандите руки одинаковые для всех раундов. В реальности <strong>контекст меняется</strong>: каждый новый посетитель &mdash; другой человек с другими характеристиками. Перед выбором действия мы видим <span class="accent">контекст</span> <span class="eq-inline">x<sub>t</sub></span>, который описывает текущую ситуацию.
+  </p>
+
+  <h3>Формальное определение</h3>
+  <p>В каждом раунде <span class="eq-inline">t</span>:</p>
+  <ol>
+    <li>Наблюдаем контекст <span class="eq-inline">x<sub>t</sub> &isin; R<sup>d</sup></span> (вектор из <var>d</var> вещественных чисел)</li>
+    <li>Выбираем действие <span class="eq-inline">a<sub>t</sub> &isin; A<sub>t</sub></span> (из множества доступных действий)</li>
+    <li>Наблюдаем награду <span class="eq-inline">r<sub>a<sub>t</sub>,t</sub></span> &mdash; <strong>только для выбранного действия!</strong></li>
+  </ol>
+
+  <p>Политика &mdash; функция, которая отображает контексты в действия:</p>
+  <div class="eq">&pi; : X &rarr; A
+<span class="comment">&mdash; политика: видишь контекст, выбираешь действие</span>
+
+V(&pi;) = E<sub>x</sub>[r<sub>&pi;(x)</sub>]
+<span class="comment">&mdash; ценность политики: средняя награда при следовании &pi;</span></div>
+
+  <h3>Каждый символ</h3>
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>x<sub>t</sub> &isin; R<sup>d</sup></td><td>Контекстный вектор в раунде <var>t</var>. <span class="eq-inline">R<sup>d</sup></span> значит <var>d</var> вещественных чисел. Для EDRA: <var>d</var>=384 (MiniLM embedding) или cluster ID.</td></tr>
+      <tr><td>A<sub>t</sub></td><td>Множество доступных действий в раунде <var>t</var>. Может меняться от раунда к раунду.</td></tr>
+      <tr><td>r<sub>a<sub>t</sub>,t</sub></td><td>Награда за действие <span class="eq-inline">a<sub>t</sub></span> в момент <var>t</var>. Подстрочный индекс <span class="eq-inline">a<sub>t</sub></span> подчёркивает: мы видим награду <em>только</em> за выбранное действие.</td></tr>
+      <tr><td>&pi; (pi)</td><td>Политика &mdash; правило принятия решений. Функция, на вход &mdash; контекст, на выход &mdash; действие.</td></tr>
+      <tr><td>V(&pi;)</td><td>Ценность (value) политики. Средняя награда, которую мы ожидаем получить, если будем всегда следовать &pi;.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Фундаментальная проблема: контрфактуал</h3>
+  <p>
+    Мы видим награду <strong>только за то действие, которое выбрали</strong>. Если мы отправили &laquo;тёплое короткое&raquo; письмо и не получили ответ, мы <em>никогда не узнаем</em>, что бы случилось, отправь мы &laquo;формальное подробное&raquo;.
+  </p>
+
+  <div class="callout">
+    <div class="callout-label">Пример</div>
+    <p>Три человека, каждый с контекстом (должность, размер компании):</p>
+    <table class="data-table">
+      <thead><tr><th>Person</th><th>Context</th><th>Action</th><th>Reward</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CEO, startup</strong></td><td>x<sub>1</sub></td><td>cold_personal</td><td>1 (reply)</td></tr>
+        <tr><td><strong>VP Eng, enterprise</strong></td><td>x<sub>2</sub></td><td>cold_template</td><td>0 (no reply)</td></tr>
+        <tr><td><strong>Professor, university</strong></td><td>x<sub>3</sub></td><td>research_study</td><td>0 (no reply)</td></tr>
+      </tbody>
+    </table>
+    <p>Мы видим 1 ответ из 3. Но мы не знаем: получил бы VP ответ, если бы отправили <em>cold_personal</em>? А профессор, если бы использовали <em>cold_template</em>? Эти <span class="accent">контрфактуальные</span> награды навсегда скрыты.</p>
+  </div>
+
+  <hr>
+
+  <!-- ===== SECTION 3 ===== -->
+  <h2 id="sec3">
+    <span class="section-num">03 &mdash; Problem Statement</span>
+    Почему классические методы не работают
+  </h2>
+
+  <p>Три фундаментальные причины, почему стандартные ML-подходы ломаются при оценке бандитных политик.</p>
+
+  <h3>3.1 &mdash; Нет train/test split</h3>
+  <p>
+    В supervised learning мы разделяем данные случайно &mdash; метки не зависят от нашего выбора. В бандитах &laquo;метки&raquo; (rewards) <strong>зависят от того, какое действие мы выбрали</strong>. Если мы тестируем политику B на данных, собранных политикой A, мы видим награды только за действия A, а не B.
+  </p>
+
+  <h3>3.2 &mdash; Данные не i.i.d.</h3>
+  <p>
+    Стандартный ML предполагает, что каждая точка данных взята <strong>независимо из одного распределения</strong> (independent and identically distributed). В бандитах каждое действие влияет на то, что мы наблюдаем дальше. Данные зависят от политики, которая их собирала.
+  </p>
+
+  <h3>3.3 &mdash; Проблема контрфактуала</h3>
+  <p>
+    Мы не можем оценить политику, которая выбирала бы другие действия &mdash; мы просто не наблюдали те награды. Это не баг, а фундаментальное ограничение: <strong>прошлое нельзя переиграть</strong>.
+  </p>
+
+  <h3>Что НЕ работает</h3>
+  <table class="data-table">
+    <thead><tr><th>Method</th><th>Why it fails</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Accuracy / F1</strong></td><td>Нет фиксированных меток. Reward зависит от action &mdash; нечего предсказывать в классическом смысле.</td></tr>
+      <tr><td><strong>Cross-validation</strong></td><td>Разбиение на fold'ы бессмысленно: награды в fold B &mdash; только за действия политики, которая собирала fold B.</td></tr>
+      <tr><td><strong>A/B тест post hoc</strong></td><td>A/B тест требует live deployment двух политик одновременно. На исторических данных его не сделаешь.</td></tr>
+      <tr><td><strong>Supervised reward predictor</strong></td><td>Обучаешь модель предсказывать reply &mdash; но training data содержит rewards только для действий, которые фактически выбрала logging policy. Модель не видела альтернативных действий &rarr; biased.</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <!-- ===== SECTION 4 ===== -->
+  <h2 id="sec4">
+    <span class="section-num">04 &mdash; Li et al. WSDM 2011</span>
+    Метод воспроизведения (Replay Method)
+  </h2>
+
+  <p>Простейший <strong>unbiased</strong> метод offline-оценки бандитных политик.</p>
+
+  <h3>Идея</h3>
+  <p>
+    Если данные собирались <strong>uniform random policy</strong> (каждое действие с равной вероятностью), то для любой целевой политики &pi; мы можем отфильтровать лог: оставить только те события, где logging policy случайно выбрала то же действие, которое бы выбрала &pi;.
+  </p>
+
+  <h3>Алгоритм</h3>
+  <div class="code-block"><span class="kw">Input:</span> Log D = {(x<sub>1</sub>, a<sub>1</sub>, r<sub>1</sub>), ..., (x<sub>n</sub>, a<sub>n</sub>, r<sub>n</sub>)}, target policy &pi;
+
+T<sub>&pi;</sub> = {}  <span class="cm">-- empty set of matching indices</span>
+
+<span class="kw">For each</span> event (x<sub>t</sub>, a<sub>t</sub>, r<sub>t</sub>) in D:
+    <span class="kw">If</span> &pi;(x<sub>t</sub>) == a<sub>t</sub>:    <span class="cm">-- target policy chose same action?</span>
+        Add t to T<sub>&pi;</sub>
+
+V&#770;(&pi;) = (1 / |T<sub>&pi;</sub>|) &middot; &Sigma;<sub>t &isin; T<sub>&pi;</sub></sub> r<sub>t</sub></div>
+
+  <h3>Формула</h3>
+  <div class="eq">V&#770;(&pi;) = (1 / |T<sub>&pi;</sub>|) &middot; &Sigma;<sub>t &isin; T<sub>&pi;</sub></sub> r<sub>t</sub>
+
+<span class="comment">где T<sub>&pi;</sub> = {t : &pi;(x<sub>t</sub>) = a<sub>t</sub>}</span></div>
+
+  <h3>Каждый символ</h3>
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>V&#770;(&pi;)</td><td>Оценка ценности политики &pi;. Шляпа (&#770;) = estimate, приближение к истинному V(&pi;).</td></tr>
+      <tr><td>T<sub>&pi;</sub></td><td>Множество индексов, где действие logging policy совпало с тем, что выбрала бы &pi;.</td></tr>
+      <tr><td>|T<sub>&pi;</sub>|</td><td>Размер этого множества. Количество &laquo;совпадений&raquo;.</td></tr>
+      <tr><td>r<sub>t</sub></td><td>Наблюдённая награда в раунде <var>t</var>.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Почему это работает</h3>
+  <p>
+    Если действия назначались случайно, то подмножество совпадений &mdash; это непредвзятая (unbiased) выборка того, что получила бы &pi;. Математически: <span class="eq-inline">E[V&#770;(&pi;)] = V(&pi;)</span>.
+  </p>
+
+  <h3>Почему это НЕ работает для данных Pipedrive</h3>
+
+  <div class="callout">
+    <div class="callout-label">Критическое ограничение</div>
+    <p>
+      Кампании Pipedrive &mdash; <strong>не случайные</strong>. Продажники назначали людей в кампании на основе своего суждения: &laquo;этот похож на того, кто купил&raquo;. Это <span class="accent">biased logging policy</span> &mdash; действия коррелируют с контекстом. Replay даёт смещённые (biased) оценки.
+    </p>
+    <p>
+      Второе ограничение: даже при случайных данных, Replay использует только <span class="eq-inline">1/K</span> данных (только совпадения). При K=3 стратегиях мы теряем 67% данных.
+    </p>
+  </div>
+
+  <hr>
+
+  <!-- ===== SECTION 5 ===== -->
+  <h2 id="sec5">
+    <span class="section-num">05 &mdash; Intermediate Step</span>
+    Inverse Propensity Scoring (IPS)
+  </h2>
+
+  <p>Перед Doubly Robust нужно понять IPS &mdash; перевзвешивание наблюдений.</p>
+
+  <h3>Идея</h3>
+  <p>
+    Каждое наблюдение взвешиваем тем, насколько оно &laquo;неожиданно&raquo; для logging policy. Если logging policy редко выбирала действие <var>a</var>, а target policy <var>&pi;</var> хочет его часто &mdash; это наблюдение получает большой вес.
+  </p>
+
+  <h3>Формула</h3>
+  <div class="eq">V&#770;<sub>IPS</sub>(&pi;) = (1/n) &middot; &Sigma;<sub>t=1</sub><sup>n</sup> [&pi;(a<sub>t</sub> | x<sub>t</sub>) / &pi;<sub>0</sub>(a<sub>t</sub> | x<sub>t</sub>)] &middot; r<sub>t</sub></div>
+
+  <h3>Каждый символ</h3>
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>&pi;(a<sub>t</sub> | x<sub>t</sub>)</td><td>Вероятность, с которой <strong>target policy</strong> &pi; выберет действие <span class="eq-inline">a<sub>t</sub></span> при контексте <span class="eq-inline">x<sub>t</sub></span>. Для детерминированной политики: 1, если &pi; выбрала бы <span class="eq-inline">a<sub>t</sub></span>, иначе 0.</td></tr>
+      <tr><td>&pi;<sub>0</sub>(a<sub>t</sub> | x<sub>t</sub>)</td><td><span class="accent">Propensity score</span> &mdash; вероятность, с которой logging policy выбрала действие <span class="eq-inline">a<sub>t</sub></span> при контексте <span class="eq-inline">x<sub>t</sub></span>. Это ключевая величина: мы должны её знать или оценить.</td></tr>
+      <tr><td>&pi; / &pi;<sub>0</sub></td><td><strong>Importance weight</strong> &mdash; коэффициент перевзвешивания. Чем реже logging policy выбирала это действие &mdash; тем больше вес.</td></tr>
+      <tr><td>n</td><td>Общее число наблюдений в логе.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Проблема: дисперсия</h3>
+  <p>
+    Если <span class="eq-inline">&pi;<sub>0</sub>(a<sub>t</sub> | x<sub>t</sub>)</span> очень мала (logging policy почти никогда не выбирала это действие), importance weight взрывается. Одно наблюдение с весом 1000 &mdash; это катастрофическая дисперсия (variance). Оценка формально unbiased, но практически бесполезна.
+  </p>
+
+  <hr>
+
+  <!-- ===== SECTION 6 ===== -->
+  <h2 id="sec6">
+    <span class="section-num">06 &mdash; Alternative Approach</span>
+    Прямой метод (Direct Method)
+  </h2>
+
+  <h3>Идея</h3>
+  <p>
+    Построить регрессионную модель <span class="eq-inline">r&#770;(x, a)</span>, которая предсказывает награду для любой пары (контекст, действие). Затем оценить target policy, подставив её действия.
+  </p>
+
+  <h3>Формула</h3>
+  <div class="eq">V&#770;<sub>DM</sub>(&pi;) = (1/n) &middot; &Sigma;<sub>t=1</sub><sup>n</sup> r&#770;(x<sub>t</sub>, &pi;(x<sub>t</sub>))</div>
+
+  <h3>Каждый символ</h3>
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>r&#770;(x<sub>t</sub>, &pi;(x<sub>t</sub>))</td><td>Предсказанная награда при контексте <span class="eq-inline">x<sub>t</sub></span> и действии, которое бы выбрала &pi;. Это выход регрессионной модели.</td></tr>
+      <tr><td>V&#770;<sub>DM</sub>(&pi;)</td><td>Оценка ценности &pi; через прямой метод. Просто среднее предсказаний.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Достоинство</h3>
+  <p>Не нужны importance weights &mdash; нет проблемы с дисперсией. Использует все данные, не только совпадения.</p>
+
+  <h3>Проблема: bias</h3>
+  <p>
+    Если модель <span class="eq-inline">r&#770;</span> ошибается &mdash; а она ошибается, потому что обучается на biased данных (только за действия logging policy) &mdash; оценка смещена. Нет способа понять направление ошибки.
+  </p>
+
+  <hr>
+
+  <!-- ===== SECTION 7 ===== -->
+  <h2 id="sec7">
+    <span class="section-num">07 &mdash; Dudik et al. ICML 2011</span>
+    Doubly Robust (DR)
+  </h2>
+
+  <p><strong>THE метод</strong> для Level 2 оценки EDRA. Комбинирует Direct Method и IPS, получая лучшее от обоих.</p>
+
+  <h3>Формула</h3>
+  <div class="eq">V&#770;<sub>DR</sub>(&pi;) = (1/n) &middot; &Sigma;<sub>t=1</sub><sup>n</sup> [<span class="part-1">r&#770;(x<sub>t</sub>, &pi;(x<sub>t</sub>))</span> + <span class="part-2">&pi;(a<sub>t</sub>|x<sub>t</sub>) / &pi;<sub>0</sub>(a<sub>t</sub>|x<sub>t</sub>)</span> &middot; <span class="part-3">(r<sub>t</sub> &minus; r&#770;(x<sub>t</sub>, a<sub>t</sub>))</span>]</div>
+
+  <h3>Три части формулы</h3>
+
+  <p><span class="part-label part-label-1">Part 1</span> <span class="eq-inline part-1">r&#770;(x<sub>t</sub>, &pi;(x<sub>t</sub>))</span> &mdash; <strong>Direct Method prediction</strong></p>
+  <p>
+    &laquo;Что наша модель наград думает, что &pi; получит?&raquo; Предсказание reward model для действия, которое target policy выбрала бы. Это baseline-оценка &mdash; если бы модель была идеальной, этого было бы достаточно.
+  </p>
+
+  <p><span class="part-label part-label-2">Part 2</span> <span class="eq-inline part-2">&pi;(a<sub>t</sub>|x<sub>t</sub>) / &pi;<sub>0</sub>(a<sub>t</sub>|x<sub>t</sub>)</span> &mdash; <strong>Importance weight</strong></p>
+  <p>
+    Тот же коэффициент из IPS. Перевзвешивает correction term по тому, насколько действия target и logging policy расходятся. Для детерминированной &pi;: этот коэффициент ненулевой <em>только</em> когда logging policy выбрала то же действие, что и &pi;.
+  </p>
+
+  <p><span class="part-label part-label-3">Part 3</span> <span class="eq-inline part-3">(r<sub>t</sub> &minus; r&#770;(x<sub>t</sub>, a<sub>t</sub>))</span> &mdash; <strong>Correction term</strong></p>
+  <p>
+    Фактическая награда минус предсказанная &mdash; для того действия, которое <em>было фактически выбрано</em>. Это ошибка модели на наблюдённых данных. Если модель идеальна, этот член = 0. Если модель ошибается, этот член корректирует.
+  </p>
+
+  <h3>Почему &laquo;doubly robust&raquo;?</h3>
+  <table class="data-table">
+    <thead><tr><th>Scenario</th><th>What happens</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><strong>r&#770; perfect</strong></td><td>Correction = 0 для всех <var>t</var>. Остаётся только Part 1 &mdash; прямой метод.</td><td class="accent-cell">Correct</td></tr>
+      <tr><td><strong>&pi;<sub>0</sub> correct</strong></td><td>IPS-часть unbiased &rarr; корректирует любые ошибки в r&#770;.</td><td class="accent-cell">Correct</td></tr>
+      <tr><td><strong>Both approximate</strong></td><td>Ни один не идеален, но DR имеет lower MSE, чем DM или IPS по отдельности.</td><td class="accent-cell">Best available</td></tr>
+    </tbody>
+  </table>
+
+  <p>Достаточно, чтобы <strong>хотя бы один</strong> из двух компонентов (reward model или propensity model) был правильным. Отсюда название: двойная робастность.</p>
+
+  <h3>Конкретный пример с числами</h3>
+
+  <div class="callout">
+    <div class="callout-label">Пример 1 &mdash; когда действия не совпадают</div>
+    <p>
+      Контекст: <span class="eq-inline">x = "CEO, tech startup"</span><br>
+      Logging policy выбрала: <span class="eq-inline">a<sub>t</sub> = cold_template</span><br>
+      Reward: <span class="eq-inline">r<sub>t</sub> = 1</span> (ответил)<br>
+      Target policy &pi; выбрала бы: <span class="eq-inline">&pi;(x) = cold_personal</span><br>
+    </p>
+    <p>Параметры:</p>
+    <ul>
+      <li><span class="eq-inline">&pi;(cold_template | x) = 0</span> &mdash; target policy НЕ выбрала бы cold_template</li>
+      <li><span class="eq-inline">&pi;<sub>0</sub>(cold_template | x) = 0.4</span> &mdash; logging policy выбирала cold_template в 40% случаев</li>
+      <li><span class="eq-inline">r&#770;(x, cold_personal) = 0.7</span> &mdash; reward model предсказывает 70% для cold_personal</li>
+      <li><span class="eq-inline">r&#770;(x, cold_template) = 0.5</span> &mdash; reward model предсказывает 50% для cold_template</li>
+    </ul>
+    <p>Подставляем в DR:</p>
+    <div class="eq"><span class="part-1">r&#770;(x, cold_personal) = 0.7</span>
++ <span class="part-2">(0 / 0.4)</span> &middot; <span class="part-3">(1 &minus; 0.5)</span>
+= 0.7 + 0 &middot; 0.5
+= <strong>0.7</strong></div>
+    <p>Importance weight = 0, потому что target policy не выбрала бы cold_template. Вклад этого наблюдения &mdash; только предсказание reward model для действия &pi;.</p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Пример 2 &mdash; когда действия совпадают</div>
+    <p>
+      Контекст: <span class="eq-inline">x = "VP Eng, SaaS"</span><br>
+      Logging policy выбрала: <span class="eq-inline">a<sub>t</sub> = cold_personal</span><br>
+      Reward: <span class="eq-inline">r<sub>t</sub> = 0</span> (не ответил)<br>
+      Target policy &pi; тоже выбрала бы: <span class="eq-inline">&pi;(x) = cold_personal</span><br>
+    </p>
+    <p>Параметры:</p>
+    <ul>
+      <li><span class="eq-inline">&pi;(cold_personal | x) = 1</span> &mdash; target policy выбрала бы cold_personal</li>
+      <li><span class="eq-inline">&pi;<sub>0</sub>(cold_personal | x) = 0.15</span> &mdash; logging policy делала это только в 15% случаев (редкое действие!)</li>
+      <li><span class="eq-inline">r&#770;(x, cold_personal) = 0.6</span> &mdash; reward model предсказывает 60%</li>
+    </ul>
+    <p>Подставляем:</p>
+    <div class="eq"><span class="part-1">r&#770;(x, cold_personal) = 0.6</span>
++ <span class="part-2">(1 / 0.15)</span> &middot; <span class="part-3">(0 &minus; 0.6)</span>
+= 0.6 + 6.67 &middot; (&minus;0.6)
+= 0.6 &minus; 4.0
+= <strong>&minus;3.4</strong></div>
+    <p>
+      Здесь IPS correction сильный: reward model думала, что будет 60% ответов, но реально &mdash; 0. Низкая propensity (0.15) усиливает коррекцию. Это одно наблюдение сильно снизит оценку V&#770;<sub>DR</sub>(&pi;).
+    </p>
+    <p>
+      Видна проблема IPS: при <span class="eq-inline">&pi;<sub>0</sub> = 0.15</span> вес = 6.67. При <span class="eq-inline">&pi;<sub>0</sub> = 0.02</span> вес был бы = 50. На практике используют <strong>clipping</strong> (ограничение весов сверху), чтобы контролировать дисперсию.
+    </p>
+  </div>
+
+  <h3>Как обучить reward model для EDRA</h3>
+  <p>
+    Reward model <span class="eq-inline">r&#770;(x, a)</span> &mdash; это <strong>не генератор текста и не семантическая модель</strong>. Это простой бинарный классификатор:
+  </p>
+  <ul>
+    <li><strong>Input:</strong> контекстные признаки (job_title, industry, company_size, cluster_id) + действие (3 first-contact strategies: cold_template (826), cold_personal (113), feature_announcement (37))</li>
+    <li><strong>Output:</strong> P(reply) &mdash; вероятность получить ответ</li>
+    <li><strong>Модель:</strong> LogisticRegression или GradientBoosting (XGBoost), обученная на 825 логированных строках</li>
+    <li><strong>Назначение:</strong> заполнить контрфактуальные награды для действий, которые не были выбраны</li>
+  </ul>
+
+  <h3>Пошагово: от данных до DR</h3>
+  <ol>
+    <li><strong>Feature matrix.</strong> Для каждой строки лога: one-hot encode outreach_type (K столбцов), embed или one-hot encode job_title и org. Результат: матрица X размером n &times; (d + K).</li>
+    <li><strong>Target variable.</strong> <span class="eq-inline">y = 1</span> (reply), <span class="eq-inline">y = 0</span> (no reply).</li>
+    <li><strong>Training.</strong> Стандартный <span class="eq-inline">sklearn.linear_model.LogisticRegression</span> или <span class="eq-inline">xgboost.XGBClassifier</span>. Cross-validation на training split для выбора гиперпараметров.</li>
+    <li><strong>Для DR формулы:</strong> <span class="eq-inline">r&#770;(x<sub>t</sub>, a) = model.predict_proba(features(x<sub>t</sub>) + onehot(a))</span> &mdash; вероятность reply для контекста x<sub>t</sub> при действии a.</li>
+  </ol>
+
+  <div class="callout">
+    <div class="callout-label">Ключевой момент</div>
+    <p>
+      Reward model нужна, чтобы заполнить <span class="eq-inline part-1">r&#770;(x, &pi;(x))</span> в DR формуле &mdash; &laquo;что бы было, если бы мы применили действие &pi;(x) вместо того, которое было применено?&raquo; Без неё DR degrades до чистого IPS, который имеет катастрофическую дисперсию при малых propensity scores.
+    </p>
+  </div>
+
+  <hr>
+
+  <!-- ===== SECTION 8 ===== -->
+  <h2 id="sec8">
+    <span class="section-num">08 &mdash; Li et al. WWW 2010</span>
+    LinUCB
+  </h2>
+
+  <p>
+    LinUCB &mdash; это бандитный <strong>алгоритм</strong> (не метод оценки). Он решает задачу контекстного бандита с линейной моделью reward. В оценке EDRA он используется как <span class="accent">baseline</span>: &laquo;а что если бы вместо LLM-правил использовали линейную модель?&raquo;
+  </p>
+
+  <h3>Модельное предположение</h3>
+  <p>Ожидаемая награда &mdash; линейная функция признаков:</p>
+  <div class="eq">E[r<sub>t,a</sub> | x<sub>t,a</sub>] = x<sub>t,a</sub><sup>T</sup> &middot; &theta;*<sub>a</sub></div>
+
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>x<sub>t,a</sub> &isin; R<sup>d</sup></td><td>Feature vector &mdash; контекст плюс признаки действия. Вектор из <var>d</var> чисел.</td></tr>
+      <tr><td>&theta;*<sub>a</sub> &isin; R<sup>d</sup></td><td>Неизвестный вектор весов для руки <var>a</var>. Это то, что алгоритм пытается оценить.</td></tr>
+      <tr><td>x<sup>T</sup> &middot; &theta;</td><td>Скалярное произведение: <span class="eq-inline">x<sub>1</sub>&middot;&theta;<sub>1</sub> + x<sub>2</sub>&middot;&theta;<sub>2</sub> + ... + x<sub>d</sub>&middot;&theta;<sub>d</sub></span>. Единственное число на выходе.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Алгоритм (для каждой руки <var>a</var>)</h3>
+  <p><strong>Инициализация:</strong></p>
+  <ul>
+    <li><span class="eq-inline">A<sub>a</sub> = I<sub>d</sub></span> &mdash; единичная матрица размера <var>d</var>&times;<var>d</var></li>
+    <li><span class="eq-inline">b<sub>a</sub> = 0<sub>d</sub></span> &mdash; нулевой вектор длины <var>d</var></li>
+  </ul>
+
+  <p><strong>В каждом раунде <var>t</var>:</strong></p>
+  <div class="code-block"><span class="cm">-- Для каждой руки a:</span>
+&theta;&#770;<sub>a</sub> = A<sub>a</sub><sup>&minus;1</sup> &middot; b<sub>a</sub>        <span class="cm">-- текущая оценка весов</span>
+
+p<sub>t,a</sub> = x<sub>t,a</sub><sup>T</sup> &middot; &theta;&#770;<sub>a</sub> + &alpha; &middot; &radic;(x<sub>t,a</sub><sup>T</sup> &middot; A<sub>a</sub><sup>&minus;1</sup> &middot; x<sub>t,a</sub>)
+        <span class="cm">-- UCB score = exploitation + exploration</span>
+
+<span class="kw">Choose</span> a<sub>t</sub> = argmax<sub>a</sub> p<sub>t,a</sub>
+
+<span class="cm">-- После наблюдения reward r<sub>t</sub>:</span>
+A<sub>a<sub>t</sub></sub> &larr; A<sub>a<sub>t</sub></sub> + x<sub>t,a<sub>t</sub></sub> &middot; x<sub>t,a<sub>t</sub></sub><sup>T</sup>    <span class="cm">-- обновить матрицу</span>
+b<sub>a<sub>t</sub></sub> &larr; b<sub>a<sub>t</sub></sub> + r<sub>t</sub> &middot; x<sub>t,a<sub>t</sub></sub>       <span class="cm">-- обновить вектор</span></div>
+
+  <h3>UCB score &mdash; по частям</h3>
+  <p>UCB score состоит из двух слагаемых:</p>
+
+  <table class="sym-table">
+    <thead><tr><th>Component</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>x<sup>T</sup> &middot; &theta;&#770;</td><td><strong>Exploitation.</strong> Лучшая текущая оценка ожидаемой награды. &laquo;Сколько, по нашему мнению, даст эта рука.&raquo;</td></tr>
+      <tr><td>&alpha; &middot; &radic;(x<sup>T</sup> A<sup>&minus;1</sup> x)</td><td><strong>Exploration bonus.</strong> Мера неопределённости. Больше наблюдений для руки <var>a</var> &rarr; A<sub>a</sub> растёт &rarr; A<sup>&minus;1</sup> уменьшается &rarr; exploration bonus уменьшается &rarr; меньше исследования.</td></tr>
+      <tr><td>&alpha;</td><td>Гиперпараметр, контролирующий интенсивность исследования. Больше &alpha; = больше exploration.</td></tr>
+      <tr><td>A<sub>a</sub></td><td>Матрица <var>d</var>&times;<var>d</var>, аккумулирующая outer products наблюдённых feature vectors. Это аналог ковариационной матрицы. Чем больше данных &mdash; тем &laquo;увереннее&raquo; матрица.</td></tr>
+      <tr><td>b<sub>a</sub></td><td>Вектор длины <var>d</var>, аккумулирующий reward-weighted features. Вместе с <span class="eq-inline">A<sub>a</sub><sup>&minus;1</sup></span> даёт ridge-regression оценку &theta;&#770;.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Почему LinUCB важен для EDRA</h3>
+  <p>
+    LinUCB &mdash; математически оптимальный baseline для контекстных бандитов с линейным reward. Если EDRA (с LLM-правилами, кластерами, revision engine) <strong>не побеждает</strong> LinUCB на тех же данных &mdash; вся сложность LLM неоправдана. Простая линейная модель с UCB exploration справляется не хуже.
+  </p>
+  <p>
+    Сравнение имеет смысл, потому что EDRA и LinUCB решают <em>одну и ту же задачу</em> (contextual bandit), но разными методами: LinUCB &mdash; числовые веса и линейная алгебра, EDRA &mdash; текстовые правила и LLM-рассуждение.
+  </p>
+
+  <hr>
+
+  <!-- ===== SECTION 9 ===== -->
+  <h2 id="sec9">
+    <span class="section-num">09 &mdash; Gama et al. 2013</span>
+    Prequential Evaluation
+  </h2>
+
+  <p>Для Level 3 (собственные outreach batch'и). Протокол <strong>test-then-train</strong>: сначала тестируй, потом учись.</p>
+
+  <h3>Процедура</h3>
+  <p>Для каждого batch <span class="eq-inline">B<sub>i</sub></span>:</p>
+  <ol>
+    <li><strong>TEST</strong> текущую модель на <span class="eq-inline">B<sub>i</sub></span> &mdash; измерить результат <em>до</em> обучения</li>
+    <li><strong>TRAIN</strong> &mdash; обновить модель данными из <span class="eq-inline">B<sub>i</sub></span></li>
+    <li>Повторить для <span class="eq-inline">B<sub>i+1</sub></span></li>
+  </ol>
+
+  <p>Порядок критичен: мы <em>всегда</em> тестируем на данных, которые модель ещё не видела. Это честная оценка в реальном времени.</p>
+
+  <h3>Формула: кумулятивная ошибка</h3>
+  <div class="eq">S<sub>i</sub> = (1/i) &middot; &Sigma;<sub>t=1</sub><sup>i</sup> L(y<sub>t</sub>, y&#770;<sub>t</sub>)</div>
+
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>S<sub>i</sub></td><td>Prequential error после <var>i</var> наблюдений. Средняя ошибка по всем прошлым предсказаниям.</td></tr>
+      <tr><td>L(y<sub>t</sub>, y&#770;<sub>t</sub>)</td><td>Функция потерь: 0, если предсказание верно; 1, если неверно. Можно использовать log-loss или другую метрику.</td></tr>
+      <tr><td>y<sub>t</sub></td><td>Реальный outcome (0 или 1).</td></tr>
+      <tr><td>y&#770;<sub>t</sub></td><td>Предсказание модели до обучения на <var>t</var>-м примере.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Формула с fading factor</h3>
+  <p>Стандартная prequential ошибка одинаково взвешивает все наблюдения. Но нас больше интересует <em>недавняя</em> производительность &mdash; для этого вводится fading factor:</p>
+
+  <div class="eq">S<sub>i</sub><sup>&kappa;</sup> = [&Sigma;<sub>t=1</sub><sup>i</sup> &kappa;<sup>i&minus;t</sup> &middot; L(y<sub>t</sub>, y&#770;<sub>t</sub>)] / [&Sigma;<sub>t=1</sub><sup>i</sup> &kappa;<sup>i&minus;t</sup>]</div>
+
+  <table class="sym-table">
+    <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>&kappa; &isin; (0, 1)</td><td><strong>Fading factor</strong> (e.g. 0.99). Число строго между 0 и 1. Чем ближе к 1 &mdash; тем равномернее веса. Чем ближе к 0 &mdash; тем больше забывание.</td></tr>
+      <tr><td>&kappa;<sup>i&minus;t</sup></td><td>Экспоненциально убывающий вес для наблюдения в момент <var>t</var>. Наблюдение <var>t = i</var> (текущее) имеет вес <span class="eq-inline">&kappa;<sup>0</sup> = 1</span>. Наблюдение <var>t = 1</var> (самое старое) имеет вес <span class="eq-inline">&kappa;<sup>i&minus;1</sup></span> &mdash; очень маленький при большом <var>i</var>.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Почему для EDRA</h3>
+  <p>
+    EDRA учится со временем. Prequential error <strong>должен уменьшаться</strong> по мере накопления batch'ей &mdash; это и есть learning curve. Если ошибка не падает, EDRA не учится. Если ошибка растёт &mdash; EDRA деградирует.
+  </p>
+  <p>
+    Fading factor нужен, потому что EDRA работает в нестационарной среде (люди меняются, тренды меняются). Нам важнее, как модель работает <em>сейчас</em>, а не как она работала 3 месяца назад.
+  </p>
+
+  <h3>Почему это НЕ очевидно</h3>
+  <p>
+    Prequential evaluation &mdash; это единственный способ показать, что замкнутый цикл EDRA <em>действительно</em> адаптируется. Learning curve детектирует конкретные failure modes:
+  </p>
+  <ol>
+    <li><strong>Overfitting к ранним данным.</strong> Правила застревают на паттернах первого batch'а. Кривая выходит на плато слишком рано &mdash; exploration не помогает.</li>
+    <li><strong>Однородная популяция.</strong> Все кластеры ведут себя одинаково &rarr; cluster-conditional rules не лучше одного глобального правила &rarr; &pi;<sub>edra</sub> &asymp; &pi;<sub>best_single</sub>.</li>
+    <li><strong>Генерические LLM-правила.</strong> Индуцированные правила (&laquo;будь тёплым&raquo;, &laquo;покажи ценность&raquo;) не содержат cluster-specific информации. Error остаётся flat.</li>
+    <li><strong>Drift убивает gains.</strong> Правила batch 1 не работают на batch 4 &mdash; аудитория поменялась. Fading factor (&kappa; = 0.99) делает это видимым.</li>
+    <li><strong>LinUCB baseline.</strong> У LinUCB есть <em>доказуемые</em> regret bounds (O(&radic;T)). Без сравнения с ним нельзя утверждать, что LLM-правила дают преимущество на самом важном измерении &mdash; online adaptation.</li>
+  </ol>
+  <p>
+    Без Level 3 EDRA остаётся &laquo;системой, которая генерирует правила&raquo;, а не &laquo;системой, которая учится&raquo;. Это принципиальная разница для ревьюеров.
+  </p>
+
+  <hr>
+
+  <!-- ===== SECTION 10 ===== -->
+  <h2 id="sec10">
+    <span class="section-num">10 &mdash; Core Mapping</span>
+    EDRA &mdash; это контекстный бандит
+  </h2>
+
+  <p>Ключевое отображение: каждый элемент EDRA имеет прямой аналог в бандитном фреймворке.</p>
+
+  <table class="data-table">
+    <thead><tr><th>EDRA</th><th>Bandit</th><th>Explanation</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Кластер посетителя</strong></td>
+        <td>Context <var>x</var></td>
+        <td>Кластер (или raw embedding 384d) = контекст, описывающий текущего человека</td>
+      </tr>
+      <tr>
+        <td><strong>Стратегия (5-slot rule)</strong></td>
+        <td>Arm / Action <var>a</var></td>
+        <td>Каждая конфигурация правила (framing + tone + opener + length + ask) = одна рука бандита</td>
+      </tr>
+      <tr>
+        <td><strong>Ответ / нет ответа</strong></td>
+        <td>Reward <var>r</var></td>
+        <td>1 если ответил, 0 если нет. Бинарная награда.</td>
+      </tr>
+      <tr>
+        <td><strong>Rule store</strong></td>
+        <td>Policy &pi;</td>
+        <td>Отображение &laquo;кластер &rarr; стратегия&raquo; &mdash; это и есть политика</td>
+      </tr>
+      <tr>
+        <td><strong>Rule induction</strong></td>
+        <td>Policy learning</td>
+        <td>LLM строит политику из успешных эпизодов &mdash; аналог обновления весов &theta;</td>
+      </tr>
+      <tr>
+        <td><strong>Consistency monitor</strong></td>
+        <td>Online update trigger</td>
+        <td>Обнаруживает деградацию, запускает ревизию &mdash; аналог detect drift + re-learn</td>
+      </tr>
+      <tr>
+        <td><strong>20% control group</strong></td>
+        <td>Exploration</td>
+        <td>Случайная стратегия для части аудитории &mdash; обеспечивает exploration данные</td>
+      </tr>
+      <tr>
+        <td><strong>Outreach batch</strong></td>
+        <td>Round <var>t</var></td>
+        <td>Каждая рассылка = один раунд бандита. Batch = несколько раундов параллельно.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Почему это отображение важно</h3>
+  <ol>
+    <li><strong>Формальные метрики.</strong> Вместо &laquo;response rate вырос&raquo; &mdash; regret, policy value, DR estimate. Числа, которые можно сравнивать, у которых есть confidence intervals.</li>
+    <li><strong>Established evaluation methods.</strong> DR, prequential, Replay &mdash; всё это опубликовано, рецензировано, с доказательствами корректности. Не нужно изобретать свою метрику.</li>
+    <li><strong>Теоретический фреймворк.</strong> EDRA вписывается в хорошо изученную область. Ревьюерам понятно, что ты делаешь и почему.</li>
+    <li><strong>LinUCB comparison is meaningful.</strong> Сравнение с LinUCB осмысленно &mdash; одна формулировка, разные решения. Это не &laquo;яблоки vs апельсины&raquo;.</li>
+  </ol>
+
+  <h3>Ключевые отличия EDRA от стандартных бандитов</h3>
+  <ul>
+    <li><strong>Бесконечное пространство рук.</strong> В стандартном бандите K конечно и фиксировано. В EDRA &laquo;руки&raquo; &mdash; это LLM-generated rule конфигурации. 5 слотов, каждый с множеством значений &mdash; комбинаторно огромное пространство. EDRA дискретизирует его через structured slots.</li>
+    <li><strong>Обновление через текст.</strong> LinUCB обновляет числовые веса &theta; через линейную алгебру. EDRA обновляет текстовые правила через LLM-reasoning. Фундаментально другой механизм обучения.</li>
+    <li><strong>Drift detection.</strong> Стандартные бандиты (UCB, Thompson Sampling) не имеют встроенного детектора drift. EDRA имеет consistency monitor, который обнаруживает деградацию и запускает ревизию. Это ближе к restless bandits или switching bandits.</li>
+  </ul>
+
+  <hr>
+
+  <!-- ===== SECTION 11 ===== -->
+  <h2 id="sec11">
+    <span class="section-num">11 &mdash; The Plan</span>
+    Как всё связано: план оценки EDRA
+  </h2>
+
+  <p>Три уровня оценки, каждый отвечает на свой вопрос, каждый использует свой метод.</p>
+
+  <h3>Level 1 &mdash; Clustering Quality</h3>
+  <div class="callout">
+    <div class="callout-label">Вопрос: &laquo;Кластеры предсказывают поведение?&raquo;</div>
+    <p><strong>Метод:</strong> silhouette score + &chi;<sup>2</sup> тест (или Fisher's exact test): различается ли reply rate между кластерами?</p>
+    <p><strong>Данные:</strong> 825 строк холодного outreach из Pipedrive (после LinkedIn enrichment для 635 человек с URL).</p>
+    <p><strong>Что доказывает:</strong> кластеры &mdash; не просто геометрически разделимые группы, а <strong>группы с разным поведением</strong>. Если reply rate одинаков во всех кластерах, cluster-conditional rules бессмысленны &mdash; нет вариации, которую можно эксплуатировать.</p>
+    <p><strong>Блокер:</strong> текущих признаков (job_title, org, labels) недостаточно &mdash; первая попытка кластеризации дала silhouette 0.177. Нужен LinkedIn enrichment для получения rich text features (headline, summary, skills). 502 research-профиля остаются полезны для booth demo seeding и будущего Level 3 outreach, но <em>не для evaluation</em> &mdash; у них нет reward signal (эти люди никогда не получали писем).</p>
+  </div>
+
+  <h3>Level 2 &mdash; Off-Policy Evaluation</h3>
+  <div class="callout">
+    <div class="callout-label">Вопрос: &laquo;Различается ли оптимальная стратегия между кластерами?&raquo;</div>
+    <p><strong>Что проверяем:</strong> interaction effect между кластером и стратегией. НЕ &laquo;персонализация лучше шаблонов&raquo; (тривиально и известно заранее), а &laquo;cluster-conditional назначение стратегий побеждает лучшую единственную стратегию для всех&raquo;.</p>
+    <p><strong>Конкретный тест:</strong> если cold_personal даёт 20% reply для кластера A и 5% для кластера B, а cold_template даёт 8% для A и 15% для B &mdash; это доказывает ценность EDRA. Если все стратегии ранжируются одинаково во всех кластерах &mdash; EDRA не нужна.</p>
+    <p><strong>Метод:</strong> Doubly Robust estimator (Dudik et al. 2011).</p>
+    <p><strong>Данные:</strong> 825 строк холодного outreach из Pipedrive (replied + no-reply).</p>
+    <p><strong>Reward model:</strong> LogisticRegression / XGBoost, обученная на (features, action) &rarr; P(reply). См. подробности в разделе 7.</p>
+    <p><strong>Сравниваемые политики</strong> (сравниваем <em>стратегии назначения</em>, а не тексты сообщений):</p>
+    <ul>
+      <li><span class="eq-inline">&pi;<sub>uniform</sub></span> &mdash; всегда cold_template для всех (самый частый тип &mdash; нижняя граница)</li>
+      <li><span class="eq-inline">&pi;<sub>random</sub></span> &mdash; случайный выбор стратегии</li>
+      <li><span class="eq-inline">&pi;<sub>best_single</sub></span> &mdash; лучшая единственная стратегия глобально (та, у которой наивысший overall reply rate). <strong>Ключевой baseline:</strong> если EDRA не побеждает &laquo;просто используй лучшую стратегию для всех&raquo;, кластеризация не добавляет ценности.</li>
+      <li><span class="eq-inline">&pi;<sub>edra</sub></span> &mdash; cluster-conditional: каждый кластер получает свою лучшую стратегию</li>
+    </ul>
+    <p><strong>Метрика:</strong> V&#770;<sub>DR</sub>(&pi;) для каждой политики. Выше = лучше.</p>
+    <p><strong>Что доказывает:</strong> если V&#770;<sub>DR</sub>(&pi;<sub>edra</sub>) &gt; V&#770;<sub>DR</sub>(&pi;<sub>best_single</sub>) &mdash; оптимальная стратегия действительно различается между кластерами, и cluster-conditional назначение оправдано. Это нетривиальный результат: простая глобальная оптимизация проигрывает сегментированной.</p>
+  </div>
+
+  <h3>Level 3 &mdash; Online Learning Curve</h3>
+  <div class="callout">
+    <div class="callout-label">Вопрос: &laquo;EDRA действительно учится?&raquo;</div>
+    <p><strong>Метод:</strong> Prequential evaluation (Gama et al. 2013).</p>
+    <p><strong>Данные:</strong> собственные outreach batch'и EDRA (будущие данные).</p>
+    <p><strong>Протокол:</strong> test-then-train на каждом batch. Prequential error с fading factor &kappa; = 0.99.</p>
+    <p><strong>Baseline:</strong> LinUCB (Li et al. 2010) &mdash; алгоритм с доказуемыми regret bounds. Если EDRA не побеждает LinUCB, вся сложность LLM не оправдана.</p>
+    <p><strong>Что доказывает:</strong> prequential error уменьшается от batch к batch &mdash; EDRA учится. Это <strong>единственное</strong> доказательство того, что замкнутый цикл (closed loop) действительно работает. Без Level 3 EDRA &mdash; это &laquo;система, которая генерирует правила&raquo;, а не &laquo;система, которая учится&raquo;.</p>
+  </div>
+
+  <h3>Почему это НЕ очевидно</h3>
+  <p>Learning curve детектирует конкретные failure modes, каждый из которых реален:</p>
+  <ol>
+    <li><strong>EDRA overfits to early data.</strong> Правила фиксируются на локальном оптимуме после первого batch'а. Последующие batch'и не улучшают prequential error &mdash; кривая выходит на плато слишком рано.</li>
+    <li><strong>Популяция слишком однородна.</strong> Нет реальных кластеров &rarr; cluster-conditional rules = шум &rarr; performance не отличается от flat policy. Кривые &pi;<sub>edra</sub> и &pi;<sub>best_single</sub> идут вместе.</li>
+    <li><strong>LLM rule induction ненадёжна.</strong> Индуцированные правила генерические (&laquo;будь тёплым&raquo;, &laquo;покажи ценность&raquo;), не захватывают cluster-specific паттерны. Prequential error остаётся flat &mdash; правила не несут информации.</li>
+    <li><strong>Drift убивает gains.</strong> Правила из batch 1 не переносятся на batch 4, потому что аудитория поменялась. Без fading factor это маскируется средними; с &kappa; = 0.99 видно, что недавняя performance деградирует.</li>
+    <li><strong>LinUCB имеет доказуемые regret bounds.</strong> Если Level 3 пропустить, нельзя утверждать, что EDRA конкурентоспособна по самому важному измерению: online adaptation. LinUCB &mdash; математический минимум, который нужно побить.</li>
+  </ol>
+
+  <hr>
+  <p style="text-align:center;color:var(--grey);font-size:14px;margin-top:48px;">
+    EDRA Evaluation Framework &mdash; internal reference document<br>
+    Last updated: 2026-05-26
+  </p>
+
+</main>
+
+<script>
+(function() {
+  // Mobile TOC toggle
+  var toggle = document.getElementById('tocToggle');
+  var sidebar = document.getElementById('sidebar');
+  toggle.addEventListener('click', function() {
+    sidebar.classList.toggle('open');
+  });
+
+  // Close sidebar on link click (mobile)
+  var tocLinks = sidebar.querySelectorAll('a');
+  tocLinks.forEach(function(link) {
+    link.addEventListener('click', function() {
+      if (window.innerWidth <= 1200) {
+        sidebar.classList.remove('open');
+      }
+    });
+  });
+
+  // Active section tracking
+  var sections = document.querySelectorAll('h2[id]');
+  var tocAnchors = {};
+  tocLinks.forEach(function(a) {
+    var href = a.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      tocAnchors[href.slice(1)] = a;
+    }
+  });
+
+  function updateActive() {
+    var scrollY = window.scrollY || window.pageYOffset;
+    var current = null;
+    sections.forEach(function(sec) {
+      if (sec.offsetTop - 120 <= scrollY) {
+        current = sec.id;
+      }
+    });
+    Object.keys(tocAnchors).forEach(function(id) {
+      tocAnchors[id].classList.toggle('active', id === current);
+    });
+  }
+
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+})();
+</script>
+</body>
+</html>

@@ -15,11 +15,11 @@
 
 \title{EDRA: Experience-Driven Rule Adaptation for Self-Improving Outreach Agents}
 
-\author{Onishchenko Daniil}
-\email{danial92335@mail.ru}
+\author{Daniil Onishchenko}
+\email{daniel@defygroup.ai}
 \affiliation{%
-   \institution{Kazan Federal University}
-   \country{Singapore}}
+   \institution{Defy Group}
+   \country{United Kingdom}}
 
 \author{Aleksandr Farseev}
 \email{sasha@somin.ai}
@@ -33,7 +33,7 @@ LLM-based outreach agents personalize messages at scale, yet their behavioral st
 Recent systems (ExpeL~\cite{expel2024}, EvolveR~\cite{evolver2025}, ReasoningBank~\cite{reasoningbank2025}) close parts of this feedback loop by extracting task-general strategies from interaction histories, but none conditions rules on \textit{who} the agent is talking to: their insights are global, not audience-aware.
 We present EDRA (Experience-Driven Rule Adaptation), a closed-loop architecture that introduces \textit{cluster-conditional} rule induction.
 Visitor profiles are embedded via MiniLM, clustered with HDBSCAN, and matched to behavioral rules through weighted KNN voting; an LLM revises rules when cluster-level consistency degrades.
-We frame rule application as a contextual bandit and validate offline on 976 real cold-outreach interactions from a commercial CRM via a doubly robust estimator.
+We frame rule application as a contextual bandit and validate offline on 825 real cold-outreach interactions from a commercial CRM via a doubly robust estimator.
 EDRA's cluster-conditional policy yields an estimated reward of \textbf{[X.XXX]}, outperforming the best single-strategy baseline (\textbf{[X.XXX]}), confirming that optimal outreach strategy differs by audience segment.
 At the conference booth, each attendee simultaneously experiences and trains the system.
 \end{abstract}
@@ -63,7 +63,7 @@ Recent work has begun closing parts of this loop: TRAD~\cite{trad2024} retrieves
 We present \textbf{EDRA} (Experience-Driven Rule Adaptation).
 First, we introduce an architecture where behavioral rules are induced per profile cluster rather than globally, so distinct audience types receive distinct strategies.
 Building on this, we formalize a KNN-based rule application mechanism where new visitors are matched to cluster rules through weighted cosine voting over semantically similar profiles.
-Finally, we validate through offline evaluation on 976 real outreach interactions framed as a contextual bandit~\cite{li2010contextual}, comparing four policies via a doubly robust estimator~\cite{dudik2011doubly}, and through live booth interactions where each attendee simultaneously experiences and trains the system.
+Finally, we validate through offline evaluation on 825 real outreach interactions framed as a contextual bandit~\cite{li2010contextual}, comparing four policies via a doubly robust estimator~\cite{dudik2011doubly}, and through live booth interactions where each attendee simultaneously experiences and trains the system.
 
 % ============================================================
 \section{The EDRA Architecture}
@@ -105,7 +105,7 @@ When CS drops below $\theta_{\text{revise}}$, the LLM receives the rule and cont
 \section{Offline Validation}
 % ============================================================
 
-We frame EDRA's rule application as a contextual bandit: the context $x$ is a profile embedding, the action $a$ is one of three first-contact strategies, and the reward $r \in \{0,1\}$ indicates whether the recipient replied. We evaluate on 976 interactions extracted from a commercial CRM.
+We frame EDRA's rule application as a contextual bandit: the context $x$ is a profile embedding, the action $a$ is one of three first-contact strategies, and the reward $r \in \{0,1\}$ indicates whether the recipient replied. We evaluate on 825 interactions extracted from a commercial CRM.
 
 \noindent\textbf{Clustering Quality.}
 HDBSCAN over MiniLM embeddings yields \textbf{[N]} clusters (silhouette = \textbf{[X.XXX]}). A $\chi^2$ test confirms that reply rates differ significantly across clusters ($p < $ \textbf{[X.XXX]}).

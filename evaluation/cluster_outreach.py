@@ -26,7 +26,7 @@ if sys.stdout.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = Path(__file__).resolve().parent / "data" / "cold_outreach.csv"
+DEFAULT_INPUT = Path(__file__).resolve().parent / "data" / "cold_outreach_clean.csv"
 DEFAULT_OUTPUT = Path(__file__).resolve().parent / "data" / "clustered_outreach.csv"
 EMBEDDINGS_CACHE = Path(__file__).resolve().parent / "data" / "embeddings.npy"
 LOCAL_MODEL_PATH = PROJECT_ROOT / "backend" / "models" / "all-MiniLM-L6-v2"
@@ -38,22 +38,46 @@ def load_rows(path: Path) -> list[dict[str, str]]:
 
 
 def build_text(row: dict[str, str]) -> str:
-    parts = []
     job = row.get("job_title", "").strip()
     org = row.get("organization", "").strip()
     labels = row.get("labels", "").strip()
+    name = row.get("name", "").strip()
 
-    if job and org:
-        parts.append(f"{job} at {org}")
-    elif job:
-        parts.append(job)
-    elif org:
-        parts.append(org)
+    seniority = "unknown seniority"
+    for level, keywords in [
+        ("C-level", ["ceo", "cmo", "cfo", "cto", "coo", "chief"]),
+        ("Founder", ["founder", "co-founder"]),
+        ("Partner", ["partner", "managing partner"]),
+        ("Director", ["director", "vp", "vice president", "president"]),
+        ("Manager", ["manager", "head", "lead"]),
+        ("Specialist", ["specialist", "analyst", "executive", "coordinator", "associate", "officer"]),
+    ]:
+        if any(kw in job.lower() for kw in keywords):
+            seniority = level
+            break
 
+    function = "general"
+    for func, keywords in [
+        ("marketing", ["marketing", "brand", "content", "social media", "creative"]),
+        ("digital", ["digital", "online", "e-commerce", "ecommerce"]),
+        ("sales", ["sales", "business development", "partnerships", "commercial"]),
+        ("growth", ["growth", "acquisition", "performance"]),
+        ("media", ["media", "advertising", "communications", "pr"]),
+        ("product", ["product", "technology", "engineering", "data"]),
+        ("strategy", ["strategy", "consulting", "analytics", "insights"]),
+    ]:
+        if any(kw in job.lower() for kw in keywords):
+            function = func
+            break
+
+    parts = [f"{seniority} in {function}"]
+    if org:
+        parts.append(f"at {org}")
+    if name:
+        parts.append(f"name: {name}")
     if labels:
-        parts.append(f"campaign: {labels}")
-
-    return ", ".join(parts) if parts else "unknown"
+        parts.append(f"segment: {labels}")
+    return ". ".join(parts)
 
 
 def compute_embeddings(texts: list[str]) -> np.ndarray:
@@ -77,6 +101,24 @@ def get_embeddings(texts: list[str], *, recompute: bool) -> np.ndarray:
     np.save(EMBEDDINGS_CACHE, embeddings)
     print(f"Saved embeddings to {EMBEDDINGS_CACHE} ({embeddings.shape})")
     return embeddings
+
+
+UMAP_CACHE = Path(__file__).resolve().parent / "data" / "umap_reduced.npy"
+
+
+def reduce_umap(embeddings: np.ndarray, *, n_components: int = 15, recompute: bool = False) -> np.ndarray:
+    if not recompute and UMAP_CACHE.exists():
+        cached = np.load(UMAP_CACHE)
+        if cached.shape[0] == embeddings.shape[0]:
+            print(f"Loaded cached UMAP from {UMAP_CACHE} ({cached.shape})")
+            return cached
+        print(f"UMAP cache shape mismatch, recomputing...")
+
+    from umap import UMAP
+    reduced = UMAP(n_components=n_components, random_state=42, metric="cosine").fit_transform(embeddings)
+    np.save(UMAP_CACHE, reduced)
+    print(f"Saved UMAP to {UMAP_CACHE} ({reduced.shape})")
+    return reduced
 
 
 def run_hdbscan(embeddings: np.ndarray, min_cluster_size: int, min_samples: int) -> np.ndarray:
@@ -229,7 +271,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Cluster cold outreach data and produce evaluation metrics")
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--min-cluster-size", type=int, default=15)
+    parser.add_argument("--min-cluster-size", type=int, default=8)
     parser.add_argument("--min-samples", type=int, default=5)
     parser.add_argument("--recompute", action="store_true", help="Force recompute embeddings")
     args = parser.parse_args()
@@ -246,9 +288,10 @@ def main() -> None:
 
     texts = [build_text(row) for row in rows]
     embeddings = get_embeddings(texts, recompute=args.recompute)
-    labels = run_hdbscan(embeddings, args.min_cluster_size, args.min_samples)
+    reduced = reduce_umap(embeddings, recompute=args.recompute)
+    labels = run_hdbscan(reduced, args.min_cluster_size, args.min_samples)
 
-    cluster_labels = print_report(rows, labels, embeddings)
+    cluster_labels = print_report(rows, labels, reduced)
     save_output(rows, labels, cluster_labels, output_path)
 
 

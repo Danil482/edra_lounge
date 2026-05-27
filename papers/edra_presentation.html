@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDRA — Experience-Driven Rule Adaptation</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #CC0000;
+    --red-dark: #990000;
+    --black: #0A0A0A;
+    --white: #F9F9F7;
+    --charcoal: #2D2D2D;
+    --grey: #777777;
+    --dim: rgba(249,249,247,0.4);
+    --dim-border: rgba(249,249,247,0.15);
+    --dim-bg: rgba(249,249,247,0.05);
+    --display: 'Playfair Display', Georgia, serif;
+    --body: 'DM Sans', Helvetica, Arial, sans-serif;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--black); }
+
+  .deck {
+    width: 100vw; height: 100vh;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 80px 120px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s ease;
+    background: var(--black); color: var(--white);
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  /* Typography */
+  .eyebrow {
+    font-family: var(--body); font-weight: 700; font-size: 12px;
+    letter-spacing: 5px; text-transform: uppercase; color: var(--red);
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-family: var(--display); font-weight: 900;
+    font-size: 72px; line-height: 1.1; letter-spacing: -1px;
+    margin-bottom: 32px; color: var(--white);
+  }
+  h2 {
+    font-family: var(--display); font-weight: 800;
+    font-size: 48px; line-height: 1.2; letter-spacing: -0.5px;
+    margin-bottom: 28px; color: var(--white);
+  }
+  h3 {
+    font-family: var(--display); font-weight: 700;
+    font-size: 28px; line-height: 1.3;
+    margin-bottom: 16px; color: var(--white);
+  }
+
+  p, li {
+    font-family: var(--body); font-weight: 400;
+    font-size: 20px; line-height: 1.85;
+    color: rgba(249,249,247,0.85);
+  }
+
+  ul { list-style: none; margin-top: 8px; }
+  ul li { padding-left: 24px; position: relative; margin-bottom: 10px; }
+  ul li::before {
+    content: ''; position: absolute; left: 0; top: 12px;
+    width: 8px; height: 8px; background: var(--red);
+  }
+
+  .red-sq { display: inline-block; width: 14px; height: 14px; background: var(--red); vertical-align: middle; margin-left: 6px; }
+  .red-sq--small { width: 8px; height: 8px; }
+  .red-sq--large { width: 48px; height: 48px; margin: 32px 0; }
+
+  strong { color: var(--white); font-weight: 700; }
+  .accent { color: var(--red); }
+
+  /* Two-column layout */
+  .cols { display: flex; gap: 64px; margin-top: 24px; align-items: center; }
+  .cols > * { flex: 1; }
+  .cols > .col-svg { flex: 1.2; display: flex; align-items: center; justify-content: center; }
+
+  /* Architecture boxes */
+  .arch-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    margin-top: 24px;
+  }
+  .arch-box {
+    border: 1px solid var(--dim-border); padding: 28px;
+    background: var(--dim-bg);
+  }
+  .arch-box h3 { font-size: 22px; margin-bottom: 10px; }
+  .arch-box p { font-size: 16px; line-height: 1.7; }
+
+  /* Loop indicators */
+  .loops { display: flex; gap: 32px; margin-top: 32px; }
+  .loop-card {
+    flex: 1; padding: 28px; border: 1px solid var(--dim-border);
+    background: var(--dim-bg);
+  }
+  .loop-label {
+    font-family: var(--body); font-weight: 700; font-size: 11px;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--red);
+    margin-bottom: 12px;
+  }
+  .loop-card p { font-size: 16px; line-height: 1.7; }
+
+  /* Code block */
+  .code-block {
+    font-family: 'Courier New', monospace; font-size: 14px;
+    background: rgba(249,249,247,0.06); color: var(--white);
+    padding: 24px; margin-top: 16px; line-height: 1.6;
+    white-space: pre; overflow-x: auto;
+  }
+
+  /* Table */
+  .data-table {
+    width: 100%; border-collapse: collapse; margin-top: 24px;
+    font-family: var(--body); font-size: 16px;
+  }
+  .data-table th {
+    text-align: left; padding: 12px 16px;
+    font-weight: 700; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--grey); border-bottom: 2px solid rgba(249,249,247,0.3);
+  }
+  .data-table td {
+    padding: 12px 16px; border-bottom: 1px solid rgba(249,249,247,0.1);
+    line-height: 1.6; color: rgba(249,249,247,0.85);
+  }
+  .data-table td.accent-cell {
+    color: var(--red); font-weight: 700;
+  }
+
+  /* Equation highlight */
+  .eq {
+    font-family: 'Courier New', monospace; font-size: 22px;
+    padding: 20px 32px; margin: 20px 0;
+    border-left: 4px solid var(--red);
+    background: rgba(204,0,0,0.08);
+    color: var(--white);
+  }
+
+  /* Status badge */
+  .badge {
+    display: inline-block; padding: 4px 14px;
+    font-family: var(--body); font-weight: 700; font-size: 11px;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .badge--done { background: rgba(249,249,247,0.15); color: var(--white); }
+  .badge--wip { background: var(--red); color: var(--white); }
+  .badge--blocked { border: 1px solid var(--grey); color: var(--grey); }
+
+  /* Wordmark */
+  .wordmark {
+    font-family: var(--display); font-weight: 900; font-size: 24px;
+    letter-spacing: -0.5px; position: fixed; bottom: 32px; left: 48px;
+    z-index: 100; color: var(--white);
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed; bottom: 32px; right: 48px; z-index: 100;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .nav-btn {
+    background: none; border: 1px solid var(--grey); color: var(--grey);
+    width: 44px; height: 44px; font-size: 18px; cursor: pointer;
+    font-family: var(--body); display: flex; align-items: center; justify-content: center;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-btn:hover { color: var(--white); border-color: var(--white); }
+  .counter {
+    font-family: var(--body); font-size: 13px; color: var(--grey);
+    letter-spacing: 2px;
+  }
+
+  /* Section divider */
+  .section-num {
+    font-family: var(--body); font-weight: 700; font-size: 14px;
+    letter-spacing: 4px; color: var(--red);
+  }
+
+  /* Outcome cards */
+  .outcomes { display: flex; gap: 24px; margin-top: 24px; }
+  .outcome-card {
+    flex: 1; padding: 16px 20px;
+    border: 1px solid var(--dim-border);
+    background: var(--dim-bg);
+    font-family: var(--body); font-size: 14px; line-height: 1.6;
+    color: rgba(249,249,247,0.7);
+  }
+  .outcome-card--good { border-left: 3px solid rgba(249,249,247,0.5); }
+  .outcome-card--bad { border-left: 3px solid #CC0000; }
+  .outcome-label {
+    font-weight: 700; font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .outcome-label--good { color: rgba(249,249,247,0.6); }
+  .outcome-label--bad { color: #CC0000; }
+
+  /* SVG containers */
+  .slide svg { max-width: 100%; height: auto; }
+  .slide svg text {
+    font-family: 'DM Sans', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- SLIDE 01: Title -->
+  <div class="slide active" data-n="1">
+    <div class="cols" style="align-items:center;">
+      <div>
+        <div class="eyebrow">ACM Multimedia 2026 &middot; Demo Track</div>
+        <h1>EDRA<span class="red-sq"></span></h1>
+        <p style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.4;max-width:600px;color:var(--white);">
+          Experience-Driven Rule Adaptation for Autonomous Outreach Agents
+        </p>
+        <div class="red-sq--large"></div>
+        <p style="font-size:16px;color:var(--grey);">
+          Daniil Onishchenko &middot; Aleksandr Farseev
+        </p>
+      </div>
+      <div class="col-svg" style="justify-content:center;">
+        <img src="../frontend/assets/avatar/edra-idle.png" alt="EDRA agent avatar"
+             style="height:350px;object-fit:contain;filter:drop-shadow(0 0 40px rgba(204,0,0,0.3));opacity:0.92;">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 02: The Problem -->
+  <div class="slide" data-n="2">
+    <div class="section-num">01 <span class="red-sq red-sq--small"></span> THE PROBLEM</div>
+    <h2 style="margin-top:24px;">One Strategy Does Not Fit All</h2>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="520" height="360" viewBox="0 0 520 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Three profile silhouettes -->
+          <!-- Professor -->
+          <circle cx="80" cy="60" r="28" stroke="#F9F9F7" stroke-width="1.5" fill="none"/>
+          <rect x="60" y="96" width="40" height="6" rx="0" fill="rgba(249,249,247,0.2)"/>
+          <text x="80" y="120" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="1">PROFESSOR</text>
+          <!-- Glasses on professor -->
+          <circle cx="72" cy="56" r="6" stroke="rgba(249,249,247,0.5)" stroke-width="1" fill="none"/>
+          <circle cx="88" cy="56" r="6" stroke="rgba(249,249,247,0.5)" stroke-width="1" fill="none"/>
+          <line x1="78" y1="56" x2="82" y2="56" stroke="rgba(249,249,247,0.5)" stroke-width="1"/>
+
+          <!-- Startup Founder -->
+          <circle cx="260" cy="60" r="28" stroke="#F9F9F7" stroke-width="1.5" fill="none"/>
+          <rect x="240" y="96" width="40" height="6" rx="0" fill="rgba(249,249,247,0.2)"/>
+          <text x="260" y="120" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="1">FOUNDER</text>
+          <!-- Lightning bolt for founder -->
+          <polygon points="262,46 256,58 264,58 258,70 264,58 256,58" stroke="rgba(249,249,247,0.5)" stroke-width="1" fill="none"/>
+
+          <!-- Agency Director -->
+          <circle cx="440" cy="60" r="28" stroke="#F9F9F7" stroke-width="1.5" fill="none"/>
+          <rect x="420" y="96" width="40" height="6" rx="0" fill="rgba(249,249,247,0.2)"/>
+          <text x="440" y="120" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="1">DIRECTOR</text>
+          <!-- Briefcase for director -->
+          <rect x="432" y="50" width="16" height="12" stroke="rgba(249,249,247,0.5)" stroke-width="1" fill="none" rx="1"/>
+          <line x1="437" y1="50" x2="437" y2="47" stroke="rgba(249,249,247,0.5)" stroke-width="1"/>
+          <line x1="443" y1="50" x2="443" y2="47" stroke="rgba(249,249,247,0.5)" stroke-width="1"/>
+          <line x1="437" y1="47" x2="443" y2="47" stroke="rgba(249,249,247,0.5)" stroke-width="1"/>
+
+          <!-- Arrows converging to template box -->
+          <line x1="80" y1="135" x2="220" y2="195" stroke="rgba(249,249,247,0.3)" stroke-width="1"/>
+          <line x1="260" y1="135" x2="260" y2="195" stroke="rgba(249,249,247,0.3)" stroke-width="1"/>
+          <line x1="440" y1="135" x2="300" y2="195" stroke="rgba(249,249,247,0.3)" stroke-width="1"/>
+
+          <!-- Template box -->
+          <rect x="180" y="195" width="160" height="60" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <text x="260" y="222" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700" letter-spacing="2">ONE TEMPLATE</text>
+          <text x="260" y="242" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">same message for everyone</text>
+
+          <!-- Red response rate below -->
+          <line x1="260" y1="260" x2="260" y2="290" stroke="#CC0000" stroke-width="1.5"/>
+          <polygon points="260,290 255,282 265,282" fill="#CC0000"/>
+          <rect x="195" y="298" width="130" height="36" stroke="#CC0000" stroke-width="1.5" rx="0" fill="rgba(204,0,0,0.12)"/>
+          <text x="260" y="321" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="16" font-weight="700">5% response rate</text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li>Static templates ignore audience diversity</li>
+          <li>Response rates vary <strong>0.6%&ndash;34%</strong> by campaign</li>
+          <li>No mechanism to learn what works</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 03: The Solution — EDRA Loop -->
+  <div class="slide" data-n="3">
+    <div class="section-num">02 <span class="red-sq red-sq--small"></span> THE SOLUTION</div>
+    <h2 style="margin-top:24px;">A Closed Loop That Learns</h2>
+    <div style="display:flex;justify-content:center;margin-top:8px;">
+      <svg width="880" height="410" viewBox="0 0 880 410" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Visitor Profile box (top) -->
+        <rect x="330" y="5" width="190" height="40" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <rect x="342" y="14" width="18" height="18" stroke="rgba(249,249,247,0.5)" stroke-width="1" rx="2" fill="none"/>
+        <text x="351" y="28" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">in</text>
+        <text x="430" y="30" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700">Visitor Profile</text>
+
+        <!-- Arrow down -->
+        <line x1="425" y1="45" x2="425" y2="62" stroke="rgba(249,249,247,0.5)" stroke-width="1.5"/>
+        <polygon points="425,67 421,60 429,60" fill="rgba(249,249,247,0.5)"/>
+        <text x="460" y="58" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">MiniLM 384d</text>
+
+        <!-- Find 7 Most Similar -->
+        <rect x="310" y="68" width="230" height="38" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="425" y="92" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700">Find 7 Most Similar Profiles</text>
+
+        <!-- Cluster Store (framed) -->
+        <rect x="625" y="15" width="120" height="125" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="685" y="33" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="2">CLUSTERS</text>
+        <!-- Cluster A (white) -->
+        <circle cx="648" cy="55" r="4" fill="rgba(249,249,247,0.4)"/>
+        <circle cx="662" cy="48" r="5" fill="rgba(249,249,247,0.3)"/>
+        <circle cx="670" cy="60" r="3" fill="rgba(249,249,247,0.25)"/>
+        <circle cx="655" cy="68" r="3" fill="rgba(249,249,247,0.2)"/>
+        <!-- Cluster B (red) -->
+        <circle cx="705" cy="58" r="5" fill="rgba(204,0,0,0.5)"/>
+        <circle cx="720" cy="66" r="4" fill="rgba(204,0,0,0.4)"/>
+        <circle cx="697" cy="70" r="3" fill="rgba(204,0,0,0.35)"/>
+        <circle cx="725" cy="52" r="3" fill="rgba(204,0,0,0.3)"/>
+        <!-- Cluster C (dim white) -->
+        <circle cx="660" cy="100" r="4" fill="rgba(249,249,247,0.18)"/>
+        <circle cx="675" cy="108" r="5" fill="rgba(249,249,247,0.15)"/>
+        <circle cx="685" cy="96" r="3" fill="rgba(249,249,247,0.12)"/>
+        <circle cx="700" cy="105" r="4" fill="rgba(249,249,247,0.2)"/>
+        <circle cx="715" cy="100" r="3" fill="rgba(249,249,247,0.14)"/>
+
+        <!-- Dotted lines: KNN box → Cluster frame -->
+        <line x1="540" y1="80" x2="625" y2="55" stroke="rgba(249,249,247,0.25)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="540" y1="92" x2="625" y2="100" stroke="rgba(249,249,247,0.25)" stroke-width="1" stroke-dasharray="4,3"/>
+
+        <!-- Arrow down -->
+        <line x1="425" y1="106" x2="425" y2="123" stroke="rgba(249,249,247,0.5)" stroke-width="1.5"/>
+        <polygon points="425,128 421,121 429,121" fill="rgba(249,249,247,0.5)"/>
+
+        <!-- Rule Store with equalizer bars -->
+        <rect x="310" y="128" width="230" height="55" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="425" y="148" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700">Rule Store</text>
+        <rect x="390" y="155" width="55" height="4" rx="0" fill="rgba(249,249,247,0.15)"/>
+        <rect x="390" y="155" width="36" height="4" rx="0" fill="rgba(249,249,247,0.35)"/>
+        <rect x="390" y="162" width="55" height="4" rx="0" fill="rgba(249,249,247,0.15)"/>
+        <rect x="390" y="162" width="26" height="4" rx="0" fill="rgba(249,249,247,0.35)"/>
+        <rect x="390" y="169" width="55" height="4" rx="0" fill="rgba(249,249,247,0.15)"/>
+        <rect x="390" y="169" width="45" height="4" rx="0" fill="rgba(204,0,0,0.5)"/>
+        <rect x="390" y="176" width="55" height="4" rx="0" fill="rgba(249,249,247,0.15)"/>
+        <rect x="390" y="176" width="18" height="4" rx="0" fill="rgba(249,249,247,0.35)"/>
+
+        <!-- Arrow down -->
+        <line x1="425" y1="183" x2="425" y2="198" stroke="rgba(249,249,247,0.5)" stroke-width="1.5"/>
+        <polygon points="425,203 421,196 429,196" fill="rgba(249,249,247,0.5)"/>
+
+        <!-- Generate Turn (red) -->
+        <rect x="310" y="203" width="230" height="40" stroke="#CC0000" stroke-width="2" rx="0" fill="rgba(204,0,0,0.08)"/>
+        <rect x="325" y="213" width="18" height="18" stroke="#CC0000" stroke-width="1" rx="2" fill="rgba(204,0,0,0.15)"/>
+        <line x1="321" y1="218" x2="325" y2="218" stroke="#CC0000" stroke-width="1"/>
+        <line x1="321" y1="226" x2="325" y2="226" stroke="#CC0000" stroke-width="1"/>
+        <line x1="343" y1="218" x2="347" y2="218" stroke="#CC0000" stroke-width="1"/>
+        <line x1="343" y1="226" x2="347" y2="226" stroke="#CC0000" stroke-width="1"/>
+        <text x="430" y="228" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700">Generate Turn</text>
+
+        <!-- Arrow down -->
+        <line x1="425" y1="243" x2="425" y2="258" stroke="rgba(249,249,247,0.5)" stroke-width="1.5"/>
+        <polygon points="425,263 421,256 429,256" fill="rgba(249,249,247,0.5)"/>
+
+        <!-- Episode -->
+        <rect x="330" y="263" width="190" height="36" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <circle cx="350" cy="281" r="7" stroke="#F9F9F7" stroke-width="1" fill="rgba(204,0,0,0.3)"/>
+        <circle cx="350" cy="281" r="3" fill="#CC0000"/>
+        <text x="430" y="286" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700">Episode</text>
+
+        <!-- Arrow down -->
+        <line x1="425" y1="299" x2="425" y2="314" stroke="rgba(249,249,247,0.5)" stroke-width="1.5"/>
+        <polygon points="425,319 421,312 429,312" fill="rgba(249,249,247,0.5)"/>
+
+        <!-- Consistency Monitor -->
+        <rect x="300" y="319" width="250" height="45" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="425" y="346" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Consistency Monitor</text>
+
+        <!-- Arrow left to Revision Engine -->
+        <line x1="300" y1="345" x2="245" y2="345" stroke="rgba(249,249,247,0.4)" stroke-width="1.5"/>
+        <text x="272" y="339" text-anchor="middle" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="8">CS &lt; &theta;</text>
+        <line x1="245" y1="345" x2="200" y2="345" stroke="rgba(249,249,247,0.4)" stroke-width="1.5"/>
+        <polygon points="195,345 203,340 203,350" fill="rgba(249,249,247,0.4)"/>
+
+        <!-- Revision Engine -->
+        <rect x="80" y="322" width="115" height="42" stroke="#CC0000" stroke-width="1.5" rx="0" fill="rgba(204,0,0,0.08)"/>
+        <text x="138" y="348" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Revision Engine</text>
+
+        <!-- RED curved arrow: Revision Engine -> Rule Store (stays inside viewBox) -->
+        <path d="M80,343 Q50,343 50,260 Q50,155 160,155 L305,155"
+              stroke="#CC0000" stroke-width="2.5" fill="none"/>
+        <polygon points="310,155 300,150 300,160" fill="#CC0000"/>
+        <text x="95" y="248" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1" transform="rotate(-90, 95, 248)">updated rule</text>
+
+        <!-- Recluster arrow: Episode -> Cluster frame bottom -->
+        <line x1="520" y1="281" x2="620" y2="281" stroke="rgba(249,249,247,0.2)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="620" y1="281" x2="685" y2="145" stroke="rgba(249,249,247,0.2)" stroke-width="1" stroke-dasharray="4,3"/>
+        <polygon points="685,140 680,150 690,150" fill="rgba(249,249,247,0.2)"/>
+        <text x="665" y="220" fill="rgba(249,249,247,0.25)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1" transform="rotate(-65, 665, 220)">recluster</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- SLIDE 04: Clustering -->
+  <div class="slide" data-n="4">
+    <div class="section-num">03 <span class="red-sq red-sq--small"></span> CLUSTERING</div>
+    <h2 style="margin-top:24px;">Who Is This Person?</h2>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="580" height="240" viewBox="0 0 580 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Box 1: Profile Text -->
+          <rect x="0" y="70" width="100" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <!-- Text lines icon -->
+          <rect x="15" y="85" width="50" height="4" rx="0" fill="rgba(249,249,247,0.25)"/>
+          <rect x="15" y="94" width="40" height="4" rx="0" fill="rgba(249,249,247,0.18)"/>
+          <rect x="15" y="103" width="55" height="4" rx="0" fill="rgba(249,249,247,0.2)"/>
+          <rect x="15" y="112" width="35" height="4" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <text x="50" y="135" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Profile Text</text>
+
+          <!-- Arrow 1 -->
+          <line x1="105" y1="105" x2="140" y2="105" stroke="#CC0000" stroke-width="1.5"/>
+          <polygon points="145,105 137,100 137,110" fill="#CC0000"/>
+
+          <!-- Box 2: MiniLM -->
+          <rect x="150" y="70" width="100" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <text x="200" y="102" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">MiniLM</text>
+          <text x="200" y="120" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">384-dim</text>
+
+          <!-- Arrow 2 -->
+          <line x1="255" y1="105" x2="290" y2="105" stroke="#CC0000" stroke-width="1.5"/>
+          <polygon points="295,105 287,100 287,110" fill="#CC0000"/>
+
+          <!-- Box 3: Scatter plot with HDBSCAN label -->
+          <rect x="300" y="50" width="140" height="110" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <!-- Cluster dots -->
+          <!-- Cluster A -->
+          <circle cx="325" cy="75" r="4" fill="rgba(249,249,247,0.4)"/>
+          <circle cx="338" cy="82" r="5" fill="rgba(249,249,247,0.35)"/>
+          <circle cx="330" cy="90" r="3" fill="rgba(249,249,247,0.3)"/>
+          <circle cx="342" cy="72" r="3" fill="rgba(249,249,247,0.25)"/>
+          <!-- Cluster B -->
+          <circle cx="380" cy="100" r="5" fill="rgba(204,0,0,0.5)"/>
+          <circle cx="395" cy="108" r="4" fill="rgba(204,0,0,0.4)"/>
+          <circle cx="370" cy="112" r="3" fill="rgba(204,0,0,0.35)"/>
+          <circle cx="390" cy="95" r="4" fill="rgba(204,0,0,0.45)"/>
+          <!-- Cluster C -->
+          <circle cx="340" cy="130" r="4" fill="rgba(249,249,247,0.2)"/>
+          <circle cx="355" cy="138" r="5" fill="rgba(249,249,247,0.15)"/>
+          <circle cx="365" cy="128" r="3" fill="rgba(249,249,247,0.18)"/>
+          <!-- New incoming dot approaching clusters -->
+          <circle cx="420" cy="82" r="5" stroke="#CC0000" stroke-width="1.5" fill="rgba(204,0,0,0.2)"/>
+          <text x="370" y="158" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">HDBSCAN</text>
+
+          <!-- Arrow 3 (from incoming dot to KNN Vote) -->
+          <line x1="445" y1="105" x2="475" y2="105" stroke="#CC0000" stroke-width="1.5"/>
+          <polygon points="480,105 472,100 472,110" fill="#CC0000"/>
+
+          <!-- Box 4: KNN Vote -->
+          <rect x="485" y="70" width="90" height="70" stroke="#CC0000" stroke-width="1.5" rx="0" fill="rgba(204,0,0,0.06)"/>
+          <text x="530" y="102" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">KNN Vote</text>
+          <text x="530" y="120" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">K = 7</text>
+
+          <!-- Bottom labels -->
+          <text x="290" y="210" text-anchor="middle" fill="rgba(249,249,247,0.2)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="3">PROFILE TEXT &rarr; EMBEDDING &rarr; CLUSTER ASSIGNMENT</text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li>Profile headline + skills &rarr; text summary</li>
+          <li>HDBSCAN finds natural groups</li>
+          <li>New visitors classified by 7 nearest neighbors</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 05: Rule Induction -->
+  <div class="slide" data-n="5">
+    <div class="section-num">04 <span class="red-sq red-sq--small"></span> RULES</div>
+    <h2 style="margin-top:24px;">What Works for Each Cluster?</h2>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="520" height="360" viewBox="0 0 520 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Mixing console / equalizer bars -->
+          <!-- Slot 1: framing -->
+          <text x="20" y="55" fill="rgba(249,249,247,0.6)" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" letter-spacing="1">FRAMING</text>
+          <rect x="130" y="40" width="360" height="30" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.03)"/>
+          <rect x="130" y="40" width="260" height="30" rx="0" fill="rgba(249,249,247,0.08)"/>
+          <rect x="385" y="40" width="8" height="30" rx="0" fill="#F9F9F7"/>
+          <text x="145" y="60" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10">strategic-alignment</text>
+          <!-- Slot 2: tone -->
+          <text x="20" y="115" fill="rgba(249,249,247,0.6)" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" letter-spacing="1">TONE</text>
+          <rect x="130" y="100" width="360" height="30" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.03)"/>
+          <rect x="130" y="100" width="180" height="30" rx="0" fill="rgba(249,249,247,0.08)"/>
+          <rect x="305" y="100" width="8" height="30" rx="0" fill="#F9F9F7"/>
+          <text x="145" y="120" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10">warm</text>
+          <!-- Slot 3: opener_type (RED accent) -->
+          <text x="20" y="175" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" letter-spacing="1">OPENER</text>
+          <rect x="130" y="160" width="360" height="30" stroke="#CC0000" stroke-width="1.5" rx="0" fill="rgba(204,0,0,0.06)"/>
+          <rect x="130" y="160" width="300" height="30" rx="0" fill="rgba(204,0,0,0.12)"/>
+          <rect x="425" y="160" width="8" height="30" rx="0" fill="#CC0000"/>
+          <text x="145" y="180" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10">reference-to-signal</text>
+          <!-- Slot 4: word_target -->
+          <text x="20" y="235" fill="rgba(249,249,247,0.6)" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" letter-spacing="1">LENGTH</text>
+          <rect x="130" y="220" width="360" height="30" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.03)"/>
+          <rect x="130" y="220" width="130" height="30" rx="0" fill="rgba(249,249,247,0.08)"/>
+          <rect x="255" y="220" width="8" height="30" rx="0" fill="#F9F9F7"/>
+          <text x="145" y="240" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10">medium</text>
+          <!-- Slot 5: ask_size -->
+          <text x="20" y="295" fill="rgba(249,249,247,0.6)" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" letter-spacing="1">ASK SIZE</text>
+          <rect x="130" y="280" width="360" height="30" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.03)"/>
+          <rect x="130" y="280" width="220" height="30" rx="0" fill="rgba(249,249,247,0.08)"/>
+          <rect x="345" y="280" width="8" height="30" rx="0" fill="#F9F9F7"/>
+          <text x="145" y="300" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10">co-author</text>
+          <!-- Bottom label -->
+          <text x="310" y="340" text-anchor="middle" fill="rgba(249,249,247,0.25)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="3">STATIC + DYNAMIC SLOTS</text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li>LLM induces rules from successful episodes</li>
+          <li>5-slot structure grounded in dialogue-act theory</li>
+          <li>Mode-of-slots fallback when LLM offline</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 06: Consistency Monitor + Revision -->
+  <div class="slide" data-n="6">
+    <div class="section-num">05 <span class="red-sq red-sq--small"></span> SELF-REPAIR</div>
+    <h2 style="margin-top:24px;">Detect Decay, Rewrite Automatically</h2>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="560" height="340" viewBox="0 0 560 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Axes -->
+          <line x1="60" y1="280" x2="520" y2="280" stroke="rgba(249,249,247,0.4)" stroke-width="1"/>
+          <line x1="60" y1="280" x2="60" y2="40" stroke="rgba(249,249,247,0.4)" stroke-width="1"/>
+          <!-- Axis labels -->
+          <text x="290" y="315" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="11" letter-spacing="2">EPISODES</text>
+          <text x="30" y="160" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="11" letter-spacing="2" transform="rotate(-90, 30, 160)">CS SCORE</text>
+          <!-- Y-axis markers -->
+          <text x="50" y="70" text-anchor="end" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">1.0</text>
+          <text x="50" y="180" text-anchor="end" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">0.5</text>
+          <text x="50" y="284" text-anchor="end" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">0.0</text>
+          <!-- Red threshold line -->
+          <line x1="60" y1="200" x2="520" y2="200" stroke="#CC0000" stroke-width="1.5" stroke-dasharray="6,4"/>
+          <text x="525" y="204" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">&theta;</text>
+          <!-- CS line dropping (before revision) -->
+          <polyline points="80,80 110,85 140,90 170,100 200,115 230,135 260,160 290,185 320,210 340,225" stroke="#F9F9F7" stroke-width="2" fill="none"/>
+          <!-- Threshold crossing marker -->
+          <circle cx="305" cy="197" r="7" fill="none" stroke="#CC0000" stroke-width="2"/>
+          <line x1="305" y1="207" x2="305" y2="280" stroke="#CC0000" stroke-width="1" stroke-dasharray="3,3"/>
+          <!-- Revision triggered label at crossing -->
+          <rect x="260" y="253" width="90" height="20" fill="rgba(204,0,0,0.2)" stroke="#CC0000" stroke-width="1"/>
+          <text x="305" y="267" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="8" font-weight="700" letter-spacing="1">REVISION TRIGGERED</text>
+          <!-- Recovery jump: line goes back up after revision -->
+          <polyline points="340,225 360,110 390,100 420,95 450,90 480,88 510,85" stroke="#F9F9F7" stroke-width="2" fill="none" stroke-dasharray="6,2"/>
+          <!-- Vertical dashed line at revision point -->
+          <line x1="340" y1="225" x2="360" y2="110" stroke="#CC0000" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <!-- Recovery label -->
+          <text x="420" y="78" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">RECOVERY</text>
+          <!-- Arrow indicating the jump -->
+          <polygon points="355,118 350,128 360,128" fill="#CC0000"/>
+        </svg>
+      </div>
+      <div>
+        <div class="eq">
+          CS(rule) = accepted / total<br>
+          <span style="font-size:14px;color:var(--grey);">sliding window</span>
+        </div>
+        <ul style="margin-top:16px;">
+          <li>Score drops below &theta; &rarr; LLM receives rule + contradicting episodes</li>
+          <li>Revised rule deployed, score recovers</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 07: The Demo -->
+  <div class="slide" data-n="7">
+    <div class="section-num">06 <span class="red-sq red-sq--small"></span> BOOTH DEMO</div>
+    <h2 style="margin-top:24px;">Visual-Novel Pitch Interface</h2>
+    <div style="display:flex;flex-direction:column;align-items:center;margin-top:24px;">
+      <img src="edra_booth_screenshot.png" alt="Screenshot of the EDRA visual-novel interface"
+           style="max-width:900px;width:100%;object-fit:contain;border:1px solid rgba(249,249,247,0.15);box-shadow:0 4px 40px rgba(0,0,0,0.5);">
+      <p style="margin-top:24px;font-size:17px;color:rgba(249,249,247,0.7);text-align:center;max-width:800px;">
+        Visitor pastes a LinkedIn URL &rarr; personalized multi-turn dialogue &rarr; 3-button reactions &rarr; episode recorded
+      </p>
+    </div>
+  </div>
+
+  <!-- SLIDE 08: Live Pipeline -->
+  <div class="slide" data-n="8">
+    <div class="section-num">07 <span class="red-sq red-sq--small"></span> PIPELINE</div>
+    <h2 style="margin-top:24px;">LinkedIn URL &rarr; Personalized Pitch</h2>
+    <div style="display:flex;flex-direction:column;align-items:center;margin-top:32px;">
+      <svg width="700" height="180" viewBox="0 0 700 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- LinkedIn icon box -->
+        <rect x="0" y="50" width="90" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="45" y="78" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="20" font-weight="700">in</text>
+        <text x="45" y="102" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">LINKEDIN</text>
+        <!-- Arrow 1 -->
+        <line x1="100" y1="85" x2="145" y2="85" stroke="#CC0000" stroke-width="2"/>
+        <polygon points="145,85 137,80 137,90" fill="#CC0000"/>
+        <!-- Profile box -->
+        <rect x="155" y="50" width="90" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="200" y="78" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">FETCH</text>
+        <text x="200" y="94" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9">RapidAPI</text>
+        <text x="200" y="108" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9">+ embed</text>
+        <!-- Arrow 2 -->
+        <line x1="255" y1="85" x2="300" y2="85" stroke="#CC0000" stroke-width="2"/>
+        <polygon points="300,85 292,80 292,90" fill="#CC0000"/>
+        <!-- Cluster box -->
+        <rect x="310" y="50" width="90" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="355" y="78" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">KNN VOTE</text>
+        <text x="355" y="94" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9">K=7 nearest</text>
+        <text x="355" y="108" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9">MiniLM 384d</text>
+        <!-- Arrow 3 -->
+        <line x1="410" y1="85" x2="455" y2="85" stroke="#CC0000" stroke-width="2"/>
+        <polygon points="455,85 447,80 447,90" fill="#CC0000"/>
+        <!-- LLM box (red accent) -->
+        <rect x="465" y="50" width="90" height="70" stroke="#CC0000" stroke-width="2" rx="0" fill="rgba(204,0,0,0.1)"/>
+        <text x="510" y="82" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">GENERATE</text>
+        <text x="510" y="102" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9">OpenAI</text>
+        <!-- Arrow 4 -->
+        <line x1="565" y1="85" x2="610" y2="85" stroke="#CC0000" stroke-width="2"/>
+        <polygon points="610,85 602,80 602,90" fill="#CC0000"/>
+        <!-- Dialogue box -->
+        <rect x="620" y="50" width="70" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+        <text x="655" y="82" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">PITCH</text>
+        <text x="655" y="102" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9">dialogue</text>
+        <!-- Bottom: Record feedback loop -->
+        <line x1="655" y1="125" x2="655" y2="155" stroke="rgba(249,249,247,0.3)" stroke-width="1"/>
+        <line x1="655" y1="155" x2="45" y2="155" stroke="rgba(249,249,247,0.3)" stroke-width="1"/>
+        <line x1="45" y1="155" x2="45" y2="125" stroke="rgba(249,249,247,0.3)" stroke-width="1"/>
+        <text x="350" y="170" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="2">EPISODE RECORDED &#8594; RECLUSTER &#8594; CHECK INDUCTION</text>
+      </svg>
+    </div>
+    <div style="max-width:700px;margin:32px auto 0;">
+      <ul>
+        <li>Profile fetched via RapidAPI, cached to disk</li>
+        <li>PII purged within 1 hour &mdash; only embeddings persist</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SLIDE 09: Evaluation -->
+  <div class="slide" data-n="9">
+    <div class="section-num">08 <span class="red-sq red-sq--small"></span> EVALUATION</div>
+    <h2 style="margin-top:24px;">Does the Problem Exist? Then Does EDRA Solve It?</h2>
+    <p style="font-size:17px;color:rgba(249,249,247,0.55);margin-top:8px;max-width:800px;">Levels 1&ndash;2 verify prerequisites: the data has structure and strategy choice matters. Level 3 tests the actual claim: EDRA discovers and adapts the right strategy automatically.</p>
+    <div class="loops" style="margin-top:24px;">
+      <!-- Level 1 -->
+      <div class="loop-card">
+        <div class="loop-label">PREREQUISITE 1</div>
+        <h3 style="font-size:22px;">Clustering Quality</h3>
+        <ul style="margin-top:12px;">
+          <li style="font-size:16px;">Silhouette score on 825 Pipedrive outreach recipients</li>
+          <li style="font-size:16px;">&chi;<sup>2</sup> test: reply rates differ between clusters?</li>
+        </ul>
+        <p style="font-size:14px;color:rgba(249,249,247,0.4);margin-top:12px;">Tests the data, not the model</p>
+      </div>
+      <!-- Level 2 -->
+      <div class="loop-card">
+        <div class="loop-label">PREREQUISITE 2</div>
+        <h3 style="font-size:22px;">Interaction Effect</h3>
+        <ul style="margin-top:12px;">
+          <li style="font-size:16px;">Does the best strategy differ by cluster?</li>
+          <li style="font-size:16px;">If one strategy fits all &rarr; clustering is overhead</li>
+        </ul>
+        <p style="font-size:14px;color:rgba(249,249,247,0.4);margin-top:12px;">Tests the problem structure, not EDRA</p>
+      </div>
+      <!-- Level 3 -->
+      <div class="loop-card" style="border-color:rgba(204,0,0,0.4);">
+        <div class="loop-label">THE TEST</div>
+        <h3 style="font-size:22px;">Online Learning Curve</h3>
+        <ul style="margin-top:12px;">
+          <li style="font-size:16px;">Prequential test-then-train (Gama 2013)</li>
+          <li style="font-size:16px;">EDRA vs LinUCB baseline</li>
+          <li style="font-size:16px;">Does EDRA improve batch over batch?</li>
+        </ul>
+        <p style="font-size:14px;color:#CC0000;margin-top:12px;font-weight:700;">Tests the actual contribution</p>
+      </div>
+    </div>
+    <div class="eq" style="margin-top:20px;font-size:18px;text-align:center;">
+      V&#770;<sub>DR</sub>(&pi;) = (1/n) &Sigma; [ r&#770;(x, &pi;(x)) + (&pi;(a|x) / &pi;<sub>0</sub>(a|x)) &middot; (r &minus; r&#770;(x, a)) ]
+    </div>
+  </div>
+
+  <!-- SLIDE 10: Level 1 — Clustering Quality -->
+  <div class="slide" data-n="10">
+    <div class="section-num">08a <span class="red-sq red-sq--small"></span> PREREQUISITE 1</div>
+    <h2 style="margin-top:24px;">Do Natural Groups Exist?</h2>
+    <p style="font-size:16px;color:rgba(249,249,247,0.45);margin-bottom:8px;">Before testing EDRA, verify the audience has exploitable structure.</p>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="540" height="310" viewBox="0 0 540 310" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Box 1: 825 Profiles -->
+          <rect x="0" y="60" width="110" height="80" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <text x="55" y="86" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">825 Profiles</text>
+          <!-- Data rows suggestion -->
+          <rect x="18" y="98" width="74" height="3" rx="0" fill="rgba(249,249,247,0.18)"/>
+          <rect x="18" y="105" width="58" height="3" rx="0" fill="rgba(249,249,247,0.13)"/>
+          <rect x="18" y="112" width="68" height="3" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <rect x="18" y="119" width="50" height="3" rx="0" fill="rgba(249,249,247,0.1)"/>
+          <rect x="18" y="126" width="62" height="3" rx="0" fill="rgba(249,249,247,0.12)"/>
+          <text x="55" y="150" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">PIPEDRIVE</text>
+
+          <!-- Arrow 1 -->
+          <line x1="115" y1="100" x2="155" y2="100" stroke="#CC0000" stroke-width="1.5"/>
+          <polygon points="160,100 152,95 152,105" fill="#CC0000"/>
+
+          <!-- Box 2: MiniLM -->
+          <rect x="165" y="65" width="100" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <text x="215" y="97" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">MiniLM</text>
+          <text x="215" y="117" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">384-dim</text>
+
+          <!-- Arrow 2 -->
+          <line x1="270" y1="100" x2="310" y2="100" stroke="#CC0000" stroke-width="1.5"/>
+          <polygon points="315,100 307,95 307,105" fill="#CC0000"/>
+
+          <!-- Box 3: Scatter plot -->
+          <rect x="320" y="30" width="210" height="155" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <!-- Cluster A (white) -->
+          <circle cx="355" cy="60" r="5" fill="rgba(249,249,247,0.4)"/>
+          <circle cx="370" cy="55" r="4" fill="rgba(249,249,247,0.35)"/>
+          <circle cx="365" cy="70" r="3" fill="rgba(249,249,247,0.3)"/>
+          <circle cx="348" cy="72" r="4" fill="rgba(249,249,247,0.25)"/>
+          <circle cx="380" cy="65" r="3" fill="rgba(249,249,247,0.28)"/>
+          <!-- Cluster B (red) -->
+          <circle cx="430" cy="85" r="5" fill="rgba(204,0,0,0.55)"/>
+          <circle cx="445" cy="78" r="4" fill="rgba(204,0,0,0.45)"/>
+          <circle cx="440" cy="95" r="4" fill="rgba(204,0,0,0.4)"/>
+          <circle cx="455" cy="90" r="3" fill="rgba(204,0,0,0.35)"/>
+          <circle cx="420" cy="92" r="3" fill="rgba(204,0,0,0.38)"/>
+          <!-- Cluster C (dim) -->
+          <circle cx="390" cy="130" r="5" fill="rgba(249,249,247,0.18)"/>
+          <circle cx="405" cy="140" r="4" fill="rgba(249,249,247,0.14)"/>
+          <circle cx="380" cy="142" r="3" fill="rgba(249,249,247,0.12)"/>
+          <circle cx="415" cy="135" r="4" fill="rgba(249,249,247,0.16)"/>
+          <circle cx="400" cy="150" r="3" fill="rgba(249,249,247,0.1)"/>
+          <!-- Cluster D (faint red) -->
+          <circle cx="475" cy="130" r="4" fill="rgba(204,0,0,0.25)"/>
+          <circle cx="490" cy="140" r="3" fill="rgba(204,0,0,0.2)"/>
+          <circle cx="485" cy="125" r="4" fill="rgba(204,0,0,0.22)"/>
+          <text x="425" y="175" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">HDBSCAN</text>
+
+          <!-- Metric boxes below scatter -->
+          <rect x="320" y="210" width="100" height="50" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <text x="370" y="232" text-anchor="middle" fill="rgba(249,249,247,0.6)" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Silhouette</text>
+          <text x="370" y="250" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="14" font-weight="700">[0.XX]</text>
+
+          <rect x="430" y="210" width="100" height="50" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <text x="480" y="232" text-anchor="middle" fill="rgba(249,249,247,0.6)" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">&chi;&sup2; test</text>
+          <text x="480" y="250" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="14" font-weight="700">p &lt; 0.05?</text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li>Are there natural groups in the recipient population?</li>
+          <li>Silhouette &gt; 0.3 &rarr; clusters are real, not noise</li>
+          <li>&chi;&sup2; p &lt; 0.05 &rarr; reply rates differ between clusters</li>
+          <li style="color:rgba(249,249,247,0.45);">If this fails &rarr; audience is homogeneous, no need for EDRA</li>
+        </ul>
+      </div>
+    </div>
+    <div class="outcomes">
+      <div class="outcome-card outcome-card--good">
+        <div class="outcome-label outcome-label--good">GOOD</div>
+        3&ndash;5 clusters, distinct reply rates &rarr; proceed to Level 2
+      </div>
+      <div class="outcome-card outcome-card--bad">
+        <div class="outcome-label outcome-label--bad">BAD</div>
+        One mega-cluster or p &gt; 0.05 &rarr; features too sparse, need richer profiles
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: Level 2 — Interaction Effect -->
+  <div class="slide" data-n="11">
+    <div class="section-num">08b <span class="red-sq red-sq--small"></span> PREREQUISITE 2</div>
+    <h2 style="margin-top:24px;">Does Optimal Strategy Differ by Cluster?</h2>
+    <p style="font-size:16px;color:rgba(249,249,247,0.45);margin-bottom:8px;">Personalization is known to help. The question: does it help <em>enough</em> on 825 noisy rows to justify the machinery?</p>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="520" height="340" viewBox="0 0 520 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid/matrix visualization -->
+          <!-- Column headers -->
+          <text x="200" y="20" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">COLD</text>
+          <text x="200" y="30" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">TEMPLATE</text>
+          <text x="310" y="20" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">COLD</text>
+          <text x="310" y="30" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">PERSONAL</text>
+          <text x="420" y="20" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">FEATURE</text>
+          <text x="420" y="30" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="1">ANN.</text>
+
+          <!-- Row labels -->
+          <text x="100" y="70" text-anchor="end" fill="rgba(249,249,247,0.7)" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">C&#8321;</text>
+          <text x="100" y="125" text-anchor="end" fill="rgba(249,249,247,0.7)" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">C&#8322;</text>
+          <text x="100" y="180" text-anchor="end" fill="rgba(249,249,247,0.7)" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">C&#8323;</text>
+
+          <!-- Grid cells: Row C1 — best = cold_template -->
+          <rect x="150" y="45" width="100" height="45" stroke="#CC0000" stroke-width="2" rx="0" fill="rgba(204,0,0,0.2)"/>
+          <text x="200" y="73" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="14" font-weight="700">34%</text>
+          <rect x="260" y="45" width="100" height="45" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.04)"/>
+          <text x="310" y="73" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="14">12%</text>
+          <rect x="370" y="45" width="100" height="45" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.02)"/>
+          <text x="420" y="73" text-anchor="middle" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="14">5%</text>
+
+          <!-- Grid cells: Row C2 — best = cold_personal -->
+          <rect x="150" y="100" width="100" height="45" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.02)"/>
+          <text x="200" y="128" text-anchor="middle" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="14">8%</text>
+          <rect x="260" y="100" width="100" height="45" stroke="#CC0000" stroke-width="2" rx="0" fill="rgba(204,0,0,0.2)"/>
+          <text x="310" y="128" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="14" font-weight="700">28%</text>
+          <rect x="370" y="100" width="100" height="45" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.04)"/>
+          <text x="420" y="128" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="14">11%</text>
+
+          <!-- Grid cells: Row C3 — best = feature_ann -->
+          <rect x="150" y="155" width="100" height="45" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.04)"/>
+          <text x="200" y="183" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="14">10%</text>
+          <rect x="260" y="155" width="100" height="45" stroke="rgba(249,249,247,0.15)" stroke-width="1" rx="0" fill="rgba(249,249,247,0.02)"/>
+          <text x="310" y="183" text-anchor="middle" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="14">7%</text>
+          <rect x="370" y="155" width="100" height="45" stroke="#CC0000" stroke-width="2" rx="0" fill="rgba(204,0,0,0.2)"/>
+          <text x="420" y="183" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="14" font-weight="700">22%</text>
+
+          <!-- Policy bars -->
+          <text x="20" y="235" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">&pi;_uniform</text>
+          <rect x="150" y="225" width="320" height="16" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <rect x="150" y="225" width="120" height="16" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <text x="480" y="237" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="10">V&#770;<tspan font-size="7" dy="3">DR</tspan></text>
+
+          <text x="20" y="260" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">&pi;_random</text>
+          <rect x="150" y="250" width="320" height="16" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <rect x="150" y="250" width="95" height="16" rx="0" fill="rgba(249,249,247,0.12)"/>
+          <text x="480" y="262" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="10">V&#770;<tspan font-size="7" dy="3">DR</tspan></text>
+
+          <text x="20" y="285" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">&pi;_best_single</text>
+          <rect x="150" y="275" width="320" height="16" rx="0" fill="rgba(249,249,247,0.05)"/>
+          <rect x="150" y="275" width="200" height="16" rx="0" fill="rgba(249,249,247,0.22)"/>
+          <text x="480" y="287" fill="rgba(249,249,247,0.35)" font-family="'DM Sans', sans-serif" font-size="10">V&#770;<tspan font-size="7" dy="3">DR</tspan></text>
+
+          <text x="20" y="310" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" letter-spacing="1">&pi;_edra</text>
+          <rect x="150" y="300" width="320" height="16" stroke="#CC0000" stroke-width="1" rx="0" fill="rgba(204,0,0,0.06)"/>
+          <rect x="150" y="300" width="280" height="16" rx="0" fill="rgba(204,0,0,0.25)"/>
+          <text x="440" y="313" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">[X.XX]</text>
+          <text x="480" y="312" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">V&#770;<tspan font-size="7" dy="3">DR</tspan></text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li>&pi;<sub>edra</sub> vs &pi;<sub>best_single</sub> &mdash; not &ldquo;personalization vs nothing&rdquo;</li>
+          <li>With 825 noisy rows, cluster-conditional may lose to the best global strategy</li>
+          <li>Doubly robust estimator corrects for campaign assignment bias (Dud&iacute;k 2011)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="outcomes">
+      <div class="outcome-card outcome-card--good">
+        <div class="outcome-label outcome-label--good">GOOD</div>
+        &pi;<sub>edra</sub> &gt; &pi;<sub>best_single</sub> &rarr; personalization works, clusters are load-bearing
+      </div>
+      <div class="outcome-card outcome-card--bad">
+        <div class="outcome-label outcome-label--bad">BAD</div>
+        &pi;<sub>best_single</sub> &asymp; &pi;<sub>edra</sub> &rarr; one strategy fits all, clustering is unnecessary overhead
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Level 3 — Learning Curve -->
+  <div class="slide" data-n="12">
+    <div class="section-num" style="color:#CC0000;">08c <span class="red-sq red-sq--small"></span> THE TEST</div>
+    <h2 style="margin-top:24px;">Can EDRA Learn What Works?</h2>
+    <p style="font-size:16px;color:rgba(249,249,247,0.55);margin-bottom:8px;">The actual contribution: automatic discovery of cluster-conditional strategies + online revision when they decay.</p>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="520" height="340" viewBox="0 0 520 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Axes -->
+          <line x1="60" y1="270" x2="490" y2="270" stroke="rgba(249,249,247,0.4)" stroke-width="1"/>
+          <line x1="60" y1="270" x2="60" y2="40" stroke="rgba(249,249,247,0.4)" stroke-width="1"/>
+          <!-- X-axis label -->
+          <text x="275" y="305" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="11" letter-spacing="2">BATCH</text>
+          <!-- Y-axis label -->
+          <text x="25" y="155" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="11" letter-spacing="2" transform="rotate(-90, 25, 155)">V&#770;_DR</text>
+          <!-- X-axis tick labels -->
+          <text x="110" y="288" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">1</text>
+          <text x="180" y="288" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">2</text>
+          <text x="250" y="288" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">3</text>
+          <text x="320" y="288" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">4</text>
+          <text x="390" y="288" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">5</text>
+          <text x="460" y="288" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10">6</text>
+          <!-- Grid lines (subtle) -->
+          <line x1="110" y1="270" x2="110" y2="45" stroke="rgba(249,249,247,0.06)" stroke-width="1"/>
+          <line x1="180" y1="270" x2="180" y2="45" stroke="rgba(249,249,247,0.06)" stroke-width="1"/>
+          <line x1="250" y1="270" x2="250" y2="45" stroke="rgba(249,249,247,0.06)" stroke-width="1"/>
+          <line x1="320" y1="270" x2="320" y2="45" stroke="rgba(249,249,247,0.06)" stroke-width="1"/>
+          <line x1="390" y1="270" x2="390" y2="45" stroke="rgba(249,249,247,0.06)" stroke-width="1"/>
+          <line x1="460" y1="270" x2="460" y2="45" stroke="rgba(249,249,247,0.06)" stroke-width="1"/>
+
+          <!-- Shaded area between curves after crossover (batch 3-4 onward) -->
+          <path d="M250,155 L320,120 L390,95 L460,80 L460,160 L390,170 L320,175 L250,155 Z" fill="rgba(204,0,0,0.08)"/>
+
+          <!-- LinUCB line (white dashed) -->
+          <polyline points="110,230 180,195 250,175 320,175 390,170 460,160" stroke="#F9F9F7" stroke-width="2" fill="none" stroke-dasharray="8,5"/>
+          <!-- LinUCB dots -->
+          <circle cx="110" cy="230" r="4" fill="rgba(249,249,247,0.5)"/>
+          <circle cx="180" cy="195" r="4" fill="rgba(249,249,247,0.5)"/>
+          <circle cx="250" cy="175" r="4" fill="rgba(249,249,247,0.5)"/>
+          <circle cx="320" cy="175" r="4" fill="rgba(249,249,247,0.5)"/>
+          <circle cx="390" cy="170" r="4" fill="rgba(249,249,247,0.5)"/>
+          <circle cx="460" cy="160" r="4" fill="rgba(249,249,247,0.5)"/>
+          <!-- LinUCB label -->
+          <text x="475" y="155" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">LinUCB</text>
+
+          <!-- EDRA line (red solid) -->
+          <polyline points="110,240 180,200 250,155 320,120 390,95 460,80" stroke="#CC0000" stroke-width="2.5" fill="none"/>
+          <!-- EDRA dots -->
+          <circle cx="110" cy="240" r="5" fill="#CC0000"/>
+          <circle cx="180" cy="200" r="5" fill="#CC0000"/>
+          <circle cx="250" cy="155" r="5" fill="#CC0000"/>
+          <circle cx="320" cy="120" r="5" fill="#CC0000"/>
+          <circle cx="390" cy="95" r="5" fill="#CC0000"/>
+          <circle cx="460" cy="80" r="5" fill="#CC0000"/>
+          <!-- EDRA label -->
+          <text x="475" y="75" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">EDRA</text>
+
+          <!-- Annotation arrow at crossover (between batch 2-3) -->
+          <line x1="250" y1="140" x2="250" y2="105" stroke="#CC0000" stroke-width="1" stroke-dasharray="3,2"/>
+          <polygon points="250,100 246,108 254,108" fill="#CC0000"/>
+          <text x="250" y="95" text-anchor="middle" fill="#CC0000" font-family="'DM Sans', sans-serif" font-size="9" font-weight="700" letter-spacing="1">EDRA ADAPTS RULES</text>
+
+          <!-- Bottom note -->
+          <text x="275" y="328" text-anchor="middle" fill="rgba(249,249,247,0.3)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="1">Prequential: test on batch t, then train (Gama 2013)</text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li>Prequential: predict first, learn after &mdash; no lookahead bias</li>
+          <li>EDRA revises structured rules; LinUCB updates weight vectors</li>
+          <li>What this catches: overfitting to early data, drift, flat generic rules that never specialize</li>
+        </ul>
+      </div>
+    </div>
+    <div class="outcomes">
+      <div class="outcome-card outcome-card--good">
+        <div class="outcome-label outcome-label--good">GOOD</div>
+        V&#770;<sub>DR</sub> rises over batches, EDRA outperforms LinUCB &rarr; structured rules + revision &gt; weight vectors
+      </div>
+      <div class="outcome-card outcome-card--bad">
+        <div class="outcome-label outcome-label--bad">BAD</div>
+        Flat curve or EDRA &le; LinUCB &rarr; the rule induction/revision machinery adds no value over simpler bandits
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 13: Positioning vs Prior Work -->
+  <div class="slide" data-n="13">
+    <div class="section-num">09 <span class="red-sq red-sq--small"></span> POSITIONING</div>
+    <h2 style="margin-top:24px;">What Makes EDRA Different</h2>
+    <table class="data-table" style="margin-top:40px;">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>ExpeL</th>
+          <th>LinUCB</th>
+          <th style="color:var(--red);">EDRA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Context-aware</strong></td>
+          <td>Flat insights</td>
+          <td>Linear features</td>
+          <td class="accent-cell">Cluster-conditional rules</td>
+        </tr>
+        <tr>
+          <td><strong>Adapts online</strong></td>
+          <td>No (fixed after training)</td>
+          <td>Yes (UCB exploration)</td>
+          <td class="accent-cell">Yes (revision on CS drop)</td>
+        </tr>
+        <tr>
+          <td><strong>Knowledge form</strong></td>
+          <td>Text list</td>
+          <td>Weight vectors</td>
+          <td class="accent-cell">5-slot structured rules</td>
+        </tr>
+        <tr>
+          <td><strong>Handles drift</strong></td>
+          <td>No</td>
+          <td>No</td>
+          <td class="accent-cell">Yes (consistency monitor)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SLIDE 14: Landscape — where each system operates -->
+  <div class="slide" data-n="14">
+    <div class="section-num">10 <span class="red-sq red-sq--small"></span> LANDSCAPE</div>
+    <h2 style="margin-top:24px;">Different Problems, Different Layers</h2>
+    <table class="data-table" style="margin-top:32px;">
+      <thead>
+        <tr>
+          <th style="width:160px;"></th>
+          <th>SOInspire</th>
+          <th>ExpeL</th>
+          <th>LinUCB</th>
+          <th style="color:var(--red);">EDRA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Layer</strong></td>
+          <td>Content generation</td>
+          <td>Knowledge extraction</td>
+          <td>Action selection</td>
+          <td class="accent-cell">Strategy adaptation</td>
+        </tr>
+        <tr>
+          <td><strong>Optimizes</strong></td>
+          <td>Text quality (CTR)</td>
+          <td>Task accuracy</td>
+          <td>Expected reward</td>
+          <td class="accent-cell">Reply rate per cluster</td>
+        </tr>
+        <tr>
+          <td><strong>Personalizes for</strong></td>
+          <td>Author (style transfer)</td>
+          <td>&mdash;</td>
+          <td>User context</td>
+          <td class="accent-cell">Recipient cluster</td>
+        </tr>
+        <tr>
+          <td><strong>Clusters</strong></td>
+          <td>Content styles &rarr; personas</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td class="accent-cell">People &rarr; audience segments</td>
+        </tr>
+        <tr>
+          <td><strong>Feedback signal</strong></td>
+          <td>CTR / engagement</td>
+          <td>None (fixed)</td>
+          <td>Reward (numeric)</td>
+          <td class="accent-cell">Reply / no-reply &rarr; rule revision</td>
+        </tr>
+        <tr>
+          <td><strong>Output</strong></td>
+          <td>Ready-to-post text</td>
+          <td>Text insight list</td>
+          <td>Arm index</td>
+          <td class="accent-cell">5-slot rule + generated message</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:24px;font-size:16px;color:rgba(249,249,247,0.6);max-width:800px;">
+      SOInspire (Farseev et al., SIGIR &rsquo;26) solves <strong style="color:var(--white);">what to say</strong> &mdash; content quality. EDRA solves <strong style="color:var(--red);">whom to say what</strong> &mdash; strategy selection per audience segment. Complementary layers, not competing systems.
+    </p>
+  </div>
+
+  <!-- SLIDE 15: Closing -->
+  <div class="slide" data-n="15">
+    <div class="section-num">11 <span class="red-sq red-sq--small"></span> CONTRIBUTIONS</div>
+    <h2 style="margin-top:24px;">What EDRA Demonstrates</h2>
+    <div class="cols">
+      <div class="col-svg">
+        <svg width="460" height="280" viewBox="0 0 460 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Three large contribution symbols -->
+          <!-- Symbol 1: Closed loop (cycle arrows) -->
+          <rect x="30" y="30" width="110" height="110" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.04)"/>
+          <path d="M85,55 A30,30 0 1,1 55,85" stroke="#CC0000" stroke-width="2" fill="none"/>
+          <polygon points="55,85 60,77 50,79" fill="#CC0000"/>
+          <text x="85" y="125" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="2">CLOSED LOOP</text>
+
+          <!-- Symbol 2: Adaptive rules (slot bars) -->
+          <rect x="170" y="30" width="110" height="110" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.04)"/>
+          <rect x="190" y="55" width="70" height="8" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <rect x="190" y="55" width="45" height="8" rx="0" fill="rgba(249,249,247,0.3)"/>
+          <rect x="190" y="70" width="70" height="8" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <rect x="190" y="70" width="55" height="8" rx="0" fill="rgba(249,249,247,0.3)"/>
+          <rect x="190" y="85" width="70" height="8" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <rect x="190" y="85" width="35" height="8" rx="0" fill="rgba(249,249,247,0.3)"/>
+          <rect x="190" y="100" width="70" height="8" rx="0" fill="rgba(249,249,247,0.15)"/>
+          <rect x="190" y="100" width="60" height="8" rx="0" fill="rgba(249,249,247,0.3)"/>
+          <text x="225" y="125" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="2">HYBRID RULES</text>
+
+          <!-- Symbol 3: Privacy shield -->
+          <rect x="310" y="30" width="110" height="110" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.04)"/>
+          <path d="M365,55 L395,65 L395,95 L365,110 L335,95 L335,65 Z" stroke="rgba(249,249,247,0.4)" stroke-width="1.5" fill="rgba(249,249,247,0.04)"/>
+          <line x1="355" y1="82" x2="362" y2="90" stroke="#F9F9F7" stroke-width="2"/>
+          <line x1="362" y1="90" x2="378" y2="72" stroke="#F9F9F7" stroke-width="2"/>
+          <text x="365" y="125" text-anchor="middle" fill="rgba(249,249,247,0.5)" font-family="'DM Sans', sans-serif" font-size="9" letter-spacing="2">PRIVACY</text>
+
+          <!-- Labels below icons -->
+          <text x="85" y="165" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Feedback Loop</text>
+          <text x="225" y="165" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Structured Rules</text>
+          <text x="365" y="165" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="11" font-weight="700">Privacy by Design</text>
+        </svg>
+      </div>
+      <div>
+        <ul>
+          <li><strong>A closed feedback loop</strong>: memory &rarr; clustering &rarr; induction &rarr; revision</li>
+          <li><strong>Cluster-conditional rules</strong> &mdash; not flat insights</li>
+          <li><strong>Privacy-by-design</strong> with 1-hour PII purge</li>
+        </ul>
+        <div class="red-sq--large"></div>
+        <p style="font-size:16px;color:var(--grey);">
+          Daniil Onishchenko &middot; Aleksandr Farseev<br>
+          ACM Multimedia 2026 &middot; Rio de Janeiro, Brazil
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Wordmark -->
+<div class="wordmark">Defy<span class="red-sq red-sq--small" style="margin-left:3px;vertical-align:baseline;"></span></div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn" id="prev">&larr;</button>
+  <span class="counter"><span id="cur">1</span> / <span id="tot">15</span></span>
+  <button class="nav-btn" id="next">&rarr;</button>
+</div>
+
+<script>
+(function() {
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  document.getElementById('tot').textContent = total;
+
+  function go(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    document.getElementById('cur').textContent = current + 1;
+  }
+
+  document.getElementById('prev').addEventListener('click', () => go(current - 1));
+  document.getElementById('next').addEventListener('click', () => go(current + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(current - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(total - 1);
+  });
+
+  go(0);
+})();
+</script>
+</body>
+</html>
