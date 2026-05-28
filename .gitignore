@@ -47,3 +47,7 @@ data/research_profiles/
 # evaluation generated data (CSVs, embeddings — regenerable from scripts)
 evaluation/data/*.csv
 evaluation/data/*.npy
+evaluation/data/*.html
+
+# papers (managed outside git — Overleaf, local drafts)
+papers/

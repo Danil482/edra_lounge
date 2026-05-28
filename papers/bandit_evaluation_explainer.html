@@ -844,7 +844,7 @@ V&#770;(&pi;) = (1 / |T<sub>&pi;</sub>|) &middot; &Sigma;<sub>t &isin; T<sub>&pi
   <ul>
     <li><strong>Input:</strong> контекстные признаки (job_title, industry, company_size, cluster_id) + действие (3 first-contact strategies: cold_template (826), cold_personal (113), feature_announcement (37))</li>
     <li><strong>Output:</strong> P(reply) &mdash; вероятность получить ответ</li>
-    <li><strong>Модель:</strong> LogisticRegression или GradientBoosting (XGBoost), обученная на 825 логированных строках</li>
+    <li><strong>Модель:</strong> LogisticRegression или GradientBoosting (XGBoost), обученная на 804 логированных строках</li>
     <li><strong>Назначение:</strong> заполнить контрфактуальные награды для действий, которые не были выбраны</li>
   </ul>
 
@@ -1084,7 +1084,7 @@ b<sub>a<sub>t</sub></sub> &larr; b<sub>a<sub>t</sub></sub> + r<sub>t</sub> &midd
   <div class="callout">
     <div class="callout-label">Вопрос: &laquo;Кластеры предсказывают поведение?&raquo;</div>
     <p><strong>Метод:</strong> silhouette score + &chi;<sup>2</sup> тест (или Fisher's exact test): различается ли reply rate между кластерами?</p>
-    <p><strong>Данные:</strong> 825 строк холодного outreach из Pipedrive (после LinkedIn enrichment для 635 человек с URL).</p>
+    <p><strong>Данные:</strong> 804 строк холодного outreach из Pipedrive (после LinkedIn enrichment для 635 человек с URL).</p>
     <p><strong>Что доказывает:</strong> кластеры &mdash; не просто геометрически разделимые группы, а <strong>группы с разным поведением</strong>. Если reply rate одинаков во всех кластерах, cluster-conditional rules бессмысленны &mdash; нет вариации, которую можно эксплуатировать.</p>
     <p><strong>Блокер:</strong> текущих признаков (job_title, org, labels) недостаточно &mdash; первая попытка кластеризации дала silhouette 0.177. Нужен LinkedIn enrichment для получения rich text features (headline, summary, skills). 502 research-профиля остаются полезны для booth demo seeding и будущего Level 3 outreach, но <em>не для evaluation</em> &mdash; у них нет reward signal (эти люди никогда не получали писем).</p>
   </div>
@@ -1095,7 +1095,7 @@ b<sub>a<sub>t</sub></sub> &larr; b<sub>a<sub>t</sub></sub> + r<sub>t</sub> &midd
     <p><strong>Что проверяем:</strong> interaction effect между кластером и стратегией. НЕ &laquo;персонализация лучше шаблонов&raquo; (тривиально и известно заранее), а &laquo;cluster-conditional назначение стратегий побеждает лучшую единственную стратегию для всех&raquo;.</p>
     <p><strong>Конкретный тест:</strong> если cold_personal даёт 20% reply для кластера A и 5% для кластера B, а cold_template даёт 8% для A и 15% для B &mdash; это доказывает ценность EDRA. Если все стратегии ранжируются одинаково во всех кластерах &mdash; EDRA не нужна.</p>
     <p><strong>Метод:</strong> Doubly Robust estimator (Dudik et al. 2011).</p>
-    <p><strong>Данные:</strong> 825 строк холодного outreach из Pipedrive (replied + no-reply).</p>
+    <p><strong>Данные:</strong> 804 строк холодного outreach из Pipedrive (replied + no-reply).</p>
     <p><strong>Reward model:</strong> LogisticRegression / XGBoost, обученная на (features, action) &rarr; P(reply). См. подробности в разделе 7.</p>
     <p><strong>Сравниваемые политики</strong> (сравниваем <em>стратегии назначения</em>, а не тексты сообщений):</p>
     <ul>

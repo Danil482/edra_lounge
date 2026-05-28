@@ -1,4 +1,8 @@
-"""HDBSCAN clustering over episode summary embeddings + UMAP projection for UI.
+"""HDBSCAN clustering over episode summary embeddings.
+
+UMAP is used in two roles:
+- dimensionality reduction (384d → 15d) before HDBSCAN to counter curse of dimensionality,
+- projection (→ 2d) for the cluster visualisation panel.
 
 Re-cluster on every N new episodes (N = settings.recluster_every).
 
@@ -19,6 +23,8 @@ from backend.config import settings
 if TYPE_CHECKING:
     from backend import schemas
 
+
+_UMAP_N_COMPONENTS = 15
 
 _embedder = None
 _LOCAL_MODEL_PATH = Path(__file__).parent.parent / "models" / "all-MiniLM-L6-v2"
@@ -53,6 +59,21 @@ def embed_single(text: str) -> list[float]:
     return embed([text])[0]
 
 
+def _reduce_for_clustering(X: np.ndarray) -> np.ndarray:
+    """UMAP reduction before HDBSCAN — standard for density-based clustering on high-dim embeddings."""
+    if X.shape[0] < 4 or X.shape[1] <= _UMAP_N_COMPONENTS:
+        return X
+
+    import umap  # type: ignore[import-untyped]
+
+    reducer = umap.UMAP(
+        n_components=_UMAP_N_COMPONENTS,
+        random_state=settings.rng_seed,
+        metric="cosine",
+    )
+    return reducer.fit_transform(X)
+
+
 def cluster_profiles(
     profiles: "list[schemas.Profile]",
 ) -> dict[int, list[str]]:
@@ -64,11 +85,12 @@ def cluster_profiles(
     import hdbscan  # type: ignore[import-untyped]
 
     X = np.array([p.embedding for p in eligible])
+    X_reduced = _reduce_for_clustering(X)
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=settings.n_min,
         min_samples=max(2, settings.n_min // 2),
     )
-    labels = clusterer.fit_predict(X)
+    labels = clusterer.fit_predict(X_reduced)
 
     out: dict[int, list[str]] = {}
     for p, label in zip(eligible, labels):
@@ -121,11 +143,12 @@ def cluster_episodes(
     import hdbscan  # type: ignore[import-untyped]
 
     X = np.array([ep.summary_embedding for ep in episodes])
+    X_reduced = _reduce_for_clustering(X)
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=settings.n_min,
         min_samples=max(2, settings.n_min // 2),
     )
-    labels = clusterer.fit_predict(X)
+    labels = clusterer.fit_predict(X_reduced)
 
     out: dict[int, list[str]] = {}
     for ep, label in zip(episodes, labels):

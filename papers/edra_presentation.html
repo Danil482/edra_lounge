@@ -475,13 +475,13 @@
           <text x="530" y="120" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">K = 7</text>
 
           <!-- Bottom labels -->
-          <text x="290" y="210" text-anchor="middle" fill="rgba(249,249,247,0.2)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="3">PROFILE TEXT &rarr; EMBEDDING &rarr; CLUSTER ASSIGNMENT</text>
+          <text x="290" y="210" text-anchor="middle" fill="rgba(249,249,247,0.2)" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="3">PROFILE TEXT &rarr; EMBEDDING &rarr; UMAP 15d &rarr; CLUSTER ASSIGNMENT</text>
         </svg>
       </div>
       <div>
         <ul>
           <li>Profile headline + skills &rarr; text summary</li>
-          <li>HDBSCAN finds natural groups</li>
+          <li>UMAP reduces 384d &rarr; 15d, then HDBSCAN clusters</li>
           <li>New visitors classified by 7 nearest neighbors</li>
         </ul>
       </div>
@@ -670,7 +670,7 @@
         <div class="loop-label">PREREQUISITE 1</div>
         <h3 style="font-size:22px;">Clustering Quality</h3>
         <ul style="margin-top:12px;">
-          <li style="font-size:16px;">Silhouette score on 825 Pipedrive outreach recipients</li>
+          <li style="font-size:16px;">Silhouette score on 804 Pipedrive outreach recipients</li>
           <li style="font-size:16px;">&chi;<sup>2</sup> test: reply rates differ between clusters?</li>
         </ul>
         <p style="font-size:14px;color:rgba(249,249,247,0.4);margin-top:12px;">Tests the data, not the model</p>
@@ -710,9 +710,9 @@
     <div class="cols">
       <div class="col-svg">
         <svg width="540" height="310" viewBox="0 0 540 310" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Box 1: 825 Profiles -->
+          <!-- Box 1: 804 Profiles -->
           <rect x="0" y="60" width="110" height="80" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
-          <text x="55" y="86" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">825 Profiles</text>
+          <text x="55" y="86" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">804 Profiles</text>
           <!-- Data rows suggestion -->
           <rect x="18" y="98" width="74" height="3" rx="0" fill="rgba(249,249,247,0.18)"/>
           <rect x="18" y="105" width="58" height="3" rx="0" fill="rgba(249,249,247,0.13)"/>
@@ -728,7 +728,7 @@
           <!-- Box 2: MiniLM -->
           <rect x="165" y="65" width="100" height="70" stroke="#F9F9F7" stroke-width="1.5" rx="0" fill="rgba(249,249,247,0.05)"/>
           <text x="215" y="97" text-anchor="middle" fill="#F9F9F7" font-family="'DM Sans', sans-serif" font-size="13" font-weight="700">MiniLM</text>
-          <text x="215" y="117" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">384-dim</text>
+          <text x="215" y="117" text-anchor="middle" fill="rgba(249,249,247,0.4)" font-family="'DM Sans', sans-serif" font-size="10">384d &rarr; UMAP 15d</text>
 
           <!-- Arrow 2 -->
           <line x1="270" y1="100" x2="310" y2="100" stroke="#CC0000" stroke-width="1.5"/>
@@ -791,11 +791,21 @@
     </div>
   </div>
 
-  <!-- SLIDE 11: Level 2 — Interaction Effect -->
+  <!-- SLIDE 11: Cluster Visualization -->
   <div class="slide" data-n="11">
+    <div class="section-num">08a+ <span class="red-sq red-sq--small"></span> CLUSTERING RESULT</div>
+    <h2 style="margin-top:24px;">6 Clusters, Silhouette 0.726</h2>
+    <p style="font-size:16px;color:rgba(249,249,247,0.45);margin-bottom:12px;">Production pipeline (MiniLM-384d &rarr; UMAP-15d &rarr; HDBSCAN) on 804 Pipedrive outreach recipients. UMAP-2D projection for visualization only.</p>
+    <div style="display:flex;justify-content:center;margin-top:8px;">
+      <iframe src="../evaluation/data/cluster_viz_production.html" style="width:95%;height:520px;border:1px solid #2A2A2A;border-radius:8px;background:#0A0A0A;" frameborder="0"></iframe>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Level 2 — Interaction Effect -->
+  <div class="slide" data-n="12">
     <div class="section-num">08b <span class="red-sq red-sq--small"></span> PREREQUISITE 2</div>
     <h2 style="margin-top:24px;">Does Optimal Strategy Differ by Cluster?</h2>
-    <p style="font-size:16px;color:rgba(249,249,247,0.45);margin-bottom:8px;">Personalization is known to help. The question: does it help <em>enough</em> on 825 noisy rows to justify the machinery?</p>
+    <p style="font-size:16px;color:rgba(249,249,247,0.45);margin-bottom:8px;">Personalization is known to help. The question: does it help <em>enough</em> on 804 noisy rows to justify the machinery?</p>
     <div class="cols">
       <div class="col-svg">
         <svg width="520" height="340" viewBox="0 0 520 340" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -863,7 +873,7 @@
       <div>
         <ul>
           <li>&pi;<sub>edra</sub> vs &pi;<sub>best_single</sub> &mdash; not &ldquo;personalization vs nothing&rdquo;</li>
-          <li>With 825 noisy rows, cluster-conditional may lose to the best global strategy</li>
+          <li>With 804 noisy rows, cluster-conditional may lose to the best global strategy</li>
           <li>Doubly robust estimator corrects for campaign assignment bias (Dud&iacute;k 2011)</li>
         </ul>
       </div>
@@ -880,8 +890,8 @@
     </div>
   </div>
 
-  <!-- SLIDE 12: Level 3 — Learning Curve -->
-  <div class="slide" data-n="12">
+  <!-- SLIDE 13: Level 3 — Learning Curve -->
+  <div class="slide" data-n="13">
     <div class="section-num" style="color:#CC0000;">08c <span class="red-sq red-sq--small"></span> THE TEST</div>
     <h2 style="margin-top:24px;">Can EDRA Learn What Works?</h2>
     <p style="font-size:16px;color:rgba(249,249,247,0.55);margin-bottom:8px;">The actual contribution: automatic discovery of cluster-conditional strategies + online revision when they decay.</p>
@@ -966,8 +976,8 @@
     </div>
   </div>
 
-  <!-- SLIDE 13: Positioning vs Prior Work -->
-  <div class="slide" data-n="13">
+  <!-- SLIDE 14: Positioning vs Prior Work -->
+  <div class="slide" data-n="14">
     <div class="section-num">09 <span class="red-sq red-sq--small"></span> POSITIONING</div>
     <h2 style="margin-top:24px;">What Makes EDRA Different</h2>
     <table class="data-table" style="margin-top:40px;">
@@ -1008,8 +1018,8 @@
     </table>
   </div>
 
-  <!-- SLIDE 14: Landscape — where each system operates -->
-  <div class="slide" data-n="14">
+  <!-- SLIDE 15: Landscape — where each system operates -->
+  <div class="slide" data-n="15">
     <div class="section-num">10 <span class="red-sq red-sq--small"></span> LANDSCAPE</div>
     <h2 style="margin-top:24px;">Different Problems, Different Layers</h2>
     <table class="data-table" style="margin-top:32px;">
@@ -1072,8 +1082,8 @@
     </p>
   </div>
 
-  <!-- SLIDE 15: Closing -->
-  <div class="slide" data-n="15">
+  <!-- SLIDE 16: Closing -->
+  <div class="slide" data-n="16">
     <div class="section-num">11 <span class="red-sq red-sq--small"></span> CONTRIBUTIONS</div>
     <h2 style="margin-top:24px;">What EDRA Demonstrates</h2>
     <div class="cols">
@@ -1134,7 +1144,7 @@
 <!-- Navigation -->
 <div class="nav">
   <button class="nav-btn" id="prev">&larr;</button>
-  <span class="counter"><span id="cur">1</span> / <span id="tot">15</span></span>
+  <span class="counter"><span id="cur">1</span> / <span id="tot">16</span></span>
   <button class="nav-btn" id="next">&rarr;</button>
 </div>
 

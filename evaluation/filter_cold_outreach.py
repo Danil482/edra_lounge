@@ -68,16 +68,35 @@ FOLLOW_UP_RE = re.compile(
     r"Checking in since you didn't reply|Following up|Checking in",
     re.IGNORECASE,
 )
-RE_ENGAGEMENT_RE = re.compile(
-    r"re-engaging|reaching back|Happy New Year|Personal Update",
-    re.IGNORECASE,
-)
 FEATURE_ANNOUNCEMENT_RE = re.compile(
     r"New Feature|New SOMIN Feature|Owned Content Scoring|Content Ideation|Case Study",
     re.IGNORECASE,
 )
 COLD_PERSONAL_RE = re.compile(
     r"Prof\.\s*Aleks\s*Farseev|Prof\.\s*Aleks(?!\s*Farseev)",
+    re.IGNORECASE,
+)
+WARM_INTRO_SUBJECT_RE = re.compile(
+    r"meet you at|met you at|nice to meet|catch up at|meeting at|"
+    r"great to e-meet|nice meeting you|great meeting|"
+    r"Startup Village|ATx|MarTech|SXSW|Cannes|PI LIVE|"
+    r"conference|event|summit|huddle",
+    re.IGNORECASE,
+)
+WARM_INTRO_SNIPPET_RE = re.compile(
+    r"meet you at|met you at|nice to meet|catch up at|"
+    r"great to e-meet|nice meeting you|great meeting|"
+    r"thanks to our friends|as discussed over|intro from|"
+    r"referred by|reference:|introduction from|Dentsu intro|"
+    r"leaving a request on our website|"
+    r"haven.t logged in|haven.t had a chance to log in|"
+    r"Your SOMONITOR (?:Platform|account) is Ready|"
+    r"Extending Your .+ Trial|Setup .+ Quick Intro|"
+    r"Complete Your .+ Setup|Exploring .+ Capabilities",
+    re.IGNORECASE,
+)
+RE_ENGAGEMENT_RE = re.compile(
+    r"re-engaging|reaching back|Happy New Year|Personal Update",
     re.IGNORECASE,
 )
 
@@ -104,15 +123,19 @@ def should_exclude(row: dict[str, str]) -> bool:
     return False
 
 
-def classify_outreach_type(subject: str) -> str:
+def classify_outreach_type(row: dict[str, str]) -> str:
+    subject = row.get("outreach_subject", "")
+    snippet = row.get("outreach_snippet", "")
+    if RE_ENGAGEMENT_RE.search(subject):
+        return "exclude_re_engagement"
     if FOLLOW_UP_RE.search(subject):
         return "follow_up"
-    if RE_ENGAGEMENT_RE.search(subject):
-        return "re_engagement"
     if FEATURE_ANNOUNCEMENT_RE.search(subject):
         return "feature_announcement"
     if COLD_PERSONAL_RE.search(subject):
         return "cold_personal"
+    if WARM_INTRO_SUBJECT_RE.search(subject) or WARM_INTRO_SNIPPET_RE.search(snippet):
+        return "warm_intro"
     return "cold_template"
 
 
@@ -142,7 +165,11 @@ def main() -> None:
             if should_exclude(row):
                 excluded += 1
                 continue
-            row["outreach_type"] = classify_outreach_type(row["outreach_subject"])
+            otype = classify_outreach_type(row)
+            if otype == "exclude_re_engagement":
+                excluded += 1
+                continue
+            row["outreach_type"] = otype
             included_rows.append(row)
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
