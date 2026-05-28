@@ -6,9 +6,9 @@ raw 384d vectors (no UMAP dimensionality reduction for clustering).
 UMAP is used only for 2D visualization.
 
 Usage:
-    python -m evaluation.cluster_production
-    python -m evaluation.cluster_production --min-cluster-size 10 --recompute
-    python -m evaluation.cluster_production --viz evaluation/data/custom_viz.html
+    python -m evaluation.level1_clustering.cluster_production
+    python -m evaluation.level1_clustering.cluster_production --min-cluster-size 10 --recompute
+    python -m evaluation.level1_clustering.cluster_production --viz evaluation/data/custom_viz.html
 """
 
 from __future__ import annotations
@@ -29,13 +29,13 @@ if sys.stdout.encoding != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = Path(__file__).resolve().parent / "data" / "cold_outreach_clean.csv"
-DEFAULT_OUTPUT = Path(__file__).resolve().parent / "data" / "clustered_production.csv"
-EMBEDDINGS_CACHE = Path(__file__).resolve().parent / "data" / "embeddings_production.npy"
-UMAP_VIZ_CACHE = Path(__file__).resolve().parent / "data" / "umap_viz_production.npy"
-UMAP_CLUSTER_CACHE = Path(__file__).resolve().parent / "data" / "umap_cluster_production.npy"
-DEFAULT_VIZ = Path(__file__).resolve().parent / "data" / "cluster_viz_production.html"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_INPUT = Path(__file__).resolve().parent.parent / "data" / "cold_outreach_clean.csv"
+DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "data" / "clustered_production.csv"
+EMBEDDINGS_CACHE = Path(__file__).resolve().parent.parent / "data" / "embeddings_production.npy"
+UMAP_VIZ_CACHE = Path(__file__).resolve().parent.parent / "data" / "umap_viz_production.npy"
+UMAP_CLUSTER_CACHE = Path(__file__).resolve().parent.parent / "data" / "umap_cluster_production.npy"
+DEFAULT_VIZ = Path(__file__).resolve().parent.parent / "data" / "cluster_viz_production.html"
 LOCAL_MODEL_PATH = PROJECT_ROOT / "backend" / "models" / "all-MiniLM-L6-v2"
 _UMAP_N_COMPONENTS = 15
 

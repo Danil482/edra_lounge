@@ -2,8 +2,8 @@
 Remove auto-replies from cold outreach data.
 
 Usage:
-    python -m evaluation.filter_autoreplies
-    python -m evaluation.filter_autoreplies --input path/to/input.csv --output path/to/output.csv
+    python -m evaluation.level0_data.filter_autoreplies
+    python -m evaluation.level0_data.filter_autoreplies --input path/to/input.csv --output path/to/output.csv
 """
 
 from __future__ import annotations
@@ -15,8 +15,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-DEFAULT_INPUT = Path(__file__).resolve().parent / "data" / "cold_outreach.csv"
-DEFAULT_OUTPUT = Path(__file__).resolve().parent / "data" / "cold_outreach_clean.csv"
+DEFAULT_INPUT = Path(__file__).resolve().parent.parent / "data" / "cold_outreach.csv"
+DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "data" / "cold_outreach_clean.csv"
 
 INPUT_COLUMNS = [
     "email", "name", "organization", "job_title", "labels", "linkedin_url",

@@ -2,8 +2,8 @@
 Filter Pipedrive outreach data to cold outreach only.
 
 Usage:
-    python -m backend.evaluation.filter_cold_outreach
-    python -m backend.evaluation.filter_cold_outreach --input path/to/input.csv --output path/to/output.csv
+    python -m evaluation.level0_data.filter_cold_outreach
+    python -m evaluation.level0_data.filter_cold_outreach --input path/to/input.csv --output path/to/output.csv
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from collections import Counter
 from pathlib import Path
 
 DEFAULT_INPUT = Path(r"C:\Users\dania\PycharmProjects\EDRA\data\eval_tier1_replied_mail.csv")
-DEFAULT_OUTPUT = Path(__file__).resolve().parent / "data" / "cold_outreach.csv"
+DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "data" / "cold_outreach.csv"
 
 INPUT_COLUMNS = [
     "email", "name", "organization", "job_title", "labels", "linkedin_url",

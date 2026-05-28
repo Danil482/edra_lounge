@@ -2,9 +2,9 @@
 Cluster cold outreach data and produce evaluation metrics.
 
 Usage:
-    python -m evaluation.cluster_outreach
-    python -m evaluation.cluster_outreach --min-cluster-size 20 --min-samples 3
-    python -m evaluation.cluster_outreach --recompute
+    python -m evaluation.level1_clustering.cluster_outreach
+    python -m evaluation.level1_clustering.cluster_outreach --min-cluster-size 20 --min-samples 3
+    python -m evaluation.level1_clustering.cluster_outreach --recompute
 """
 
 from __future__ import annotations
@@ -25,10 +25,10 @@ if sys.stdout.encoding != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = Path(__file__).resolve().parent / "data" / "cold_outreach_clean.csv"
-DEFAULT_OUTPUT = Path(__file__).resolve().parent / "data" / "clustered_outreach.csv"
-EMBEDDINGS_CACHE = Path(__file__).resolve().parent / "data" / "embeddings.npy"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_INPUT = Path(__file__).resolve().parent.parent / "data" / "cold_outreach_clean.csv"
+DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "data" / "clustered_outreach.csv"
+EMBEDDINGS_CACHE = Path(__file__).resolve().parent.parent / "data" / "embeddings.npy"
 LOCAL_MODEL_PATH = PROJECT_ROOT / "backend" / "models" / "all-MiniLM-L6-v2"
 
 
@@ -103,7 +103,7 @@ def get_embeddings(texts: list[str], *, recompute: bool) -> np.ndarray:
     return embeddings
 
 
-UMAP_CACHE = Path(__file__).resolve().parent / "data" / "umap_reduced.npy"
+UMAP_CACHE = Path(__file__).resolve().parent.parent / "data" / "umap_reduced.npy"
 
 
 def reduce_umap(embeddings: np.ndarray, *, n_components: int = 15, recompute: bool = False) -> np.ndarray:
