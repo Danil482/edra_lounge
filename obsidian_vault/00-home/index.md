@@ -78,9 +78,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-27: **Clustering integration + demo paper rewrite** — see [[../sessions/2026-05-27 Clustering integration and demo paper rewrite]]
 - 2026-05-27 (PM): **Eval cleanup + pitch escalation** — see [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
 - 2026-05-28: **UMAP production pipeline + strategy reclassification** — see [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
+- 2026-05-28 (PM): **Chi-squared test + evaluation reorganization** — see [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 
 ## Session log
 
+- [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 - [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
 - [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
 - [[../sessions/2026-05-27 Clustering integration and demo paper rewrite]]
