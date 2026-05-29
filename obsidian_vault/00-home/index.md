@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-28
+date: 2026-05-29
 ---
 
 # EDRA — Vault Home
@@ -79,9 +79,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-27 (PM): **Eval cleanup + pitch escalation** — see [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
 - 2026-05-28: **UMAP production pipeline + strategy reclassification** — see [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
 - 2026-05-28 (PM): **Chi-squared test + evaluation reorganization** — see [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
+- 2026-05-29: **Evaluation pipeline refactor + 3-level validation** — see [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
 
 ## Session log
 
+- [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
 - [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 - [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
 - [[../sessions/2026-05-27 Evaluation cleanup and pitch escalation]]
