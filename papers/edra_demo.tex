@@ -39,8 +39,8 @@ LLM-based outreach agents personalize messages at scale, yet their behavioral st
 Recent systems (ExpeL~\cite{expel2024}, EvolveR~\cite{evolver2025}, ReasoningBank~\cite{reasoningbank2025}) close parts of this feedback loop by extracting task-general strategies from interaction histories, but none conditions rules on \textit{who} the agent is talking to: their insights are global, not audience-aware.
 We present EDRA (Experience-Driven Rule Adaptation), a closed-loop architecture that introduces \textit{cluster-conditional} rule induction.
 Visitor profiles are embedded via MiniLM, projected via UMAP and clustered with HDBSCAN, and matched to behavioral rules through weighted KNN voting; an LLM revises rules when cluster-level consistency degrades.
-We frame rule application as a contextual bandit and validate offline on 804 real cold-outreach interactions from a commercial CRM via a doubly robust estimator.
-EDRA's cluster-conditional policy yields an estimated reward of \textbf{[X.XXX]}, outperforming the best single-strategy baseline (\textbf{[X.XXX]}), confirming that optimal outreach strategy differs by audience segment.
+We frame rule application as a contextual bandit and validate offline on 632 real cold-outreach interactions from a commercial CRM via a doubly robust estimator.
+EDRA's cluster-conditional policy yields an estimated reward $\hat{V}_{\text{DR}} = 0.670$, outperforming the best single-strategy baseline ($0.569$) by $+0.102$, confirming that optimal outreach strategy differs by audience segment.
 At the conference booth, each attendee simultaneously experiences and trains the system.
 \end{abstract}
 
@@ -69,7 +69,7 @@ Recent work has begun closing parts of this loop: TRAD~\cite{trad2024} retrieves
 We present \textbf{EDRA} (Experience-Driven Rule Adaptation).
 First, we introduce an architecture where behavioral rules are induced per profile cluster rather than globally, so distinct audience types receive distinct strategies.
 Building on this, we formalize a KNN-based rule application mechanism where new visitors are matched to cluster rules through weighted cosine voting over semantically similar profiles.
-Finally, we validate through offline evaluation on 804 real outreach interactions framed as a contextual bandit~\cite{li2010contextual}, comparing five policies via a doubly robust estimator~\cite{dudik2011doubly}, and through live booth interactions where each attendee simultaneously experiences and trains the system.
+Finally, we validate through offline evaluation on 632 real outreach interactions framed as a contextual bandit~\cite{li2010contextual}, comparing four policies via a doubly robust estimator~\cite{dudik2011doubly}, and through live booth interactions where each attendee simultaneously experiences and trains the system.
 
 % ============================================================
 \section{The EDRA Architecture}
@@ -111,20 +111,33 @@ When CS drops below $\theta_{\text{revise}}$, the LLM receives the rule and cont
 \section{Offline Validation}
 % ============================================================
 
-We frame EDRA's rule application as a contextual bandit: the context $x$ is a profile embedding, the action $a$ is one of five outreach strategies (cold template, cold personal, warm introduction, feature announcement, follow-up), and the reward $r \in \{0,1\}$ indicates whether the recipient replied. We evaluate on 804 interactions extracted from a commercial CRM.
+We frame EDRA's rule application as a contextual bandit: the context $x$ is a recipient's profile embedding, the action $a$ is one of seven message archetypes discovered by embedding outreach snippets via MiniLM and clustering with HDBSCAN, and the reward $r \in \{0,1\}$ indicates whether the recipient replied. We evaluate on 632 cold outreach interactions extracted from a commercial CRM after filtering warm contacts, autoreplies, and junk messages.
 
 \noindent\textbf{Clustering Quality.}
-HDBSCAN over UMAP-reduced MiniLM embeddings yields 6 clusters (silhouette = 0.726). A $\chi^2$ test confirms that reply rates differ significantly across clusters ($p < $ \textbf{[TBD]}).
-
-% ---- PLACEHOLDER: insert silhouette and chi-squared results ----
+HDBSCAN over UMAP-reduced MiniLM profile embeddings yields 7 recipient clusters (silhouette = 0.551). A $\chi^2$ test confirms that reply rates differ significantly across clusters ($\chi^2 = 33.16$, $p < 0.001$, Cram\'{e}r's $V = 0.229$). Strategy choice has an even stronger effect ($\chi^2 = 77.32$, $V = 0.350$), with reply rates ranging from 9\% (mass newsletter) to 68\% (personalized opener).
 
 \noindent\textbf{Does Optimal Strategy Differ by Cluster?}
-We compare five policies via the doubly robust estimator~\cite{dudik2011doubly}: $\pi_{\text{uniform}}$ (always cold template), $\pi_{\text{random}}$, $\pi_{\text{best}}$ (best single strategy for everyone), $\pi_{\text{warm}}$ (always warm introduction), and $\pi_{\text{edra}}$ (cluster-conditional). If $\pi_{\text{edra}}$ cannot beat $\pi_{\text{best}}$, clustering adds nothing. Estimated rewards: \textbf{[X.XXX / X.XXX / X.XXX / X.XXX / X.XXX]}.
+We compare four policies via the doubly robust estimator~\cite{dudik2011doubly}:
 
-% ---- PLACEHOLDER: insert DR estimator results for 5 policies ----
+\begin{center}
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Policy} & $\hat{V}_{\text{DR}}$ & \textbf{vs.\ uniform} \\
+\midrule
+$\pi_{\text{random}}$ (uniform 1/7) & 0.464 & $-0.107$ \\
+$\pi_{\text{uniform}}$ (always general intro) & 0.571 & --- \\
+$\pi_{\text{best}}$ (always personalized opener) & 0.569 & --- \\
+$\pi_{\text{edra}}$ (cluster-conditional) & \textbf{0.670} & $+0.102$ vs.\ $\pi_{\text{best}}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\noindent\textbf{Learning Curve.}
-Following the prequential protocol~\cite{gama2013evaluating}, we evaluate in chronological batches, comparing EDRA against LinUCB~\cite{li2010contextual}. \textbf{[TBD: learning curve shape and comparison.]}
+\noindent $\pi_{\text{edra}}$ selects a different archetype for each cluster: \textit{personalized opener} for marketing managers, \textit{company pitch} for investors, \textit{vc fundraising} for C-level executives, and \textit{general intro} for founders.
+The $+0.102$ gap over $\pi_{\text{best}}$ confirms that the optimal strategy depends on who the agent is talking to.
+
+\noindent\textbf{Learning Dynamics.}
+\textit{[Placeholder: prequential evaluation on sliding windows pending additional data collection. Current 632-row dataset produces noisy per-window estimates due to action space sparsity (7 strategies $\times$ 7 clusters). Will be completed with expanded tier-2 extraction.]}
 
 % ============================================================
 \section{Conclusion}
@@ -138,6 +151,7 @@ Following the prequential protocol~\cite{gama2013evaluating}, we evaluate in chr
 \end{figure}
 
 The booth makes the closed loop tangible (Figure~\ref{fig:booth}). An attendee enters their LinkedIn URL; the system embeds their profile, applies the KNN-matched rule, and conducts a dialogue for up to 7 turns. Each interaction trains the rule base; profiles are purged within one hour. The Expert View exposes rules, a cluster scatter plot, and streaming revision reasoning. The architecture is channel-agnostic and runs on a single laptop.
+
 \balance
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{edra_demo}

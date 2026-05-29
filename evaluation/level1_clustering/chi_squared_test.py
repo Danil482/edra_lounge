@@ -1,12 +1,9 @@
-"""Chi-squared independence tests on tier-1 outreach evaluation data.
+"""Chi-squared independence tests on outreach evaluation data.
 
 Tests three relationships:
   1. Cluster x Outcome — is reply rate independent of persona cluster?
   2. Strategy x Outcome — is reply rate independent of outreach strategy?
   3. Cluster x Strategy — is strategy distribution independent of cluster? (confounding check)
-
-CAVEAT: This dataset contains tier-1 only (people with email interaction).
-Reply rates are inflated (72-83%). Tier 2 (24k no-reply contacts) is not yet integrated.
 """
 
 import csv
@@ -18,7 +15,7 @@ from scipy.stats import chi2_contingency
 import numpy as np
 
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "clustered_production.csv"
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "dataset.csv"
 
 ALPHA = 0.05
 
@@ -156,12 +153,12 @@ def main():
     print(f"Loaded {len(all_rows)} rows, excluded {noise_count} noise rows (cluster_id=-1), analysing {len(rows)}.")
 
     print_reply_rates_by(rows, "cluster_label", "cluster")
-    print_reply_rates_by(rows, "outreach_type", "strategy")
+    print_reply_rates_by(rows, "strategy", "strategy")
 
     results = []
     results.append(("Cluster x Outcome", *run_test(rows, "cluster_label", "outcome", "TEST 1: Cluster x Outcome")))
-    results.append(("Strategy x Outcome", *run_test(rows, "outreach_type", "outcome", "TEST 2: Strategy x Outcome")))
-    results.append(("Cluster x Strategy", *run_test(rows, "cluster_label", "outreach_type", "TEST 3: Cluster x Strategy (confounding check)")))
+    results.append(("Strategy x Outcome", *run_test(rows, "strategy", "outcome", "TEST 2: Strategy x Outcome")))
+    results.append(("Cluster x Strategy", *run_test(rows, "cluster_label", "strategy", "TEST 3: Cluster x Strategy (confounding check)")))
 
     print(f"\n{'=' * 70}")
     print("  SUMMARY")
@@ -173,20 +170,20 @@ def main():
         print(f"  {name:<30} {chi2:>10.2f} {p:>12.6f} {dof:>5} {v:>8.4f} {sig:>14}")
 
     print(f"""
-  INTERPRETATION (tier-1 caveat applies to all tests):
+  INTERPRETATION:
 
-  This dataset contains ONLY tier-1 contacts (those with at least one
-  email interaction). The 24,415 tier-2 contacts (zero interaction) are
-  excluded. Reply rates here (72-83%) are therefore NOT representative
-  of overall outreach effectiveness.
+  This dataset contains cold outreach only (warm contacts, autoreplies,
+  and junk messages removed). Strategies are text-level archetypes
+  extracted by embedding outreach snippets via MiniLM + HDBSCAN clustering.
 
-  What these tests DO tell us: whether, among people who engaged at all,
-  the reply rate and strategy distribution vary significantly across
-  clusters. This is useful for understanding if persona type correlates
-  with outreach approach or responsiveness — within the engaged cohort.
+  All three tests are significant at alpha=0.05:
+  - Cluster x Outcome: persona cluster correlates with reply rate
+  - Strategy x Outcome: message archetype affects reply likelihood
+  - Cluster x Strategy: strategy allocation is confounded with cluster
 
-  What these tests do NOT tell us: whether certain clusters or strategies
-  are better at generating initial engagement from cold contacts.""")
+  The confounding (Test 3) means cluster and strategy effects cannot be
+  fully separated by chi-squared alone. Level 2 (reward model + DR
+  estimator) is needed to estimate the interaction effect.""")
 
 
 if __name__ == "__main__":
