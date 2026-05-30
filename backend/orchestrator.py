@@ -268,6 +268,21 @@ class Orchestrator:
         existing_by_id = {c.id: c for c in existing_clusters}
         claimed_ids: set[str] = set()
 
+        if len(hdbscan_result) >= 2:
+            from sklearn.metrics import silhouette_score
+            sil_embs, sil_labels = [], []
+            for label, profile_ids in hdbscan_result.items():
+                for pid in profile_ids:
+                    if pid in emb_by_id:
+                        sil_embs.append(emb_by_id[pid])
+                        sil_labels.append(label)
+            if len(sil_embs) >= 2:
+                score = silhouette_score(np.array(sil_embs), sil_labels)
+                log.info(
+                    "recluster.silhouette n_profiles=%d n_clusters=%d score=%.3f",
+                    len(sil_embs), len(hdbscan_result), score,
+                )
+
         for hdbscan_label, profile_ids in hdbscan_result.items():
             embeddings = [emb_by_id[pid] for pid in profile_ids if pid in emb_by_id]
             if not embeddings:

@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 def select_rule_by_knn(profile: Profile,
                        corpus: list[ProfileRow],
                        rules: dict[str, Rule],
-                       k: int = 7,) -> object | None:
+                       k: int = 7,
+                       min_sim: float = 0.35,) -> object | None:
     
     if not corpus:
         return None
@@ -32,6 +33,8 @@ def select_rule_by_knn(profile: Profile,
 
     cluster_votes: dict[str, float] = {}
     for idx in top_indices:
+        if similarities[idx] < min_sim:
+            continue
         neighbor = eligible[idx]
         cid = getattr(neighbor, "cluster_id", None)
         if cid is not None and cid in rules:

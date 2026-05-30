@@ -34,6 +34,7 @@ data/linkedin_raw/
 .vscode/
 .idea/
 .claude/
+obsidian_vault/.obsidian/
 
 # runtime logs (uvicorn etc.)
 *.log
@@ -47,3 +48,7 @@ data/research_profiles/
 # evaluation generated data (CSVs, embeddings — regenerable from scripts)
 evaluation/data/*.csv
 evaluation/data/*.npy
+
+
+.DS_Store
+backend/.DS_Store
