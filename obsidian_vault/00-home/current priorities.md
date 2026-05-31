@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-29
+date: 2026-05-31
 ---
 
 # Current Priorities
@@ -29,6 +29,7 @@ Session 2026-05-27 (Eval cleanup + pitch escalation) → [[../sessions/2026-05-2
 Session 2026-05-28 (UMAP production + strategies) → [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
 Session 2026-05-28 (Chi-squared + eval reorg) → [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 Session 2026-05-29 (Eval pipeline refactor) → [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
+Session 2026-05-31 (Demo paper rewrite + eval seed) → [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -42,6 +43,7 @@ On 2026-05-27 we integrated the intern's clustering refactor (cherry-picked from
 On 2026-05-27 (PM session) we built the autoreply filter (`evaluation/filter_autoreplies.py`): 202 auto-replies removed from 1027 → 825 clean rows. Reclustered with structured text extraction (seniority×function from job titles) + UMAP 15-dim reduction: **silhouette jumped from 0.177 to 0.739, 6 meaningful clusters** (CEOs, Directors, Managers, Founders, Partners/VCs, Mixed). Added 3 evaluation detail slides to presentation (Levels 1-2 as prerequisites, Level 3 as actual test). Fixed pitch agent escalation: interest level now passed to continuation prompt with 4-phase escalation ladder (RECOVER→BUILD→PERSONALIZE→CLOSE). Row count updated to 825 across all papers.
 On 2026-05-28 we validated that production clustering (384d HDBSCAN without UMAP) fails on Pipedrive data (silhouette 0.179, 3 meaningless clusters). Added UMAP-15d reduction to production pipeline (`backend/clustering/cluster.py`). Reclassified outreach strategies: extracted warm_intro from cold_template (event/referral/inbound), removed re_engagement. **Final: 5 strategies, 804 rows, silhouette 0.726, 6 clusters. Production and evaluation now use the same algorithm. 206 tests green.** Paper and presentation updated with new numbers, cluster visualization slide added (16 slides total). `papers/` added to .gitignore.
 On 2026-05-28 (PM session) we ran chi-squared independence tests on 804 tier-1 rows: **cluster×outcome NOT significant (p=0.208)** — reply rates 72-83% too close within engaged cohort; **strategy×outcome HIGHLY significant (p≈0, V=0.318)** — cold_personal 97% vs feature_announcement 31%; **cluster×strategy confounded (p=0.00001)** — clusters received uneven strategy mixes. Conclusion: tier 2 data (24K no-reply) essential to disentangle cluster from strategy effect. Reorganized `evaluation/` into 4 levels (level0_data, level1_clustering, level2_policy, level3_learning). Fixed tier 2 extraction script (per-input state files, retry on transient errors). Tier 2 extraction started (762/24,415). Defy website analyzed (Vercel, pure HTML), deployment message drafted for CTO.
+On 2026-05-31 supervisor reviewed the demo paper and flagged it as industry paper, not demo paper. Restructured to 4-section format (matching SOInspire template): Introduction with numbered system components (I-IV), The Demonstration, Preliminary Evaluation, Conclusion. Removed all equations, aligned writing style to abstract. Re-ran evaluation on doubled tier 2 data (13,806 rows, 744 clean): **cluster×outcome now V=0.346 (was 0.229)**, EDRA DR estimate 0.654 vs best single 0.588 (delta +0.066). Created architecture diagram HTML and 10-slide supplementary deck. **Seeded demo DB from 744 real outreach interactions** via `backend/seed_from_eval.py` — 7 clusters, 7 rules, 7 agents with real-world strategy distributions.
 
 ## ✅ Phase 1A — Vocabulary swap (done, 2026-04-28)
 
@@ -176,8 +178,13 @@ Rewritten for MM '26 demo track (2-page limit, excluding references). Novelty na
 - [x] Abstract and conclusion updated for channel-agnostic framing
 - [x] Humanizer pass: removed AI writing patterns (promotional qualifiers, passive clusters, em-dash parentheticals)
 - [x] Removed unpublished doctoral citation
+- [x] Restructured to 4-section demo paper format (2026-05-31): merged Intro+System, numbered components I-IV, removed equations, aligned style to abstract
+- [x] Architecture diagram HTML created (`papers/edra_architecture_diagram.html`) — needs screenshot to PNG
+- [x] 10-slide supplementary deck (`papers/edra_supplementary_slides.html`)
+- [x] EvolveR and ReasoningBank bib entries filled with real author names
+- [x] Demo video bib entry added (placeholder URL)
+- [ ] Screenshot architecture diagram → `papers/EDRA_workflow.png`
 - [ ] Compile in Overleaf — verify 2-page fit
-- [ ] Fill in real author names for EvolveR and ReasoningBank bib entries
 - [x] Create presentation slides — `papers/edra_presentation.html` rewritten (11 slides, visual-first, 2026-05-25)
 - [ ] Visual QA of presentation in browser (all 11 slides)
 - [ ] Create supplementary video (5 min max)
@@ -207,6 +214,12 @@ Three-level evaluation framework designed:
 - [ ] **Both EDRA and uniform show DOWN trend** — distribution shift in data (early=inbound, late=cold), not algorithm failure
 - [ ] Learning Dynamics section in demo paper = placeholder — pending more data or methodological fix for distribution shift
 - [ ] Consider epsilon-greedy or UCB-style exploration to handle shift
+
+### Phase 12 — Seed demo from real data (done, 2026-05-31)
+- [x] `backend/seed_from_eval.py` — seeds edra_lounge.db from 744 evaluation interactions
+- [x] 7 clusters with centroid embeddings + labels from real CRM data
+- [x] 7 rules (best strategy per cluster) with real reply rates
+- [x] PII stripped (no names/emails), source_kind="synthetic"
 
 ### Reading list
 - [x] Compiled 6 key papers (2026-05-20)

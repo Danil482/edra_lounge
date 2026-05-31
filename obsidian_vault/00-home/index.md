@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-29
+date: 2026-05-31
 ---
 
 # EDRA — Vault Home
@@ -80,9 +80,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-28: **UMAP production pipeline + strategy reclassification** — see [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
 - 2026-05-28 (PM): **Chi-squared test + evaluation reorganization** — see [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 - 2026-05-29: **Evaluation pipeline refactor + 3-level validation** — see [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
+- 2026-05-31: **Demo paper rewrite + eval seed from real data** — see [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
 
 ## Session log
 
+- [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
 - [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
 - [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 - [[../sessions/2026-05-28 UMAP production pipeline and strategy reclassification]]
