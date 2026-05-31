@@ -815,6 +815,10 @@ def main() -> None:
     n_saved = save_output(rows, labels, cluster_labels, output_path)
     print(f"\nFinal dataset: {n_saved} rows with cluster assignments (from {len(rows)} input)")
 
+    mask = labels != -1
+    np.save(UMAP_CACHE, reduced[mask])
+    print(f"Re-saved UMAP to {UMAP_CACHE} — filtered to {mask.sum()} non-noise rows")
+
 
 if __name__ == "__main__":
     main()

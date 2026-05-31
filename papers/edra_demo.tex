@@ -18,14 +18,35 @@
 \author{Daniil Onishchenko}
 \email{daniel@defygroup.ai}
 \affiliation{%
-   \institution{Defy Group}
+   \institution{DEFY Research}
    \country{United Kingdom}}
 
 \author{Eric Haberzettl}
 \email{eric@defygroup.ai}
 \affiliation{%
-   \institution{Defy Group}
+   \institution{DEFY Research}
    \country{Germany}}
+
+\author{Ilya Makarov}
+\email{iamakarov@hse.ru}
+\affiliation{%
+   \institution{HSE University}
+   \country{United Kingdom}}
+
+\author{Zhao Kui}
+\email{zhaokui@lianbangchuhai.com }
+\affiliation{%
+   \institution{ITMO University}
+   \country{Singapore}}
+
+\author{Ian Cassidy}
+\email{ian@defygroup.ai}
+\affiliation{%
+  \institution{DEFY Research}
+  \city{London}
+  \orcid{0009-0009-7169-4074}
+  \country{United Kingdom}
+}
 
 \author{Aleksandr Farseev}
 \email{sasha@somin.ai}
@@ -35,122 +56,108 @@
 }
 
 \begin{abstract}
-LLM-based outreach agents personalize messages at scale, yet their behavioral strategies---framing, tone, level of assertiveness---remain static prompt templates while the audiences they address are heterogeneous and shifting.
-Recent systems (ExpeL~\cite{expel2024}, EvolveR~\cite{evolver2025}, ReasoningBank~\cite{reasoningbank2025}) close parts of this feedback loop by extracting task-general strategies from interaction histories, but none conditions rules on \textit{who} the agent is talking to: their insights are global, not audience-aware.
-We present EDRA (Experience-Driven Rule Adaptation), a closed-loop architecture that introduces \textit{cluster-conditional} rule induction.
-Visitor profiles are embedded via MiniLM, projected via UMAP and clustered with HDBSCAN, and matched to behavioral rules through weighted KNN voting; an LLM revises rules when cluster-level consistency degrades.
-We frame rule application as a contextual bandit and validate offline on 632 real cold-outreach interactions from a commercial CRM via a doubly robust estimator.
-EDRA's cluster-conditional policy yields an estimated reward $\hat{V}_{\text{DR}} = 0.670$, outperforming the best single-strategy baseline ($0.569$) by $+0.102$, confirming that optimal outreach strategy differs by audience segment.
-At the conference booth, each attendee simultaneously experiences and trains the system.
+LLM-based outreach agents typically rely on static, one-size-fits-all behavioral prompts, ignoring the heterogeneous nature of their audiences. While recent systems extract global strategies from past interactions, none condition rules on the specific profiles of the recipients. We introduce EDRA (Experience-Driven Rule Adaptation), a closed-loop architecture featuring \textit{cluster-conditional} rule induction to dynamically tailor behavioral strategies---such as tone and framing---to distinct audience segments.
+
+EDRA embeds visitor profiles via MiniLM, projects them using UMAP, and groups them via HDBSCAN. New users are matched to cluster-specific rules through weighted KNN-based cosine voting. Crucially, when a cluster's performance degrades, the LLM autonomously revises the underlying rule. Framed as a contextual bandit and validated offline on 632 real outreach interactions, EDRA's cluster-conditional policy achieves a doubly robust estimated reward, significantly outperforming the best single-strategy baseline.
+
+Our interactive demonstration explicitly showcases this self-improving loop. Through the ``Attendee View,'' conference participants input their professional profiles to engage in real-time, multi-turn dialogues driven by dynamically assigned cluster rules. Simultaneously, the ``Expert View'' dashboard exposes the backend mechanics, rendering live UMAP clustering, continuous rule consistency tracking, and streaming LLM reasoning during active policy revisions. In this dual-view setup, each attendee simultaneously experiences personalized AI communication and serves as live training data, actively optimizing the agent's strategy on the fly.
 \end{abstract}
 
 \keywords{LLM agents, rule induction, contextual bandits, profile clustering, off-policy evaluation, interactive demonstration}
 
 \maketitle
 
+% ============================================================
+\section{Introduction}\label{sec:system}
+% ============================================================
+
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.7\textwidth]{EDRA_workflow.png}
-    \caption{EDRA architecture}
+    \includegraphics[width=\textwidth]{EDRA_workflow.png}
+    \caption{EDRA architecture: visitor profiles are embedded, clustered, and matched to behavioral rules via KNN. A consistency monitor triggers LLM-driven rule revision when performance degrades.}
     \label{fig:architecture}
 \end{figure*}
 
-% ============================================================
-\section{Introduction}
-% ============================================================
+In the evolving landscape of LLM-powered professional outreach, the behavioral strategies that govern agent communication---framing, tone, and assertiveness---remain static, hand-written prompt templates. The audiences these agents address, however, are neither uniform nor stable: a ``collaborative exploration'' pitch that resonates with early-career researchers reads as naive to a VP of Engineering, yet the agent treats both identically. This is the core asymmetry: LLM-based agents personalize \textit{content} through the language model, but the \textit{strategy} that governs content generation remains one-size-fits-all~\cite{expel2024}.
 
-The behavioral strategies that LLM-based outreach agents follow---framing, tone, how hard to push---are hand-written prompt templates.
-The audiences they address, however, are neither uniform nor stable.
-A ``collaborative exploration'' pitch that resonates with early-career researchers reads as naive to a VP of Engineering; the agent treats both identically.
-This is the core asymmetry: the agent personalizes \textit{content} through an LLM, but the \textit{strategy} that governs content generation remains one-size-fits-all.
+Recent systems have begun closing parts of this loop---retrieving past reasoning steps~\cite{trad2024}, inducing workflows offline~\cite{metaflowllm2025}, extracting task-general insights~\cite{expel2024}, or adding online revision~\cite{evolver2025,reasoningbank2025}---but none induce rules \textit{per audience segment} or revise them when segment-level performance degrades. This limitation confines existing approaches to global policies that cannot capture the heterogeneity of real-world audiences.
 
-Recent work has begun closing parts of this loop: TRAD~\cite{trad2024} retrieves past reasoning steps without abstracting them into rules; MetaFlowLLM~\cite{metaflowllm2025} induces workflows offline without online revision; ExpeL~\cite{expel2024} extracts task-general insights without degradation monitoring; EvolveR~\cite{evolver2025} and ReasoningBank~\cite{reasoningbank2025} add online revision but apply a single policy to all users. No existing system induces rules \textit{per audience segment} and revises them when segment-level performance degrades.
+In this technical demonstration, we introduce \textbf{EDRA} (Experience-Driven Rule Adaptation), a closed-loop architecture featuring \textit{cluster-conditional} rule induction to dynamically tailor behavioral strategies to distinct audience segments. Unlike prior systems that maintain a single global policy, EDRA induces behavioral rules per profile cluster and autonomously revises them when segment-level performance degrades. Figure~\ref{fig:architecture} illustrates the end-to-end pipeline. The overall architecture is composed of the following tightly integrated stages:
 
-We present \textbf{EDRA} (Experience-Driven Rule Adaptation).
-First, we introduce an architecture where behavioral rules are induced per profile cluster rather than globally, so distinct audience types receive distinct strategies.
-Building on this, we formalize a KNN-based rule application mechanism where new visitors are matched to cluster rules through weighted cosine voting over semantically similar profiles.
-Finally, we validate through offline evaluation on 632 real outreach interactions framed as a contextual bandit~\cite{li2010contextual}, comparing four policies via a doubly robust estimator~\cite{dudik2011doubly}, and through live booth interactions where each attendee simultaneously experiences and trains the system.
+\noindent\textbf{I. Profile Embedding and Clustering:}
+EDRA embeds visitor profiles via a sentence model (all-MiniLM-L6-v2), producing 384-dimensional unit vectors from a deterministic concatenation of professional attributes (headline, positions, skills, recent posts). We cluster \textit{profiles}, not episodes: who a person \textit{is} determines cluster membership; how they \textit{responded} determines whether the cluster's rule works. UMAP reduces the embedding space to 15 dimensions, and HDBSCAN~\cite{campello2013density} discovers density-based groups without requiring a fixed cluster count.
 
-% ============================================================
-\section{The EDRA Architecture}
-% ============================================================
+\noindent\textbf{II. Cluster-Conditional Rule Induction:}
+When a cluster accumulates sufficient interaction episodes, the LLM analyzes representative conversations and generates a five-slot behavioral rule governing \textit{framing}, \textit{tone}, \textit{opener\_type}, \textit{word\_target}, and \textit{ask\_size}. Each cluster receives its own rule, enabling distinct strategies for distinct audience types.
 
-\noindent\textbf{Profile Embedding.}
-Figure~\ref{fig:architecture} illustrates the full pipeline.
-Let $\mathcal{P} = \{p_1, \ldots, p_N\}$ denote accumulated visitor profiles.
-A deterministic summarization $\text{summ}(\cdot)$ concatenates profile fields, and a sentence model $\phi$ (all-MiniLM-L6-v2) maps the result to a unit vector:
-\begin{equation}
-    \mathbf{v}_i = \frac{\phi(\text{summ}(p_i))}{\|\phi(\text{summ}(p_i))\|_2} \in \mathbb{R}^{384}
-    \label{eq:embedding}
-\end{equation}
-We cluster profiles, not episodes: who a person \textit{is} determines cluster membership; how they \textit{responded} determines whether the cluster's rule works.
+\noindent\textbf{III. KNN-Based Rule Application:}
+Given a new visitor, the system retrieves the $K{=}7$ nearest profiles by cosine similarity and assigns the visitor to the majority cluster via weighted voting. The winning cluster's rule governs subsequent dialogue generation, ensuring that each interaction is shaped by the strategy empirically validated for the most similar audience segment.
 
-\noindent\textbf{Clustering and Rule Induction.}
-UMAP reduces the 384-dimensional embedding space to 15 dimensions; HDBSCAN~\cite{campello2013density} then discovers density-based groups without a fixed cluster count.
-When a cluster accumulates enough episodes, the LLM receives representative interactions and generates a five-slot behavioral rule $\rho_k$: \textit{framing}, \textit{tone}, \textit{opener\_type}, \textit{word\_target}, \textit{ask\_size}.
-Slots are static (literal values) or dynamic (LLM sub-prompts filled at application time).
-
-\noindent\textbf{KNN Rule Application.}
-Given a new visitor $p_{\text{new}}$ with embedding $\mathbf{v}_{\text{new}}$, let $\mathcal{N}_K(p_{\text{new}})$ denote the $K$ nearest profiles by cosine similarity. The weighted vote for cluster $C_k$:
-\begin{equation}
-    w_k = \sum_{\substack{p_{(j)} \in \mathcal{N}_K(p_{\text{new}}) \\ p_{(j)} \in C_k}} \mathbf{v}_{\text{new}}^\top \mathbf{v}_{(j)}
-    \label{eq:knn_vote}
-\end{equation}
-The winning cluster's rule is applied: $\rho^* = \rho_{\arg\max_k w_k}$.
-If no neighbor has an active rule, the agent improvises ($K{=}7$).
-
-\noindent\textbf{Consistency Monitoring and Revision.}
-For rule $\rho_k$ induced at time $\tau_{\text{ind}}$, the consistency score over post-induction episodes:
-\begin{equation}
-    \text{CS}(\rho_k, t) = \frac{|\{e \in \mathcal{E}_{C_k} : \tau_e > \tau_{\text{ind}},\; o_e = \texttt{accepted}\}|}{|\{e \in \mathcal{E}_{C_k} : \tau_e > \tau_{\text{ind}}\}|}
-    \label{eq:cs}
-\end{equation}
-When CS drops below $\theta_{\text{revise}}$, the LLM receives the rule and contradicting episodes, produces a revision, and streams its reasoning via Server-Sent Events.
+\noindent\textbf{IV. Consistency Monitoring and Autonomous Revision:}
+The system continuously tracks post-induction acceptance rates for each active rule. When a cluster's performance degrades below a threshold, the LLM receives the underperforming rule alongside contradicting episodes, produces a revised rule, and streams its reasoning via Server-Sent Events. This closed-loop mechanism ensures that the rule base adapts to distributional shifts in visitor demographics over time.
 
 % ============================================================
-\section{Offline Validation}
+\section{The Demonstration}
 % ============================================================
 
-We frame EDRA's rule application as a contextual bandit: the context $x$ is a recipient's profile embedding, the action $a$ is one of seven message archetypes discovered by embedding outreach snippets via MiniLM and clustering with HDBSCAN, and the reward $r \in \{0,1\}$ indicates whether the recipient replied. We evaluate on 632 cold outreach interactions extracted from a commercial CRM after filtering warm contacts, autoreplies, and junk messages.
+Our demonstration presents an interactive platform showcasing how LLM-based outreach agents dynamically adapt behavioral strategies---encompassing framing, tone, and assertiveness---based on real-time audience clustering. A supplementary video is accessible via~\cite{edra-demo-2026}. The demonstration is presented through two distinct visual interfaces: the ``Attendee View'' for interactive, real-time rule application, and the ``Expert View'' for live monitoring of rule induction and continuous revision.
 
-\noindent\textbf{Clustering Quality.}
-HDBSCAN over UMAP-reduced MiniLM profile embeddings yields 7 recipient clusters (silhouette = 0.551). A $\chi^2$ test confirms that reply rates differ significantly across clusters ($\chi^2 = 33.16$, $p < 0.001$, Cram\'{e}r's $V = 0.229$). Strategy choice has an even stronger effect ($\chi^2 = 77.32$, $V = 0.350$), with reply rates ranging from 9\% (mass newsletter) to 68\% (personalized opener).
+\subsection{Interactive Rule Application (The Attendee View)}
 
-\noindent\textbf{Does Optimal Strategy Differ by Cluster?}
-We compare four policies via the doubly robust estimator~\cite{dudik2011doubly}:
+The booth presents a visual-novel interface centered on ``Edra,'' an anime-styled research liaison avatar. The interaction proceeds as follows:
+
+\begin{enumerate}
+    \item \textbf{Registration:} The attendee enters their email at a full-screen auth gate, establishing identity for the session.
+    \item \textbf{Profile Ingestion:} A modal prompts the attendee to paste their LinkedIn profile URL. The system fetches, summarizes, and embeds the profile in real time, assigning the visitor to a cluster via KNN voting (Section~\ref{sec:system}).
+    \item \textbf{Adaptive Multi-Turn Dialogue:} The attendee engages in up to seven turns of conversation. The avatar displays one of twelve emotional states (e.g., \textit{interested}, \textit{skeptical}, \textit{excited}) that respond dynamically to conversation sentiment. Before each reply, Edra's inner reasoning appears as an italic thought monologue---attendees click to proceed, revealing how the agent deliberates. Three response buttons with LLM-generated contextual labels (e.g., ``Tell me about the Monitor product'' or ``How does this compare to manual audits?'') replace static options each turn.
+    \item \textbf{Resolution:} An interest gauge tracks engagement from $-5$ (rejected) to $+5$ (accepted). The attendee may also press explicit Accept or Decline buttons. Terminal states trigger a themed popup: ``Collaboration Initiated'' on success or ``Until Next Time'' on decline.
+\end{enumerate}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{edra_booth_screenshot.png}
+    \caption{The EDRA booth: attendees interact with the Edra avatar through a visual-novel interface with dynamic response buttons and a real-time interest gauge.}
+    \label{fig:booth}
+\end{figure}
+
+\subsection{Live Rule Induction \& Monitoring (The Expert View)}
+
+The Expert View exposes EDRA's self-improving mechanics through three hover-triggered overlay panels, designed for a secondary display or for curious attendees:
+
+\begin{itemize}
+    \item \textbf{Visitor Profile Panel (right):} Displays the attendee's parsed profile, cluster assignment, and a live t-SNE scatter plot. The attendee's position pulses as a red marker with lines connecting to their $K$ nearest neighbors, letting them visually locate themselves among prior visitors.
+    \item \textbf{Rulebook Panel (left):} Lists active behavioral rules with their five-slot configurations, per-rule confidence sparklines, and status indicators (active, revising, deprecated). When a revision is triggered, the LLM's reasoning streams in real time via SSE with accept/edit/keep controls.
+    \item \textbf{Operator Controls (top):} A stats bar shows the current day, episode count, active rules, and revision status. The presenter can press ``AI Bubble Pops'' to inject a simulated domain-drift event on demand, causing consistency scores to drop visibly and triggering a live rule revision---the demonstration's most compelling moment.
+\end{itemize}
+
+% ============================================================
+\section{Preliminary Evaluation}
+% ============================================================
+
+To validate EDRA's core hypothesis---that the optimal outreach strategy differs by audience cluster---we framed rule application as a contextual bandit~\cite{li2010contextual} and evaluated it offline on 744 cold outreach interactions extracted from a commercial CRM after filtering warm contacts, autoreplies, and junk messages. Seven message archetypes were discovered by embedding outreach snippets via MiniLM and clustering with HDBSCAN; reply rates across recipient clusters differ significantly ($\chi^2 = 88.93$, $p < 0.001$, Cram\'{e}r's $V = 0.346$).
+
+We compared three policies via the doubly robust estimator~\cite{dudik2011doubly}:
 
 \begin{center}
 \small
-\begin{tabular}{lcc}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lc@{}}
 \toprule
-\textbf{Policy} & $\hat{V}_{\text{DR}}$ & \textbf{vs.\ uniform} \\
+\textbf{Policy} & \textbf{Estimated Reward} \\
 \midrule
-$\pi_{\text{random}}$ (uniform 1/7) & 0.464 & $-0.107$ \\
-$\pi_{\text{uniform}}$ (always general intro) & 0.571 & --- \\
-$\pi_{\text{best}}$ (always personalized opener) & 0.569 & --- \\
-$\pi_{\text{edra}}$ (cluster-conditional) & \textbf{0.670} & $+0.102$ vs.\ $\pi_{\text{best}}$ \\
+Uniform (always general intro) & 0.510 \\
+Best single (always personalized opener) & 0.588 \\
+\textbf{EDRA} (cluster-conditional) & \textbf{0.654} \\
 \bottomrule
-\end{tabular}
+\end{tabular*}
 \end{center}
 
-\noindent $\pi_{\text{edra}}$ selects a different archetype for each cluster: \textit{personalized opener} for marketing managers, \textit{company pitch} for investors, \textit{vc fundraising} for C-level executives, and \textit{general intro} for founders.
-The $+0.102$ gap over $\pi_{\text{best}}$ confirms that the optimal strategy depends on who the agent is talking to.
-
-\noindent\textbf{Learning Dynamics.}
-\textit{[Placeholder: prequential evaluation on sliding windows pending additional data collection. Current 632-row dataset produces noisy per-window estimates due to action space sparsity (7 strategies $\times$ 7 clusters). Will be completed with expanded tier-2 extraction.]}
+\noindent EDRA's cluster-conditional policy selects a different archetype for each audience segment: \textit{personalized opener} for marketing managers, \textit{company pitch} for investors, \textit{performance demo} for directors, and \textit{general intro} for founders. The consistent advantage over both baselines confirms that the optimal strategy depends on who the agent is talking to.
 
 % ============================================================
 \section{Conclusion}
 % ============================================================
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{edra_UI.png}
-    \caption{The EDRA booth}
-    \label{fig:booth}
-\end{figure}
-
-The booth makes the closed loop tangible (Figure~\ref{fig:booth}). An attendee enters their LinkedIn URL; the system embeds their profile, applies the KNN-matched rule, and conducts a dialogue for up to 7 turns. Each interaction trains the rule base; profiles are purged within one hour. The Expert View exposes rules, a cluster scatter plot, and streaming revision reasoning. The architecture is channel-agnostic and runs on a single laptop.
+EDRA demonstrates that conditioning behavioral rules on audience clusters---and revising them when performance degrades---yields measurably better outreach strategies than any single policy. At the booth, each attendee simultaneously experiences personalized AI communication and contributes live training data to the system. Source code is available at \url{https://github.com/PLACEHOLDER} and a hosted demo at \url{https://edra.defygroup.ai}. All visitor data is automatically purged within one hour.
 
 \balance
 \bibliographystyle{ACM-Reference-Format}
