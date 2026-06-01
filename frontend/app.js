@@ -13,7 +13,6 @@
 
 const POLL_MS = 1000;
 const TYPEWRITER_CPS = 30;
-const SPAWNABLE_ROTATION = ['arch_journalist_curious', 'arch_vc_investor'];
 
 const IDLE_ARCHETYPES = [
   'Next visitor could be a Curious Journalist...',
@@ -38,19 +37,22 @@ const ARCHETYPE_LABELS = {
   arch_student_enthusiast: 'The Enthusiast',
 };
 
+// Live cluster id → display label, rebuilt every cluster-viz poll from the
+// /api/cluster-viz `clusters` array. Seeded real clusters are not in the
+// hardcoded ARCHETYPE_LABELS map, so this is the authoritative source.
+const clusterLabelById = {};
+
 const AUTH_EMAIL_RE = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
 
 const WELCOME_TEXT = "Hi! I'm Edra, a research liaison from the DEFY Lab. I help connect researchers with collaborative opportunities. Ready to learn about what we can offer based on your profile?";
 
 const state = {
-  expertOn: true,
   lastUtterance: null,
   lastInterest: null,
   typewriterTimer: null,
   activeRevisionId: null,
   eventSource: null,
   currentSessionId: null,
-  spawnIdx: 0,
   liveMode: false,
   syntheticArchetypes: [],
   pendingLiveUrl: null,
@@ -67,6 +69,9 @@ const state = {
   awaitingLLM: false,
   thoughtPending: false,
   pendingReply: null,
+  pollTimer: null,
+  clusterVizTimer: null,
+  booted: false,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -141,10 +146,6 @@ function getEmotion(session) {
   return 'greeting';
 }
 
-function pad2(n) {
-  return String(n).padStart(2, '0');
-}
-
 // ── Polling + state apply ────────────────────────────────────────────
 
 async function poll() {
@@ -171,13 +172,17 @@ function applyState(s) {
 }
 
 function applyTopStats(s) {
-  const day = (s.clock && s.clock.day) || 1;
-  setText('#stat-day', `Day ${pad2(day)}`);
-  setText('#stat-episodes', (s.recent_episodes || []).length);
+  const episodes = (s.recent_episodes || []).length;
   const activeRules = (s.rules || []).filter(r => r.status === 'active').length;
+  const revising = s.active_revision ? 1 : 0;
+  setText('#stat-episodes', episodes);
   setText('#stat-rules', activeRules);
-  setText('#stat-revising', s.active_revision ? 1 : 0);
-  setText('#stat-specialists', (s.agents || []).length);
+  setText('#stat-revising', revising);
+
+  const strip = document.querySelector('.edge-top');
+  if (strip) {
+    strip.dataset.label = `▼  EDRA  ·  ${episodes} EPISODES  ·  ${activeRules} RULES  ·  ${revising} REVISING  ▼`;
+  }
 }
 
 // pick the most-recent DialogueStep we should display
@@ -540,6 +545,11 @@ function applyRulebook(rules) {
   const deprecated = rules.filter(r => r.status === 'deprecated').length;
   const revising = rules.filter(r => r.status === 'under_revision').length;
 
+  const strip = document.querySelector('.edge-left');
+  if (strip) {
+    strip.dataset.label = `◀  RULEBOOK  ·  ${active} ACTIVE  ·  ${revising} REVISING  ·  HOVER`;
+  }
+
   if (rules.length === 0) {
     if (meta) meta.textContent = '— no rules induced yet —';
     list.innerHTML = '<div class="rules-empty">— no rules induced yet —</div>';
@@ -574,7 +584,9 @@ function renderRule(rule) {
   if (rule.status === 'under_revision') cls.push('-revising');
   if (rule.status === 'deprecated') cls.push('-deprecated');
 
-  const clusterLabel = ARCHETYPE_LABELS[rule.cluster_id] || rule.cluster_id;
+  const clusterLabel = clusterLabelById[rule.cluster_id]
+    || ARCHETYPE_LABELS[rule.cluster_id]
+    || rule.cluster_id;
 
   if (rule.status === 'deprecated') {
     return `
@@ -729,8 +741,10 @@ function applyVisitor(currentSession, recentEpisodes) {
 
   const profile = currentSession ? currentSession.profile : null;
   const meta = $('#visitor-meta');
+  const strip = document.querySelector('.edge-right');
 
   if (!profile) {
+    if (strip) strip.dataset.label = '◀  SUBJECT  ·  NO ACTIVE SESSION  ·  HOVER';
     if (meta) meta.textContent = '— no active session —';
     setText('#visitor-name', '—');
     setText('#visitor-role', '—');
@@ -745,14 +759,20 @@ function applyVisitor(currentSession, recentEpisodes) {
     return;
   }
 
+  const clusterId = currentSession.cluster_id;
+  const clusterName = clusterId
+    ? (clusterLabelById[clusterId] || ARCHETYPE_LABELS[clusterId] || clusterId)
+    : null;
+
   if (meta) {
-    const clLabel = ARCHETYPE_LABELS[currentSession.cluster_id] || currentSession.cluster_id || '—';
+    const clLabel = clusterName || 'unclustered';
     meta.textContent = `${profile.source_kind} · ${clLabel}`;
   }
+  if (strip) strip.dataset.label = `◀  SUBJECT  ·  ${profile.name}  ·  HOVER`;
   setText('#visitor-name', profile.name);
   setText('#visitor-role', profile.role);
-  setText('#visitor-archetype', ARCHETYPE_LABELS[currentSession.cluster_id] || profile.id);
-  setText('#visitor-cluster', ARCHETYPE_LABELS[currentSession.cluster_id] || currentSession.cluster_id || '—');
+  setText('#visitor-archetype', clusterName || 'Unclustered — improvising');
+  setText('#visitor-cluster', clusterName || '—');
   setText('#visitor-seniority', profile.seniority);
   setText('#visitor-domain', profile.domain);
   setText('#visitor-source', profile.source_kind);
@@ -916,45 +936,18 @@ $('#resolve-decline')?.addEventListener('click', () => handleResolve('decline'))
 
 // ── Operator buttons ─────────────────────────────────────────────────
 
-$('#op-drift')?.addEventListener('click', async () => {
-  await postJSON('/simulator/drift/ai_bubble_pops').catch(e => console.warn(e));
+// Inject Contradiction — no body; the backend picks the largest cluster.
+$('#op-inject')?.addEventListener('click', async () => {
+  await postJSON('/simulator/inject_contradiction', {})
+    .catch(e => console.warn(e));
 });
 
-$('#op-segment')?.addEventListener('click', async () => {
-  const id = SPAWNABLE_ROTATION[state.spawnIdx % SPAWNABLE_ROTATION.length];
-  state.spawnIdx += 1;
-  await postJSON('/simulator/inject_archetype', { archetype_id: id }).catch(e => console.warn(e));
-});
+// ── Reflection console — single OK (preview, no real rule change) ─────
 
-$('#op-expert')?.addEventListener('click', () => {
-  state.expertOn = !state.expertOn;
-  document.body.classList.toggle('expert-off', !state.expertOn);
-  const btn = $('#op-expert');
-  if (btn) btn.textContent = state.expertOn ? 'Expert · On' : 'Expert · Off';
-});
-
-// ── Reflection accept/edit/keep ──────────────────────────────────────
-
-$('#refl-accept')?.addEventListener('click', async () => {
-  if (!state.activeRevisionId) return;
-  await postJSON(`/revisions/${state.activeRevisionId}/decision`, { decision: 'accepted' })
-    .catch(e => console.warn('accept', e));
-  await poll();
-});
-
-$('#refl-keep')?.addEventListener('click', async () => {
-  if (!state.activeRevisionId) return;
-  await postJSON(`/revisions/${state.activeRevisionId}/decision`, { decision: 'rejected' })
-    .catch(e => console.warn('keep', e));
-  await poll();
-});
-
-$('#refl-edit')?.addEventListener('click', async () => {
-  // Phase 2 keeps "Edit" minimal: same as Accept (operator can edit slots in a
-  // future inline form). The endpoint accepts an `edited_rule` payload too.
-  if (!state.activeRevisionId) return;
-  await postJSON(`/revisions/${state.activeRevisionId}/decision`, { decision: 'edited' })
-    .catch(e => console.warn('edit', e));
+// "OK" acknowledges the preview and rolls everything back: deletes the
+// injected episodes + pending revision and restores the rule to active.
+$('#refl-ok')?.addEventListener('click', async () => {
+  await postJSON('/simulator/reset_injection', {}).catch(e => console.warn('ok', e));
   await poll();
 });
 
@@ -1027,7 +1020,34 @@ function hideEndDialog() {
   state.thoughtPending = false;
   state.pendingReply = null;
   state.lastEmotion = null;
-  showWelcome();
+  resetAuthGate();
+}
+
+function resetAuthGate() {
+  state.visitorId = null;
+  state.visitorEmail = null;
+
+  const overlay = $('#auth-overlay');
+  const input = $('#auth-email');
+  const submit = $('#auth-submit');
+  const error = $('#auth-error');
+
+  if (input) {
+    input.value = '';
+    input.classList.remove('-invalid');
+  }
+  if (error) error.textContent = '';
+  if (submit) submit.disabled = true;
+
+  // Reverse exactly what the submit handler did when it faded the gate out.
+  if (overlay) {
+    overlay.classList.remove('-fading');
+    overlay.style.display = '';
+  }
+  const stage = $('#stage');
+  if (stage) stage.style.display = 'none';
+
+  if (input) input.focus();
 }
 
 $('#end-btn')?.addEventListener('click', hideEndDialog);
@@ -1071,6 +1091,7 @@ function renderClusterViz(data) {
 
   if (placeholder) placeholder.classList.add('-hidden');
 
+  rebuildClusterLabels(data.clusters);
   drawScatterPlot(canvas, data);
   renderLegend(legend, data.clusters);
   renderNeighbors(neighborsList, data.neighbors, data.archetype_label);
@@ -1195,6 +1216,13 @@ function hexToRGBA(hex, alpha) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function rebuildClusterLabels(clusters) {
+  if (!clusters) return;
+  for (const c of clusters) {
+    clusterLabelById[c.id] = c.archetype || c.label || c.id;
+  }
 }
 
 function renderLegend(el, clusters) {
@@ -1383,9 +1411,16 @@ function showSessionStartDialog(welcomeBtn, choices, resolveAccept, resolveDecli
 
   function startPolling() {
     poll();
-    setInterval(poll, POLL_MS);
     pollClusterViz();
-    setInterval(pollClusterViz, CLUSTER_VIZ_POLL_MS);
+    // Guard against stacking a fresh pair of intervals on every session start —
+    // hideEndDialog → showWelcome → showSessionStartDialog re-enters this path,
+    // and unguarded setInterval would leave the old pollers running forever.
+    if (state.pollTimer == null) {
+      state.pollTimer = setInterval(poll, POLL_MS);
+    }
+    if (state.clusterVizTimer == null) {
+      state.clusterVizTimer = setInterval(pollClusterViz, CLUSTER_VIZ_POLL_MS);
+    }
   }
 
   function closeAndRestore() {
@@ -1426,7 +1461,13 @@ function showSessionStartDialog(welcomeBtn, choices, resolveAccept, resolveDecli
       }
     }
   };
-  $('#session-start-live-go')?.addEventListener('click', liveGoHandler);
+  const liveGoBtn = $('#session-start-live-go');
+  // The previous session disabled this button on submit and never re-enabled it
+  // on the success path. cloneNode(true) above copies the reflected `disabled`
+  // attribute, so without this the second open is born disabled and the dialog
+  // is stuck. Clear it every time the dialog opens.
+  if (liveGoBtn) liveGoBtn.disabled = false;
+  liveGoBtn?.addEventListener('click', liveGoHandler);
   $('#session-start-url')?.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') await liveGoHandler();
     else if (e.key === 'Escape') closeAndRestore();
@@ -1447,11 +1488,14 @@ function setSessionStartStatus(msg, kind) {
 }
 
 async function bootAfterAuth() {
-  ['idle','greeting','interested-low','interested-high','excited','thinking',
-   'skeptical-low','skeptical-high','disappointed-low','disappointed-high','sad','surprised'
-  ].forEach(e => { const i = new Image(); i.src = `assets/avatar/edra-${e}.png?v=2`; });
+  if (!state.booted) {
+    state.booted = true;
+    ['idle','greeting','interested-low','interested-high','excited','thinking',
+     'skeptical-low','skeptical-high','disappointed-low','disappointed-high','sad','surprised'
+    ].forEach(e => { const i = new Image(); i.src = `assets/avatar/edra-${e}.png?v=2`; });
 
-  await bootSources();
+    await bootSources();
+  }
   showWelcome();
 }
 

@@ -134,8 +134,8 @@ The repo's `.gitignore` should list each of these. If you add a new generated ar
   - `llm/` — three-mode client (`local` / `remote` / `openai`) over httpx, no SDK
   - `routers/` — FastAPI endpoints (`sessions`, `state`, `reflections`, `rules`, `clusters`)
 - **Frontend** (`frontend/`)
-  - `index.html` + `styles.css` + `app.js` — vanilla, polling `GET /state` every 1s, SSE on revisions
-  - `edra_pitch_mockup.html` — the source-of-truth mockup; the live frontend is a verbatim port
+  - `index.html` + `styles.css` + `app.js` — vanilla, polling `GET /state` every 1s, SSE on revisions. **This is the source of truth for the frontend.**
+  - `edra_pitch_mockup.html` — **DEPRECATED / stale.** Originally the source-of-truth mockup that the live frontend was a verbatim port of, but the live frontend has since diverged (operator panel collapsed to a single Inject Contradiction control, single-OK revision preview, dynamic edge-handle bars, email-gate reset between visitors, out-of-distribution → improvise). Do not treat the mockup as authoritative and do not port from it; the live `index.html`/`app.js`/`styles.css` lead.
 
 ## Architectural invariants — do not violate without discussion
 

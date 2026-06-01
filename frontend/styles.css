@@ -868,7 +868,7 @@ body {
   padding-left: 180px;     /* clear the wordmark */
   padding-right: 280px;    /* clear the EDRA mark */
 }
-.edge-top::after { content: '▼  EDRA · DAY 03  ·  47 EPISODES  ·  5 RULES  ▼'; }
+.edge-top::after { content: attr(data-label); }
 
 .edge-right {
   top: 28px; bottom: 92px;
@@ -880,7 +880,7 @@ body {
   padding: 18px 0;
   letter-spacing: 6px;
 }
-.edge-right::after { content: '◀  SUBJECT №47  ·  MAYA LIANG  ·  HOVER'; }
+.edge-right::after { content: attr(data-label); }
 
 .edge-left {
   top: 28px; bottom: 92px;
@@ -892,7 +892,7 @@ body {
   padding: 18px 0;
   letter-spacing: 6px;
 }
-.edge-left::after { content: '◀  RULEBOOK  ·  R.07 FIRING  ·  R.12 REVISING'; }
+.edge-left::after { content: attr(data-label); }
 
 .panel {
   position: absolute;
@@ -1408,6 +1408,16 @@ body {
 }
 @keyframes warnBlink { 50% { opacity: 0.4; } }
 
+.refl-preview-note {
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: var(--cream-faint);
+  margin-bottom: 12px;
+}
+
 .refl-text {
   font-family: var(--f-display);
   font-style: italic;
@@ -1535,6 +1545,30 @@ body {
 .btn-op:last-child { border-right: none; }
 .btn-op:hover { background: var(--warm-white); color: var(--black); }
 .btn-op.-danger:hover { background: var(--defy-red); color: var(--warm-white); }
+.btn-op.-select {
+  letter-spacing: 1px;
+  padding-right: 28px;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--warm-white) 50%),
+    linear-gradient(135deg, var(--warm-white) 50%, transparent 50%);
+  background-position:
+    right 14px center,
+    right 9px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.btn-op.-select:hover {
+  background-color: var(--warm-white);
+  color: var(--black);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--black) 50%),
+    linear-gradient(135deg, var(--black) 50%, transparent 50%);
+}
+.btn-op.-select option { background: var(--black); color: var(--warm-white); }
 
 /* mockup note */
 .mockup-note {

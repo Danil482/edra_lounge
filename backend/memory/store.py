@@ -191,6 +191,16 @@ async def episodes_for_cluster(
     return [_episode_from_row(r) for r in result.scalars()]
 
 
+async def delete_episodes(session: AsyncSession, episode_ids: list[str]) -> int:
+    if not episode_ids:
+        return 0
+    result = await session.execute(
+        delete(models.EpisodeRow).where(models.EpisodeRow.id.in_(episode_ids))
+    )
+    await session.commit()
+    return result.rowcount or 0
+
+
 # ── Rules ─────────────────────────────────────────────────────────────────
 
 def _rule_from_row(row: models.RuleRow) -> schemas.Rule:
@@ -339,7 +349,7 @@ async def save_revision(session: AsyncSession, r: schemas.Revision) -> schemas.R
         triggered_at=r.triggered_at,
         contradicting_episode_ids=list(r.contradicting_episode_ids),
         llm_reasoning=r.llm_reasoning,
-        proposed_rule=r.proposed_rule.model_dump(),
+        proposed_rule=r.proposed_rule.model_dump(mode="json"),
         decision=r.decision,
         resolved_at=r.resolved_at,
     )
@@ -372,11 +382,19 @@ async def update_revision(
     if llm_reasoning is not None:
         row.llm_reasoning = llm_reasoning
     if proposed_rule is not None:
-        row.proposed_rule = proposed_rule.model_dump()
+        row.proposed_rule = proposed_rule.model_dump(mode="json")
     if resolved_at is not None:
         row.resolved_at = resolved_at
     await session.commit()
     return _revision_from_row(row)
+
+
+async def delete_revision(session: AsyncSession, revision_id: str) -> bool:
+    result = await session.execute(
+        delete(models.RevisionRow).where(models.RevisionRow.id == revision_id)
+    )
+    await session.commit()
+    return bool(result.rowcount)
 
 
 async def pending_revision_for_rule(
@@ -386,6 +404,20 @@ async def pending_revision_for_rule(
         select(models.RevisionRow)
         .where(models.RevisionRow.rule_id == rule_id)
         .where(models.RevisionRow.decision == "pending")
+        .order_by(models.RevisionRow.triggered_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    row = result.scalars().first()
+    return _revision_from_row(row) if row else None
+
+
+async def latest_revision_for_rule(
+    session: AsyncSession, rule_id: str
+) -> schemas.Revision | None:
+    stmt = (
+        select(models.RevisionRow)
+        .where(models.RevisionRow.rule_id == rule_id)
         .order_by(models.RevisionRow.triggered_at.desc())
         .limit(1)
     )

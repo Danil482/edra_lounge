@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import logging
+import os
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -93,6 +95,25 @@ STRATEGY_TO_RULE = {
 SLOT_NAMES = ["framing", "tone", "opener_type", "word_target", "ask_size"]
 
 MIN_SAMPLES_FOR_BEST = 5
+
+log = logging.getLogger(__name__)
+
+
+def _names_enabled() -> bool:
+    """LOCAL-ONLY toggle. When SEED_WITH_NAMES is truthy, the seeded DB stores
+    real CRM person names instead of anonymized cluster labels. The resulting
+    DB contains PII and must NEVER be deployed to the booth/public — it is for
+    manually verifying clustering quality on the dev machine only."""
+    return os.environ.get("SEED_WITH_NAMES", "").strip().lower() in ("1", "true", "yes")
+
+
+def _choose_profile_name(real_name: str | None, cluster_label: str, idx: int, *, with_names: bool) -> str:
+    """Anonymized label by default; real name only when explicitly opted in.
+    Falls back to the anonymized form if a row has no usable name."""
+    anonymized = f"{cluster_label} #{idx}"
+    if with_names and real_name and real_name.strip():
+        return real_name.strip()
+    return anonymized
 
 
 def _normalize_strategy(raw: str) -> str:
@@ -183,6 +204,15 @@ async def seed_from_eval() -> None:
 
     print(f"Loaded {len(all_rows)} rows from {DATASET_PATH}")
 
+    with_names = _names_enabled()
+    if with_names:
+        # LOCAL-ONLY: the DB will hold real CRM person names (PII).
+        log.warning(
+            "SEED_WITH_NAMES is ON — seeding edra_lounge.db with REAL person names (PII). "
+            "This DB is for local clustering verification only and must NEVER be deployed."
+        )
+        print("WARNING: seeding with REAL names (PII) — local verification only, do NOT deploy this DB")
+
     clusters: dict[str, list[dict]] = defaultdict(list)
     for row in all_rows:
         clusters[row["cluster_label"]].append(row)
@@ -257,7 +287,7 @@ async def seed_from_eval() -> None:
                 id=profile_id,
                 source_kind="synthetic",
                 source_identifier=f"eval_dataset:{i}",
-                name=f"{cluster_label} #{i}",
+                name=_choose_profile_name(row.get("name"), cluster_label, i, with_names=with_names),
                 role=job_title,
                 domain=organization,
                 seniority=_infer_seniority(job_title),

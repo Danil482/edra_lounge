@@ -84,6 +84,11 @@ class Orchestrator:
         self.active_session: schemas.SessionSnapshot | None = None
         self.live_session_active: bool = False
 
+        # Demo-theater contradiction injection (reversible) — tracks rows
+        # created by POST /simulator/inject_contradiction so reset can undo them.
+        self.injected_episode_ids: list[str] = []
+        self.injected_rule_id: str | None = None
+
     # ── lifecycle ────────────────────────────────────────────────────────
 
     async def start(self) -> None:

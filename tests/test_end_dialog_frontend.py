@@ -86,3 +86,30 @@ def test_end_card_success_css_defined():
 def test_end_card_failure_css_defined():
     css = _read("styles.css")
     assert ".-failure" in css
+
+
+# ── second-conversation regression (start → end → start) ───────────────
+#
+# Root cause: liveGoHandler set the Fetch&Start button's `disabled` property on
+# submit and only re-enabled it on the error path. teardown() (success) never
+# re-enabled it, and cloneNode(true) in the next showSessionStartDialog open
+# copies the reflected `disabled` attribute — so the second open was born
+# disabled and clicking it did nothing, leaving the dialog stuck open.
+
+
+def test_session_start_dialog_reenables_go_button_on_open():
+    """The dialog-open path must clear `disabled` on the Fetch&Start button so
+    the second conversation can be started."""
+    js = _read("app.js")
+    func = js[js.index("function showSessionStartDialog("):]
+    func = func[: func.index("\nfunction ")]
+    # Inside the dialog-open function, the go button must be explicitly enabled.
+    assert "liveGoBtn.disabled = false" in func
+
+
+def test_start_polling_guards_against_stacked_intervals():
+    """startPolling must not stack a fresh setInterval pair on every session
+    start, or each re-entry leaks a new poller."""
+    js = _read("app.js")
+    assert "state.pollTimer == null" in js
+    assert "state.clusterVizTimer == null" in js

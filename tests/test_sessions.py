@@ -306,6 +306,73 @@ async def test_run_synthetic_session_with_best_combo_accepts(db_factory, profile
     assert episode.rule_applied_top == "R.01"
 
 
+# ── repeated sessions (booth: start → end → start) ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_start_end_start_same_profile_succeeds(db_factory, profile_source):
+    """The booth runs back-to-back live visits: a session must be startable
+    again with the SAME identifier after the previous one ended. Regression
+    guard for the second-conversation bug — `upsert_profile` must not collide
+    and the active-session pointer must be reusable."""
+    async with db_factory() as db:
+        sess1, first1 = await lifecycle.start_session(
+            db=db,
+            profile_source=profile_source,
+            source_kind="synthetic",
+            identifier="arch_phd_nlp_introvert",
+            day=1,
+        )
+        assert session_store_mod.session_store.active_id == sess1.id
+
+        await lifecycle.end_session(db=db, session_id=sess1.id)
+        assert session_store_mod.session_store.active_id is None
+
+        sess2, first2 = await lifecycle.start_session(
+            db=db,
+            profile_source=profile_source,
+            source_kind="synthetic",
+            identifier="arch_phd_nlp_introvert",
+            day=1,
+        )
+
+    assert sess2.id != sess1.id
+    assert first2.turn == 1
+    assert first2.agent_reply
+    assert session_store_mod.session_store.active_id == sess2.id
+
+
+@pytest.mark.asyncio
+async def test_start_resolve_start_same_profile_succeeds(db_factory, profile_source):
+    """Same as above but the first session ends via explicit resolve(accept)."""
+    async with db_factory() as db:
+        sess1, _ = await lifecycle.start_session(
+            db=db,
+            profile_source=profile_source,
+            source_kind="synthetic",
+            identifier="arch_postdoc_cv_ambitious",
+            day=1,
+        )
+        episode, outcome = await lifecycle.resolve_session(
+            db=db,
+            session_id=sess1.id,
+            decision="accept",
+        )
+        assert outcome == "accepted"
+        assert session_store_mod.session_store.active_id is None
+
+        sess2, first2 = await lifecycle.start_session(
+            db=db,
+            profile_source=profile_source,
+            source_kind="synthetic",
+            identifier="arch_postdoc_cv_ambitious",
+            day=1,
+        )
+
+    assert sess2.id != sess1.id
+    assert first2.agent_reply
+    assert session_store_mod.session_store.active_id == sess2.id
+
+
 @pytest.mark.asyncio
 async def test_run_synthetic_session_rejects_non_synthetic_source(db_factory):
     from backend.profile_source.linkedin_rapidapi import LinkedInRapidAPISource

@@ -146,19 +146,15 @@
   <!-- ═══════════════ HOVER PANELS ═══════════════ -->
 
   <!-- TOP -->
-  <div class="edge-handle edge-top panel-trigger -top"></div>
+  <div class="edge-handle edge-top panel-trigger -top" data-label="▼  EDRA  ·  0 EPISODES  ·  0 RULES  ·  0 REVISING  ▼"></div>
   <div class="panel panel-top">
     <div class="top-stats">
-      <div class="top-stat"><div class="top-stat-num" id="stat-day">Day 01</div><div class="top-stat-lab">Simulated Time</div></div>
       <div class="top-stat"><div class="top-stat-num" id="stat-episodes">0</div><div class="top-stat-lab">Episodes</div></div>
       <div class="top-stat"><div class="top-stat-num -red" id="stat-rules">0</div><div class="top-stat-lab">Rules</div></div>
       <div class="top-stat"><div class="top-stat-num -red" id="stat-revising">0</div><div class="top-stat-lab">Revising</div></div>
-      <div class="top-stat"><div class="top-stat-num" id="stat-specialists">0</div><div class="top-stat-lab">Specialists</div></div>
     </div>
     <div class="top-controls">
-      <button class="btn-op -danger" id="op-drift">AI Bubble Pops</button>
-      <button class="btn-op" id="op-segment">+ Segment</button>
-      <button class="btn-op" id="op-expert">Expert · On</button>
+      <button class="btn-op -danger" id="op-inject">Inject Contradiction</button>
     </div>
   </div>
 
@@ -193,7 +189,7 @@
   </div>
 
   <!-- RIGHT -->
-  <div class="edge-handle edge-right panel-trigger -right"></div>
+  <div class="edge-handle edge-right panel-trigger -right" data-label="◀  SUBJECT  ·  NO ACTIVE SESSION  ·  HOVER"></div>
   <div class="panel panel-right">
     <div class="section-num">SUBJECT</div>
     <div class="panel-title">
@@ -249,7 +245,7 @@
   </div>
 
   <!-- LEFT -->
-  <div class="edge-handle edge-left panel-trigger -left"></div>
+  <div class="edge-handle edge-left panel-trigger -left" data-label="◀  RULEBOOK  ·  0 ACTIVE  ·  0 REVISING  ·  HOVER"></div>
   <div class="panel panel-left">
     <div class="section-num">RULEBOOK</div>
     <div class="panel-title">
@@ -267,15 +263,14 @@
         <span class="refl-title-square"></span>
         <span id="refl-title-text">— · Revising</span>
       </div>
+      <div class="refl-preview-note">Preview — how this rule would change if these signals were real. Not applied.</div>
       <div class="refl-text -streaming" id="refl-text"></div>
       <div class="refl-proposal" id="refl-proposal" style="display:none;">
         <span class="refl-proposal-head">Proposed</span>
         <div id="refl-changes"></div>
       </div>
       <div class="refl-actions">
-        <button class="btn-sm -go" id="refl-accept">Accept</button>
-        <button class="btn-sm -edit" id="refl-edit">Edit</button>
-        <button class="btn-sm -no" id="refl-keep">Keep</button>
+        <button class="btn-sm -go" id="refl-ok">OK</button>
       </div>
     </div>
   </div>

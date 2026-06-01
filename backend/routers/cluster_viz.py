@@ -247,12 +247,10 @@ async def cluster_viz(
                 })
 
     archetype_label = None
-    if current_cluster_id:
-        label = cluster_label_map.get(current_cluster_id, "")
-        archetype_label = _archetype_label(current_cluster_id, label)
-    elif active_session and active_session.profile:
-        pid = active_session.profile.id
-        archetype_label = ARCHETYPE_LABELS.get(pid, "The Visitor")
+    session_cluster = active_session.cluster_id if active_session else None
+    if session_cluster:
+        label = cluster_label_map.get(session_cluster, "")
+        archetype_label = _archetype_label(session_cluster, label)
 
     cluster_info = []
     for cid in cluster_ids_ordered:
