@@ -1456,14 +1456,54 @@ body {
   margin-bottom: 8px;
   line-height: 1;
 }
-.refl-change b {
-  color: var(--warm-white);
-  background: var(--defy-red);
-  padding: 1px 6px;
+.refl-change {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+.refl-slot-name {
+  flex: 0 0 78px;
+  font-family: var(--f-body);
   font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--mid-grey);
+  line-height: 1.6;
+}
+.refl-diff {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .refl-change s {
   color: var(--mid-grey);
+  text-decoration: line-through;
+}
+.refl-arrow {
+  color: var(--mid-grey);
+  font-weight: 700;
+}
+.refl-change b {
+  color: var(--warm-white);
+  padding: 1px 6px;
+  font-weight: 700;
+}
+/* changed slot — red accent draws the eye */
+.refl-change.-changed b {
+  background: var(--defy-red);
+}
+/* unchanged slot — everything muted, before == after so collapse to one value */
+.refl-change.-unchanged b {
+  color: var(--cream-dim);
+  background: transparent;
+  padding: 0;
+}
+.refl-change.-unchanged s,
+.refl-change.-unchanged .refl-arrow {
+  display: none;
 }
 
 .refl-actions {

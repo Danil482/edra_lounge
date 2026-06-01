@@ -42,6 +42,13 @@ const ARCHETYPE_LABELS = {
 // hardcoded ARCHETYPE_LABELS map, so this is the authoritative source.
 const clusterLabelById = {};
 
+// Live rule id → Rule from the most recent /state snapshot. The demo theater is
+// pending-only: when a revision is raised the active rule flips to
+// under_revision but KEEPS its original ("before") slot values, while the
+// proposed ("after") slots live only in the streamed revision payload. So this
+// lookup is the baseline for the before → after diff in renderProposed().
+const rulesById = {};
+
 const AUTH_EMAIL_RE = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
 
 const WELCOME_TEXT = "Hi! I'm Edra, a research liaison from the DEFY Lab. I help connect researchers with collaborative opportunities. Ready to learn about what we can offer based on your profile?";
@@ -537,6 +544,10 @@ function applyAvatar(s) {
 // ── Rulebook ─────────────────────────────────────────────────────────
 
 function applyRulebook(rules) {
+  for (const r of rules) {
+    if (r && r.id) rulesById[r.id] = r;
+  }
+
   const meta = $('#rulebook-meta');
   const list = $('#rules-list');
   if (!list) return;
@@ -720,17 +731,49 @@ function openReflectionStream(revisionId) {
   };
 }
 
+function slotDisplay(slot) {
+  if (!slot) return '—';
+  if (slot.kind === 'dynamic') return 'dynamic';
+  return slot.value || '—';
+}
+
 function renderProposed(proposed) {
   const head = $('#refl-proposal .refl-proposal-head');
   if (head) head.textContent = `Proposed: ${proposed.id} → ${proposed.id}'`;
 
   const changes = $('#refl-changes');
   if (!changes) return;
-  const slots = (proposed.slots || []).map(s => {
-    const v = s.kind === 'dynamic' ? 'dynamic' : (s.value || '—');
-    return `<div class="refl-change">${escapeHTML(s.name)}: <b>${escapeHTML(v)}</b></div>`;
+
+  // Baseline ("before") is the rule with the same id in the latest /state
+  // snapshot — its slots still hold the original values (pending-only theater).
+  const baseline = rulesById[proposed.id];
+  const baseSlots = {};
+  if (baseline) {
+    for (const s of baseline.slots || []) baseSlots[s.name] = s;
+  }
+
+  const rows = (proposed.slots || []).map(s => {
+    const after = slotDisplay(s);
+
+    // Fallback: no baseline for this rule id (race, or rule not yet in state) —
+    // render the proposed value only, highlighted, as before.
+    if (!baseline) {
+      return `<div class="refl-change -changed">${escapeHTML(s.name)}: <b>${escapeHTML(after)}</b></div>`;
+    }
+
+    const before = slotDisplay(baseSlots[s.name]);
+    const changed = before !== after;
+    const cls = changed ? 'refl-change -changed' : 'refl-change -unchanged';
+    return `<div class="${cls}">`
+      + `<span class="refl-slot-name">${escapeHTML(s.name)}</span>`
+      + `<span class="refl-diff">`
+      + `<s>${escapeHTML(before)}</s>`
+      + `<span class="refl-arrow">→</span>`
+      + `<b>${escapeHTML(after)}</b>`
+      + `</span>`
+      + `</div>`;
   });
-  changes.innerHTML = slots.join('');
+  changes.innerHTML = rows.join('');
 }
 
 // ── Visitor panel ────────────────────────────────────────────────────
