@@ -98,6 +98,26 @@ class Orchestrator:
             self._clock_day = head.day
             self._clock_time = head.time
 
+        # Clean up orphan injected episodes and stale revisions from previous runs.
+        # The demo theater's inject_contradiction stores episode/rule IDs in memory;
+        # a server restart loses that state, leaving the DB dirty.
+        async with self.session_factory() as session:
+            all_eps = await memory_store.all_episodes(session)
+            orphan_ids = [ep.id for ep in all_eps
+                          if ep.summary and ep.summary.startswith("injected contradiction")]
+            if orphan_ids:
+                await memory_store.delete_episodes(session, orphan_ids)
+                log.info("startup cleanup: deleted %d orphan injected episodes", len(orphan_ids))
+
+            stale_rules = await memory_store.list_rules(session, status="under_revision")
+            for rule in stale_rules:
+                pending = await memory_store.pending_revision_for_rule(session, rule.id)
+                if pending:
+                    await memory_store.delete_revision(session, pending.id)
+                    log.info("startup cleanup: deleted stale revision %s for rule %s", pending.id, rule.id)
+                await memory_store.update_rule(session, rule.id, status="active")
+                log.info("startup cleanup: reset rule %s to active", rule.id)
+
         self._tasks = [
             asyncio.create_task(self._tick_loop(), name="tick"),
             asyncio.create_task(self._consistency_loop(), name="consistency"),

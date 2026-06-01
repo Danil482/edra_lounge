@@ -7,7 +7,8 @@
 `POST /simulator/reset_injection`       — undo the injected contradiction
 """
 
-from datetime import datetime
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -17,9 +18,59 @@ from backend import schemas
 from backend.config import settings
 from backend.memory import store
 from backend.memory.ids import short_id
+from backend.seed_from_eval import STRATEGY_TO_RULE
 
 
 router = APIRouter(prefix="/simulator", tags=["simulator"])
+
+SLOT_NAMES = ["framing", "tone", "opener_type", "word_target", "ask_size"]
+
+
+def _slot_diff_count(a: dict[str, str], b: schemas.PitchStrategy) -> int:
+    return sum(1 for name in SLOT_NAMES if a[name] != getattr(b, name))
+
+
+def _strategy_from_slots(slots: dict[str, str]) -> schemas.PitchStrategy:
+    return schemas.PitchStrategy(**{name: slots[name] for name in SLOT_NAMES})
+
+
+def _pick_alternative_strategy(
+    cluster_eps: list[schemas.Episode],
+    current: schemas.PitchStrategy,
+) -> schemas.PitchStrategy:
+    """The honest 'emerging winner'. Rank strategies present in the cluster's
+    real episodes by accept rate and take the highest-rate one that differs from
+    the current rule in >=2 slots. If the cluster's data offers no such strategy,
+    fall back to the highest-rate STRATEGY_TO_RULE entry differing in >=2 slots.
+    Guarantees a proposed rule that visibly differs from the current one."""
+    stats: dict[tuple[str, ...], list[int]] = defaultdict(lambda: [0, 0])
+    for ep in cluster_eps:
+        ps = ep.pitch_strategy
+        key = tuple(getattr(ps, name) for name in SLOT_NAMES)
+        stats[key][1] += 1
+        if ep.outcome == "accepted":
+            stats[key][0] += 1
+
+    ranked = sorted(
+        stats.items(),
+        key=lambda kv: (kv[1][0] / kv[1][1] if kv[1][1] else 0.0, kv[1][1]),
+        reverse=True,
+    )
+    for key, _counts in ranked:
+        slots = dict(zip(SLOT_NAMES, key))
+        if _slot_diff_count(slots, current) >= 2:
+            return _strategy_from_slots(slots)
+
+    for slots in STRATEGY_TO_RULE.values():
+        if _slot_diff_count(slots, current) >= 2:
+            return _strategy_from_slots(slots)
+
+    # Theoretically unreachable: the 7 seeded strategies span enough variation
+    # that at least one differs in >=2 slots from any single current rule.
+    raise HTTPException(
+        status_code=409,
+        detail="no alternative strategy differs from the current rule in >=2 slots",
+    )
 
 
 class InjectIn(BaseModel):
@@ -105,16 +156,36 @@ async def inject_contradiction(body: InjectContradictionIn, request: Request):
         donor = cluster_eps[0]
 
         slot_values = {s.name: s.value for s in rule.slots}
-        failing_strategy = schemas.PitchStrategy(
-            framing=slot_values["framing"],
-            tone=slot_values["tone"],
-            opener_type=slot_values["opener_type"],
-            word_target=slot_values["word_target"],
-            ask_size=slot_values["ask_size"],
-        )
+        failing_strategy = _strategy_from_slots(slot_values)
+        winning_strategy = _pick_alternative_strategy(cluster_eps, failing_strategy)
 
         injected_ids: list[str] = []
-        now = datetime.utcnow()
+        # Anchor both groups strictly AFTER rule.induced_at so they count as
+        # post-induction evidence even when the operator injects right after a
+        # fresh seed (where induced_at == now). Winners land STRICTLY EARLIER
+        # than the failures so the trailing cs_window window `should_revise`
+        # inspects contains only the failing episodes — the accepted winners
+        # must not lift the success ratio back above theta.
+        now = max(datetime.utcnow(), rule.induced_at + timedelta(seconds=10))
+        winner_ts = now - timedelta(seconds=2)
+        for _ in range(n):
+            ep = schemas.Episode(
+                id=short_id("eval_ep"),
+                timestamp=winner_ts,
+                day=donor.day,
+                profile_id=donor.profile_id,
+                cluster_id=target_cluster,
+                pitch_strategy=winning_strategy,
+                dialogue=[],
+                final_interest=4,
+                outcome="accepted",
+                summary="injected contradiction — emerging alternative strategy winning",
+                summary_embedding=list(donor.summary_embedding),
+                rule_applied_top=rule.id,
+            )
+            await store.save_episode(session, ep)
+            injected_ids.append(ep.id)
+
         for _ in range(n):
             ep = schemas.Episode(
                 id=short_id("eval_ep"),
@@ -143,6 +214,7 @@ async def inject_contradiction(body: InjectContradictionIn, request: Request):
         "rule_id": rule.id,
         "injected_episode_ids": injected_ids,
         "n": n,
+        "winning_strategy": winning_strategy.model_dump(exclude={"opener_text"}),
     }
 
 

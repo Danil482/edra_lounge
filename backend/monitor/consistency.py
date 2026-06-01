@@ -30,8 +30,16 @@ def compute_cs(rule: schemas.Rule, cluster_episodes: list[schemas.Episode]) -> f
 
 
 def should_revise(rule: schemas.Rule, cluster_episodes: list[schemas.Episode]) -> bool:
-    """True when the last `cs_window` post-induction episodes yield CS < theta_revise."""
-    post = [ep for ep in cluster_episodes if ep.timestamp > rule.induced_at]
+    """True when the last `cs_window` post-induction episodes yield CS < theta_revise.
+
+    "Last" is by timestamp — the DB does not guarantee row order matches
+    chronology, and injected demo evidence deliberately back-dates the winning
+    episodes so only the failing tail occupies the trailing window.
+    """
+    post = sorted(
+        (ep for ep in cluster_episodes if ep.timestamp > rule.induced_at),
+        key=lambda ep: ep.timestamp,
+    )
     window = post[-settings.cs_window :]
     if len(window) < settings.cs_window:
         return False

@@ -11,9 +11,10 @@ Flow:
   4. The Revision row is updated with the accumulated reasoning + parsed rule
      so reconnecting clients see the final state in `/state.active_revision`.
 
-If the LLM is unavailable or returns malformed JSON, we fall back to
-emitting the original rule unchanged + a short fallback reasoning string
-so the booth UI never gets stuck mid-stream.
+If the LLM is unavailable or returns malformed JSON, we fall back to a
+deterministic mode-of-slots induction over the succeeding (accepted)
+post-induction episodes, so the proposed rule still reflects the strategy the
+evidence supports and the booth UI never gets stuck on an empty diff.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from backend import schemas
+from backend.config import settings
 from backend.db import async_session_factory, get_session
 from backend.memory import store
 from backend.reflection import revise as reflect_mod
@@ -35,6 +37,14 @@ from backend.reflection import revise as reflect_mod
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/reflections", tags=["reflections"])
+
+_SLOT_NAMES = ("framing", "tone", "opener_type", "word_target", "ask_size")
+
+
+def _slots_match(a: schemas.Rule, b: schemas.Rule) -> bool:
+    a_vals = {s.name: s.value for s in a.slots}
+    b_vals = {s.name: s.value for s in b.slots}
+    return all(a_vals.get(n) == b_vals.get(n) for n in _SLOT_NAMES)
 
 
 @router.get("/stream/{revision_id}")
@@ -48,26 +58,52 @@ async def stream(revision_id: str):
         rule = await store.get_rule(session, rev.rule_id)
         if rule is None:
             raise HTTPException(status_code=404, detail=f"unknown rule: {rev.rule_id}")
+        cluster_eps = await store.episodes_for_cluster(session, rule.cluster_id)
         contradicting = []
         if rev.contradicting_episode_ids:
-            cluster_eps = await store.episodes_for_cluster(session, rule.cluster_id)
             id_set = set(rev.contradicting_episode_ids)
             contradicting = [ep for ep in cluster_eps if ep.id in id_set]
 
+        # Evidence for the revision is the recent post-induction history of the
+        # cluster — both what is failing AND what is succeeding — so the LLM (and
+        # the deterministic fallback) can induce toward the emerging winner.
+        post = sorted(
+            (ep for ep in cluster_eps if ep.timestamp > rule.induced_at),
+            key=lambda ep: ep.timestamp,
+        )[-(2 * settings.cs_window):]
+        succeeding = [ep for ep in post if ep.outcome == "accepted"]
+
+    fallback_rule = reflect_mod.mode_of_slots_rule(rule, succeeding)
+
     async def event_gen():
         accumulated_reasoning = ""
-        proposed = rule
+        proposed = fallback_rule
         try:
-            async for kind, payload in reflect_mod.stream_revision(rule, contradicting):
+            async for kind, payload in reflect_mod.stream_revision(
+                rule, contradicting, succeeding
+            ):
                 if kind == "reasoning":
                     accumulated_reasoning += payload
                     yield {"event": "reasoning", "data": payload}
                 elif kind == "revision":
                     try:
                         proposed = reflect_mod.parse_proposed_rule(rule, payload)
+                        if _slots_match(proposed, rule):
+                            log.warning(
+                                "LLM proposed rule identical to current for %s; "
+                                "using mode-of-slots fallback",
+                                rule.id,
+                            )
+                            proposed = fallback_rule
                     except Exception:  # noqa: BLE001
-                        log.exception("parse_proposed_rule failed; keeping original")
-                        proposed = rule.model_copy(update={"status": "under_revision"})
+                        log.exception("parse_proposed_rule failed; using mode-of-slots")
+                        proposed = fallback_rule
+                        if _slots_match(proposed, rule):
+                            log.error(
+                                "mode-of-slots fallback also identical to current for %s; "
+                                "succeeding evidence may be empty",
+                                rule.id,
+                            )
                     yield {
                         "event": "revision",
                         "data": json.dumps(proposed.model_dump(mode="json")),
@@ -75,15 +111,16 @@ async def stream(revision_id: str):
         except Exception as e:  # noqa: BLE001
             log.exception("reflection stream errored: %s", e)
             fallback_msg = (
-                "(LLM offline — proposed_rule kept as-is; please edit manually.)"
+                "(LLM offline — proposed rule induced by mode-of-slots over the "
+                "succeeding sessions in this cluster.)"
             )
             accumulated_reasoning = accumulated_reasoning or fallback_msg
             yield {"event": "reasoning", "data": fallback_msg}
             yield {
                 "event": "revision",
-                "data": json.dumps(rule.model_dump(mode="json")),
+                "data": json.dumps(fallback_rule.model_dump(mode="json")),
             }
-            proposed = rule
+            proposed = fallback_rule
 
         async with async_session_factory() as commit_session:
             await store.update_revision(

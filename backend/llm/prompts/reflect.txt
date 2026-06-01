@@ -6,16 +6,26 @@ Analyse the contradicting sessions and propose a revised rule.
 Current rule (id {rule_id}):
 {rule_slots_formatted}
 
-Contradicting sessions (rule predicted accepted, observed rejected/abandoned):
+Contradicting sessions (these episodes used the CURRENT rule's strategy and FAILED):
 {contradicting_episodes_formatted}
 
+Succeeding sessions (these episodes used a DIFFERENT strategy and SUCCEEDED):
+{succeeding_episodes_formatted}
+
 Think step-by-step:
-  1. What shared signal among the contradicting sessions indicates that the
-     cluster's preference has shifted (or was misread at induction time)?
-  2. Which of the five slots — framing, tone, opener_type, word_target,
-     ask_size — is the principal cause of the miss?
-  3. What is the minimal revision that restores fit without breaking the rule
-     on the still-accepting tail of the cluster?
+  1. Identify the slot values shared by ALL succeeding sessions — that is the
+     winning strategy the cluster now responds to.
+  2. Identify which slots differ between the current (failing) rule and the
+     succeeding (winning) sessions.
+  3. Propose a revised rule that ADOPTS the slot values from the succeeding
+     sessions. The revised rule MUST differ from the current rule. For each
+     slot where the succeeding sessions share a value different from the
+     current rule, your revised rule MUST use the succeeding value.
+
+IMPORTANT: The succeeding sessions show what IS working. Your revised rule must
+match their strategy, not the current rule's strategy. If your proposed rule
+would be identical to the current rule, you have made an error — re-read the
+succeeding sessions and adopt their values.
 
 Output format: stream plain-prose reasoning first. When reasoning is complete,
 emit a line containing exactly "---REVISION---" on its own, then the JSON
