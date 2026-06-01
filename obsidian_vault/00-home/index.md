@@ -8,7 +8,7 @@ date: 2026-05-31
 Booth demo + research artifact for **EDRA** (Experience-Driven Rule Adaptation). Thematic wrapper — a visual-novel scene with an anime agent representing research collaboration from **DEFY.group**. The earlier working title "Lounge / Cafe Manager" was retired on 2026-04-28 — see [[../sessions/2026-04-28 Re-pivot to VN Pitch Floor, vocabulary swap]].
 
 Spec: [`../../TASK.md`](../../TASK.md) (living document, rewritten 2026-04-28)
-Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mockup.html) (final, ported verbatim)
+Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mockup.html) (**DEPRECATED / stale** — the live `frontend/index.html` + `app.js` + `styles.css` are now the source of truth; the mockup predates the operator-panel/revision-preview/email-gate changes and should not be ported from)
 
 ## Vault structure
 
@@ -81,9 +81,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-28 (PM): **Chi-squared test + evaluation reorganization** — see [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 - 2026-05-29: **Evaluation pipeline refactor + 3-level validation** — see [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
 - 2026-05-31: **Demo paper rewrite + eval seed from real data** — see [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
+- 2026-06-01: **Live rule-revision demo theater + live-run fixes** — see [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]]
 
 ## Session log
 
+- [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]]
 - [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
 - [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
 - [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
