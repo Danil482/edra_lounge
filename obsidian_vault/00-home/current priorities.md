@@ -32,6 +32,7 @@ Session 2026-05-29 (Eval pipeline refactor) → [[../sessions/2026-05-29 Evaluat
 Session 2026-05-31 (Demo paper rewrite + eval seed) → [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
 Session 2026-06-01 (Demo theater + live-run fixes) → [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]]
 Session 2026-06-01 PM (Centroid gate + induced revision + viz palette) → [[../sessions/2026-06-01 Centroid OOD gate induced revision and viz palette]]
+Session 2026-06-01 eve (KNN rewrite + reflection fixes + paper) → [[../sessions/2026-06-01 KNN rewrite reflection fixes and demo paper update]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -254,36 +255,45 @@ See [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]
 - [ ] Decide: keep KNN threshold 0.55 or retune (cluster-4 weak members fall to improvise).
 - [ ] (Optional) link captured email → session/episode for lead attribution.
 
-## 🟡 Phase 14 — Centroid OOD gate + honest induced revision + viz palette (done in code, NOT live-verified, 2026-06-01 PM)
+## ✅ Phase 14 — KNN rewrite, honest induced revision, viz palette, reflection fixes (committed 2026-06-01)
 
-See [[../sessions/2026-06-01 Centroid OOD gate induced revision and viz palette]].
+See [[../sessions/2026-06-01 Centroid OOD gate induced revision and viz palette]] and [[../sessions/2026-06-01 KNN rewrite reflection fixes and demo paper update]].
 
-### Cluster-membership geometry (the "0.55 problem")
+### Cluster-membership geometry
 - [x] Removed `(segment)` suffix from `_build_profile_text` (was leaking cluster label into the embedding, inflating intra-cluster cosine)
-- [x] `select_rule_by_centroid` replaces single-NN `select_rule_by_knn` — cosine to stored `centroid_embedding` per ruled cluster
-- [x] `MIN_CENTROID_SIMILARITY = 0.45` (genuine-member p5: min=0.14 p1=0.23 p5=0.45 p25=0.64 median=0.74; OOD "PhD researcher"=0.26, plumber=0.28)
+- [x] Centroid-based assignment introduced (PM session) then **reverted to K=7 weighted KNN voting** (evening session) to match the paper
+- [x] `select_rule_by_knn`: K=7 cosine-weighted nearest-neighbor voting, OOD gate on mean similarity (`MIN_AVG_SIMILARITY = 0.40`)
+- [x] `store.profiles_for_knn()` returns (profile_id, embedding, cluster_id) corpus
 - [x] Role-display fallback `job_title → cluster_label → "Professional"` (fixes "Professional" everywhere; 398/744 rows have real titles)
 - [x] Reseeded `edra_lounge.db` anonymized
-- [ ] **Verify the ADMISSION side** — no real in-domain marketing LinkedIn profile tested against 0.45 (may fall below due to residual free-text-vs-short-CRM-string mismatch)
-- [ ] Decide: keep 0.45 or retune after live data; consider option 3 (`approximate_predict` through the same UMAP+HDBSCAN) or option 4 (calibrate on real live-style profiles)
-- [ ] Note: neighbor-panel "% similar" (raw NN) now diverges from assignment (centroid) — deliberate
+- [ ] **Verify the ADMISSION side** — no real in-domain marketing LinkedIn profile tested against 0.40 (may fall below)
+- [ ] Decide: keep 0.40 or retune after live data
 
 ### Frontend rule-revision before→after diff
 - [x] `rulesById` captured each `/state` poll; `renderProposed` renders `before → after`, highlights only changed slots, mutes unchanged, fallback to proposed-only
 
 ### Cluster-viz palette
-- [x] `CLUSTER_COLORS` 6→8 distinct dark-bg-readable colors (Defy red kept first + amber/teal/slate-blue/magenta/green/cream/grey)
+- [x] `CLUSTER_COLORS` 6→8 distinct dark-bg-readable colors; default k=5→7
 
 ### Honest induced rule revision (demo theater)
 - [x] `inject_contradiction` injects winning-alternative (accepted, back-dated) + failing-current (rejected) groups
 - [x] `should_revise` sorts post-induction episodes by timestamp; `now = max(utcnow(), induced_at + 10s)` (fresh-seed bug fix)
-- [x] Reflection sees both outcomes; `reflect.txt` "Succeeding sessions" section; LLM induces the winner
+- [x] Reflection sees both outcomes; `reflect.txt` explicit directive to adopt succeeding values
 - [x] Deterministic `mode_of_slots_rule` fallback (LLM offline) → ≥2-slot diff by construction
-- [ ] Honesty nuance: seeded clusters are strategy-homogeneous → winner is the fixed `STRATEGY_TO_RULE` fallback, induced from *injected* evidence (not discovered in real cluster history)
+- [x] Regex REVISION marker tolerates whitespace (`--- REVISION---` etc.)
+- [x] `_slots_match` safety net: LLM or fallback echoing current → mode_of_slots
+- [x] Startup cleanup: orphan injected episodes + stale under_revision rules deleted at server start
+- [ ] Honesty nuance: seeded clusters are strategy-homogeneous → winner is the fixed `STRATEGY_TO_RULE` fallback, induced from *injected* evidence (not discovered in real cluster history). Acceptable for demo theater framing.
+
+### Demo paper (edra_demo.tex)
+- [x] Updated Expert View section: Rulebook (OK button, before/after diff), Operator Controls (Inject Contradiction, no "current day"), Visitor Panel (K=7)
+- [x] Abstract: 632→744 interactions
+- [ ] Screenshot architecture diagram → `papers/EDRA_workflow.png`
+- [ ] Compile in Overleaf — verify 2-page fit
 
 ### Phase 14 follow-ups (TODO)
-- [ ] **Live-verify the whole batch** (backend restart + hard-refresh): palette separation, admission of a genuine marketing profile, real titles in neighbor panel, inject → induced before→after diff → OK rollback
-- [ ] **Commit accumulated code** in atomic groups: (a) seed+centroid geometry+role fallback, (b) viz palette, (c) induced revision, (d) frontend diff — obsidian separately; leave `papers/edra_demo.tex` to the user
+- [x] **Committed accumulated code** in 4 atomic groups (2026-06-01 evening)
+- [ ] **Live-verify KNN K=7** (backend restart + hard-refresh): admission of a genuine marketing LinkedIn profile at 0.40, palette separation, inject → before→after diff → OK rollback
 - [ ] Fix the 2 pre-existing `test_cluster_viz` failures
 
 ### Reading list
