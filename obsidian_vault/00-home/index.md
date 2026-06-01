@@ -81,10 +81,12 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-05-28 (PM): **Chi-squared test + evaluation reorganization** — see [[../sessions/2026-05-28 Chi-squared test and evaluation reorganization]]
 - 2026-05-29: **Evaluation pipeline refactor + 3-level validation** — see [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
 - 2026-05-31: **Demo paper rewrite + eval seed from real data** — see [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
-- 2026-06-01: **Live rule-revision demo theater + live-run fixes** — see [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]]
+- 2026-06-01 (AM): **Live rule-revision demo theater + live-run fixes** — see [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]]
+- 2026-06-01 (PM): **Centroid OOD gate + honest induced revision + viz palette** — see [[../sessions/2026-06-01 Centroid OOD gate induced revision and viz palette]]
 
 ## Session log
 
+- [[../sessions/2026-06-01 Centroid OOD gate induced revision and viz palette]]
 - [[../sessions/2026-06-01 Live rule-revision demo theater and live-run fixes]]
 - [[../sessions/2026-05-31 Demo paper rewrite and eval seed from real data]]
 - [[../sessions/2026-05-29 Evaluation pipeline refactor and 3-level validation]]
