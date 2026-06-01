@@ -529,3 +529,13 @@ async def profiles_with_embeddings(session: AsyncSession) -> list[tuple[str, lis
     )
     result = await session.execute(stmt)
     return [(pid, emb) for pid, emb in result.all()]
+
+
+async def profiles_for_knn(session: AsyncSession) -> list[tuple[str, list[float], str | None]]:
+    """Return (profile_id, embedding, cluster_id) for KNN rule selection."""
+    stmt = (
+        select(models.ProfileRow.id, models.ProfileRow.embedding, models.ProfileRow.cluster_id)
+        .where(models.ProfileRow.embedding.is_not(None))
+    )
+    result = await session.execute(stmt)
+    return [(pid, emb, cid) for pid, emb, cid in result.all()]

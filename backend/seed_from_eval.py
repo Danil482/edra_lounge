@@ -131,13 +131,24 @@ def _infer_seniority(job_title: str) -> str:
     return "early"
 
 
-def _build_profile_text(job_title: str, organization: str, cluster_label: str) -> str:
+def _role_display(job_title: str | None, cluster_label: str) -> str:
+    """User-visible role for a seeded profile. Only 398/744 rows carry a real
+    job_title; the cluster_label values already read like roles ("Marketing
+    Manager", "Marketing Investor"), so they are a better fallback than the
+    bare literal "Professional"."""
+    if job_title and job_title.strip():
+        return job_title.strip()
+    if cluster_label and cluster_label.strip():
+        return cluster_label.strip()
+    return "Professional"
+
+
+def _build_profile_text(job_title: str, organization: str) -> str:
     parts = []
     if job_title:
         parts.append(job_title)
     if organization:
         parts.append(f"at {organization}")
-    parts.append(f"({cluster_label} segment)")
     return " ".join(parts)
 
 
@@ -222,10 +233,10 @@ async def seed_from_eval() -> None:
     print("\nComputing embeddings for all profiles...")
     profile_texts = []
     for i, row in enumerate(all_rows):
-        job_title = row.get("job_title") or "Professional"
-        organization = row.get("organization") or "Unknown"
         cluster_label = row.get("cluster_label", "")
-        profile_texts.append(_build_profile_text(job_title, organization, cluster_label))
+        role = _role_display(row.get("job_title"), cluster_label)
+        organization = row.get("organization") or "Unknown"
+        profile_texts.append(_build_profile_text(role, organization))
 
     BATCH_SIZE = 128
     all_profile_embeddings: list[list[float]] = []
@@ -267,9 +278,9 @@ async def seed_from_eval() -> None:
     print("\nInserting profiles and episodes...")
     async with session_factory() as session:
         for i, row in enumerate(all_rows):
-            job_title = row.get("job_title") or "Professional"
-            organization = row.get("organization") or "Unknown"
             cluster_label = row["cluster_label"]
+            role = _role_display(row.get("job_title"), cluster_label)
+            organization = row.get("organization") or "Unknown"
             cid = cluster_id_map[cluster_label]
 
             profile_id = f"eval:{i}"
@@ -288,12 +299,12 @@ async def seed_from_eval() -> None:
                 source_kind="synthetic",
                 source_identifier=f"eval_dataset:{i}",
                 name=_choose_profile_name(row.get("name"), cluster_label, i, with_names=with_names),
-                role=job_title,
+                role=role,
                 domain=organization,
-                seniority=_infer_seniority(job_title),
-                headline=f"{job_title} at {organization}",
+                seniority=_infer_seniority(role),
+                headline=f"{role} at {organization}",
                 recent_signals=[],
-                archetype_summary=_build_profile_text(job_title, organization, cluster_label),
+                archetype_summary=_build_profile_text(role, organization),
                 avatar_url=None,
                 summary_text=profile_texts[i],
                 embedding=all_profile_embeddings[i],

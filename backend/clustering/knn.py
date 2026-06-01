@@ -1,66 +1,71 @@
+"""K-nearest-neighbor rule selection with out-of-distribution rejection.
+
+select_rule_by_knn finds the K=7 nearest neighbors of the incoming profile
+in the corpus (cosine similarity), gates on mean similarity to reject
+out-of-distribution visitors, then uses cosine-weighted voting across
+clusters to pick the best rule.
+"""
+
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 if TYPE_CHECKING:
-    from backend.memory.models import ProfileRow
     from backend.schemas import Profile, Rule
 
-
-# Embeddings are L2-normalized, so matrix @ query is cosine similarity in [-1, 1].
-# A profile whose strongest clustered+ruled neighbor falls below this is treated
-# as out-of-distribution: select_rule_by_knn returns None and the pitch path
-# improvises instead of being force-bucketed into the nearest seeded cluster.
-# Tuned empirically against the seeded eval DB (744 profiles): the in-cluster
-# nearest-neighbor similarity distribution has p1=0.58, p5=0.64, while an
-# out-of-domain AI-researcher outlier scored ~0.46-0.53 against the marketing
-# clusters. 0.55 sits below the genuine-member low end (false-reject ~0.13%)
-# while rejecting that outlier.
-MIN_NEIGHBOR_SIMILARITY = 0.55
+K_NEIGHBORS = 7
+MIN_AVG_SIMILARITY = 0.40
 
 
-def select_rule_by_knn(profile: Profile,
-                       corpus: list[ProfileRow],
-                       rules: dict[str, Rule],
-                       k: int = 7,
-                       min_similarity: float | None = None,) -> object | None:
+def select_rule_by_knn(
+    profile: "Profile",
+    corpus: list[tuple[str, list[float], str | None]],
+    rules: dict[str, "Rule"],
+    k: int | None = None,
+    min_avg_similarity: float | None = None,
+) -> "Rule | None":
+    k_val = K_NEIGHBORS if k is None else k
+    threshold = MIN_AVG_SIMILARITY if min_avg_similarity is None else min_avg_similarity
 
-    threshold = MIN_NEIGHBOR_SIMILARITY if min_similarity is None else min_similarity
-
-    if not corpus:
-        return None
-    if not profile.embedding:
-        return None
-
-    eligible = [p for p in corpus if p.embedding]
-    if not eligible:
+    if not profile.embedding or not corpus or not rules:
         return None
 
     query = np.array(profile.embedding, dtype=np.float32)
-    matrix = np.array([p.embedding for p in eligible], dtype=np.float32)
-    similarities = matrix @ query
+    query_norm = np.linalg.norm(query)
+    if query_norm == 0:
+        return None
 
-    top_k_count = min(k, len(eligible))
-    top_indices = np.argpartition(similarities, -top_k_count)[-top_k_count:]
+    sims: list[tuple[float, str | None]] = []
+    for pid, emb, cid in corpus:
+        if pid == profile.id:
+            continue
+        vec = np.array(emb, dtype=np.float32)
+        vec_norm = np.linalg.norm(vec)
+        if vec_norm == 0:
+            continue
+        sim = float(np.dot(query, vec) / (query_norm * vec_norm))
+        sims.append((sim, cid))
 
-    # Confidence = max cosine similarity among the top-k neighbors that belong to
-    # a clustered+ruled profile (matches the "% similar" the UI shows). Summed
-    # votes would let many lukewarm neighbors outweigh a single close match.
-    cluster_best: dict[str, float] = {}
-    for idx in top_indices:
-        neighbor = eligible[idx]
-        cid = getattr(neighbor, "cluster_id", None)
+    if not sims:
+        return None
+
+    sims.sort(key=lambda x: x[0], reverse=True)
+    top_k = sims[:k_val]
+
+    mean_sim = sum(s for s, _ in top_k) / len(top_k)
+    if mean_sim < threshold:
+        return None
+
+    votes: dict[str, float] = defaultdict(float)
+    for sim, cid in top_k:
         if cid is not None and cid in rules:
-            sim = float(similarities[idx])
-            if sim > cluster_best.get(cid, float("-inf")):
-                cluster_best[cid] = sim
+            votes[cid] += sim
 
-    if not cluster_best:
+    if not votes:
         return None
 
-    best_cluster = max(cluster_best, key=lambda c: cluster_best[c])
-    if cluster_best[best_cluster] < threshold:
-        return None
-    return rules[best_cluster]
+    best_cid = max(votes, key=votes.get)  # type: ignore[arg-type]
+    return rules[best_cid]

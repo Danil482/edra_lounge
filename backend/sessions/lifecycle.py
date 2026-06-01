@@ -31,7 +31,6 @@ from backend.llm import client as llm
 from backend.memory import store as memory_store
 from backend.memory.ids import short_id
 from backend.clustering.knn import select_rule_by_knn
-from backend.config import settings
 from backend.pitch import generate_turn
 from backend.pitch import strategy as strategy_mod
 from backend.profile_source import (
@@ -117,9 +116,9 @@ async def start_session(
         except Exception:
             log.exception("on_new_profile hook failed for profile=%s", profile.id)
 
-    corpus = await memory_store.list_profiles(db)
+    corpus = await memory_store.profiles_for_knn(db)
     active_rules = await memory_store.active_rules_by_cluster(db)
-    applicable_rule = select_rule_by_knn(profile, corpus, active_rules, k=settings.knn_k)
+    applicable_rule = select_rule_by_knn(profile, corpus, active_rules)
     cluster_id = applicable_rule.cluster_id if applicable_rule else None
     pitch_strategy = strategy_mod.assemble_strategy(applicable_rule)
 

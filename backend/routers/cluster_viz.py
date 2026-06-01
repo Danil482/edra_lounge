@@ -36,12 +36,14 @@ ARCHETYPE_LABELS = {
 }
 
 CLUSTER_COLORS = [
-    "#CC0000",
-    "#F3F1EC",
-    "#777777",
-    "#F9F9F7",
-    "#990000",
-    "#2D2D2D",
+    "#CC0000",  # brand red
+    "#E8A23D",  # amber
+    "#2FB7A8",  # teal
+    "#6F8FE0",  # slate-blue
+    "#C75FD6",  # magenta
+    "#A7E05A",  # green
+    "#E0C5A0",  # cream
+    "#9AA0A8",  # grey
 ]
 
 _cache: dict[str, Any] = {
@@ -105,7 +107,7 @@ def _cluster_color(idx: int) -> str:
 @router.get("/cluster-viz")
 async def cluster_viz(
     session: AsyncSession = Depends(get_session),
-    k: int = Query(default=5, ge=1, le=10),
+    k: int = Query(default=7, ge=1, le=10),
 ):
     clusters = await store.list_clusters(session)
     if not clusters:
