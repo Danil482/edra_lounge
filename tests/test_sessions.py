@@ -276,10 +276,15 @@ async def test_run_synthetic_session_with_best_combo_accepts(db_factory, profile
 
     We pre-seed a static Rule for arch_phd_nlp_introvert with the
     knowledge-share/socratic/question/medium/co-author combination
-    (+0.40 combo bonus → +2 interest per turn before fatigue).
+    (+0.40 combo bonus -> +2 interest per turn before fatigue).
+
+    KNN rule selection needs corpus profiles (not centroids) so we seed 10
+    synthetic neighbors with the same embedding and cluster_id.
     """
     from datetime import datetime
     from backend.memory import store as memory_store
+    from backend.clustering.cluster import embed_single
+    from backend.clustering.summarize import summarize_profile_from_archetype
 
     rule = schemas.Rule(
         id="R.01",
@@ -293,8 +298,27 @@ async def test_run_synthetic_session_with_best_combo_accepts(db_factory, profile
         ],
         induced_at=datetime.utcnow(),
     )
+    visitor = await profile_source.fetch("arch_phd_nlp_introvert")
+    embedding = embed_single(summarize_profile_from_archetype(profile=visitor))
+
     async with db_factory() as db:
         await memory_store.save_rule(db, rule)
+        for i in range(10):
+            neighbor = schemas.Profile(
+                id=f"neighbor_{i}",
+                source_kind="synthetic",
+                source_identifier=f"neighbor_{i}",
+                name=f"Neighbor {i}",
+                role="researcher",
+                domain="NLP",
+                seniority="senior",
+                headline="h",
+                archetype_summary="s",
+                embedding=embedding,
+                cluster_id="arch_phd_nlp_introvert",
+                fetched_at=datetime.utcnow(),
+            )
+            await memory_store.upsert_profile(db, neighbor)
         episode = await lifecycle.run_synthetic_session(
             db=db,
             profile_source=profile_source,

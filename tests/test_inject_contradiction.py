@@ -23,7 +23,11 @@ from backend.config import settings
 from backend.memory import store
 from backend.memory.models import Base
 from backend.monitor import consistency
+from backend.reflection import revise as reflect_mod
 from backend.routers import simulator
+
+
+SLOT_NAMES = ["framing", "tone", "opener_type", "word_target", "ask_size"]
 
 
 @pytest.fixture
@@ -129,7 +133,7 @@ async def _seed(factory, *, with_episodes: bool = True, with_rule: bool = True):
 # ── inject_contradiction ──────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_inject_inserts_post_induction_rejected_episodes(db_factory):
+async def test_inject_inserts_two_groups_of_episodes(db_factory):
     await _seed(db_factory)
     orch = FakeOrchestrator(db_factory)
 
@@ -142,7 +146,8 @@ async def test_inject_inserts_post_induction_rejected_episodes(db_factory):
     assert result["cluster_id"] == CLUSTER_ID
     assert result["rule_id"] == RULE_ID
     assert result["n"] == settings.cs_window
-    assert len(result["injected_episode_ids"]) == settings.cs_window
+    # Two groups: cs_window failing-current + cs_window winning-alternative.
+    assert len(result["injected_episode_ids"]) == 2 * settings.cs_window
     assert orch.injected_episode_ids == result["injected_episode_ids"]
     assert orch.injected_rule_id == RULE_ID
 
@@ -150,14 +155,35 @@ async def test_inject_inserts_post_induction_rejected_episodes(db_factory):
         rule = await store.get_rule(db, RULE_ID)
         eps = await store.episodes_for_cluster(db, CLUSTER_ID)
     injected = [e for e in eps if e.id in result["injected_episode_ids"]]
-    assert len(injected) == settings.cs_window
-    for e in injected:
-        assert e.outcome == "rejected"
+    assert len(injected) == 2 * settings.cs_window
+
+    rejected = [e for e in injected if e.outcome == "rejected"]
+    accepted = [e for e in injected if e.outcome == "accepted"]
+    assert len(rejected) == settings.cs_window
+    assert len(accepted) == settings.cs_window
+
+    current_slots = {s.name: s.value for s in rule.slots}
+    for e in rejected:
         assert e.final_interest < 0
         assert e.timestamp > rule.induced_at
+        # Failing group carries the rule's CURRENT strategy.
+        for name in SLOT_NAMES:
+            assert getattr(e.pitch_strategy, name) == current_slots[name]
+
+    for e in accepted:
+        assert e.final_interest > 0
+        assert e.timestamp > rule.induced_at
+        # Winners are back-dated strictly earlier than the failures.
+        assert all(e.timestamp < r.timestamp for r in rejected)
+
+    # The winning strategy differs from the current rule in >=2 slots.
+    win = result["winning_strategy"]
+    n_diff = sum(1 for name in SLOT_NAMES if win[name] != current_slots[name])
+    assert n_diff >= 2
+    for e in injected:
         assert e.cluster_id == CLUSTER_ID
         assert e.profile_id == "eval:0"
-        assert e.summary_embedding  # carried a plausible embedding
+        assert e.summary_embedding
 
 
 @pytest.mark.asyncio
@@ -229,9 +255,10 @@ async def test_inject_no_cluster_picks_largest_ruled_cluster(db_factory):
     async with db_factory() as db:
         eps = await store.episodes_for_cluster(db, big_cluster)
     injected = [e for e in eps if e.id in result["injected_episode_ids"]]
-    assert len(injected) == settings.cs_window
+    assert len(injected) == 2 * settings.cs_window
+    assert sum(1 for e in injected if e.outcome == "rejected") == settings.cs_window
+    assert sum(1 for e in injected if e.outcome == "accepted") == settings.cs_window
     for e in injected:
-        assert e.outcome == "rejected"
         assert e.cluster_id == big_cluster
 
 
@@ -256,7 +283,7 @@ async def test_inject_respects_explicit_n(db_factory):
         FakeRequest(orch),
     )
     assert result["n"] == 3
-    assert len(result["injected_episode_ids"]) == 3
+    assert len(result["injected_episode_ids"]) == 6
 
 
 @pytest.mark.asyncio
@@ -297,7 +324,7 @@ async def test_reset_deletes_only_injected_episodes(db_factory):
 
     result = await simulator.reset_injection(FakeRequest(orch))
 
-    assert result["deleted_episodes"] == settings.cs_window
+    assert result["deleted_episodes"] == 2 * settings.cs_window
     assert orch.injected_episode_ids == []
     assert orch.injected_rule_id is None
 
@@ -356,7 +383,7 @@ async def test_reset_idempotent(db_factory):
         FakeRequest(orch),
     )
     first = await simulator.reset_injection(FakeRequest(orch))
-    assert first["deleted_episodes"] == settings.cs_window
+    assert first["deleted_episodes"] == 2 * settings.cs_window
 
     second = await simulator.reset_injection(FakeRequest(orch))
     assert second["deleted_episodes"] == 0
@@ -396,3 +423,43 @@ async def test_reset_409_when_revision_already_resolved(db_factory):
     assert {e.id for e in eps} == {f"eval_ep:{i}" for i in range(4)}
     assert orch.injected_episode_ids == []
     assert orch.injected_rule_id is None
+
+
+# ── deterministic (LLM-offline) fallback ────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_offline_fallback_proposes_rule_differing_in_two_plus_slots(db_factory):
+    """The LLM-offline reflection path: mode-of-slots over the injected
+    succeeding episodes must yield a proposed rule differing from the current
+    rule in >=2 slots (never an empty diff)."""
+    await _seed(db_factory)
+    orch = FakeOrchestrator(db_factory)
+
+    await simulator.inject_contradiction(
+        simulator.InjectContradictionIn(cluster_id=CLUSTER_ID),
+        FakeRequest(orch),
+    )
+
+    async with db_factory() as db:
+        rule = await store.get_rule(db, RULE_ID)
+        eps = await store.episodes_for_cluster(db, CLUSTER_ID)
+
+    post = [e for e in eps if e.timestamp > rule.induced_at]
+    succeeding = [e for e in post if e.outcome == "accepted"]
+    assert succeeding  # injection seeded the winners
+
+    proposed = reflect_mod.mode_of_slots_rule(rule, succeeding)
+
+    assert proposed.id == rule.id
+    assert proposed.cluster_id == rule.cluster_id
+    assert proposed.status == "under_revision"
+
+    current = {s.name: s.value for s in rule.slots}
+    proposed_slots = {s.name: s.value for s in proposed.slots}
+    changed = [name for name in SLOT_NAMES if proposed_slots[name] != current[name]]
+    assert len(changed) >= 2, f"expected >=2 changed slots, got {changed}"
+    # framing + tone are the personalized_opener winner's distinguishing slots.
+    assert "framing" in changed
+    assert "tone" in changed
+    assert proposed_slots["framing"] == "applied-curiosity"
+    assert proposed_slots["tone"] == "direct"

@@ -1,21 +1,19 @@
-"""KNN rule selection with out-of-distribution rejection.
+"""K=7 cosine-weighted nearest-neighbor rule selection.
 
-select_rule_by_knn returns the nearest clustered+ruled rule only when the
-strongest matching neighbor clears MIN_NEIGHBOR_SIMILARITY; otherwise it
-returns None so the pitch path improvises. Embeddings here are synthetic and
-deterministic (a near-duplicate of a corpus vector vs an orthogonal one) so the
-test does not depend on the real MiniLM model.
+select_rule_by_knn finds the K nearest neighbors in the corpus, gates on
+mean cosine similarity, and uses weighted voting to pick the best cluster rule.
+Embeddings are synthetic 8-dim unit vectors so the test does not depend on the
+real MiniLM model.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
-from types import SimpleNamespace
 
 import numpy as np
 
 from backend import schemas
-from backend.clustering.knn import MIN_NEIGHBOR_SIMILARITY, select_rule_by_knn
+from backend.clustering.knn import K_NEIGHBORS, MIN_AVG_SIMILARITY, select_rule_by_knn
 
 
 def _unit(vec: list[float]) -> list[float]:
@@ -23,24 +21,22 @@ def _unit(vec: list[float]) -> list[float]:
     return (a / np.linalg.norm(a)).tolist()
 
 
-# Two orthogonal directions in an 8-dim space; both unit-normalized so dot
-# products are cosine similarities, mirroring the real L2-normalized corpus.
 DIR_A = _unit([1, 0, 0, 0, 0, 0, 0, 0])
 DIR_B = _unit([0, 1, 0, 0, 0, 0, 0, 0])
-# A vector very close to DIR_A (cosine ~0.997) — a genuine cluster member.
-NEAR_A = _unit([0.92, 0.08, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-# A vector midway between A and B (cosine ~0.71 to each) — borderline but still
-# above threshold, used to assert a clearly-in-distribution match classifies.
-MID_AB = _unit([1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+DIR_ORTHO = _unit([0, 0, 0, 0, 0, 0, 0, 1])
 
 
-def _corpus_member(pid: str, embedding: list[float], cluster_id: str):
-    return SimpleNamespace(id=pid, embedding=embedding, cluster_id=cluster_id)
+def _corpus_around(direction: list[float], cluster_id: str, n: int = 10, noise: float = 0.05):
+    entries = []
+    for i in range(n):
+        perturbed = [d + (i * noise / n) * (0.5 - (j % 2)) for j, d in enumerate(direction)]
+        entries.append((f"{cluster_id}_{i}", _unit(perturbed), cluster_id))
+    return entries
 
 
-def _profile(embedding: list[float]) -> schemas.Profile:
+def _profile(embedding: list[float] | None, pid: str = "visitor") -> schemas.Profile:
     return schemas.Profile(
-        id="visitor",
+        id=pid,
         source_kind="synthetic",
         source_identifier="x",
         name="V",
@@ -69,54 +65,59 @@ def _rule(cluster_id: str) -> schemas.Rule:
     )
 
 
-def test_returns_rule_when_neighbor_above_threshold():
-    corpus = [
-        _corpus_member("a1", DIR_A, "A"),
-        _corpus_member("a2", NEAR_A, "A"),
-        _corpus_member("b1", DIR_B, "B"),
-    ]
+def test_returns_rule_of_majority_cluster():
+    corpus = _corpus_around(DIR_A, "A", n=10) + _corpus_around(DIR_B, "B", n=10)
     rules = {"A": _rule("A"), "B": _rule("B")}
-    # Visitor sits essentially on top of cluster A.
-    result = select_rule_by_knn(_profile(NEAR_A), corpus, rules, k=7)
+    near_a = _unit([0.95, 0.05, 0, 0, 0, 0, 0, 0])
+    result = select_rule_by_knn(_profile(near_a), corpus, rules)
     assert result is not None
     assert result.cluster_id == "A"
 
 
-def test_returns_none_when_all_neighbors_below_threshold():
-    # Corpus only has cluster A; visitor is orthogonal to it (cosine ~0.0),
-    # far below MIN_NEIGHBOR_SIMILARITY — the out-of-distribution case.
-    corpus = [
-        _corpus_member("a1", DIR_A, "A"),
-        _corpus_member("a2", NEAR_A, "A"),
-    ]
-    rules = {"A": _rule("A")}
-    result = select_rule_by_knn(_profile(DIR_B), corpus, rules, k=7)
+def test_returns_none_when_out_of_distribution():
+    corpus = _corpus_around(DIR_A, "A", n=10) + _corpus_around(DIR_B, "B", n=10)
+    rules = {"A": _rule("A"), "B": _rule("B")}
+    result = select_rule_by_knn(_profile(DIR_ORTHO), corpus, rules)
     assert result is None
 
 
-def test_max_neighbor_similarity_gates_not_summed_votes():
-    # Many moderate A-neighbors (cosine ~0.707 to the query) plus one strong
-    # B-neighbor (cosine ~0.997). Summed votes would favor A by sheer count
-    # (5 * 0.707 = 3.54 > 0.997); max-neighbor must pick B.
-    corpus = [_corpus_member(f"a{i}", MID_AB, "A") for i in range(5)]
-    corpus.append(_corpus_member("b1", NEAR_A, "B"))
+def test_weighted_voting_prefers_closer_cluster():
+    corpus = _corpus_around(DIR_A, "A", n=10) + _corpus_around(DIR_B, "B", n=10)
     rules = {"A": _rule("A"), "B": _rule("B")}
-    # Query aligned with DIR_A: each A member scores ~0.707, the lone B ~0.997.
-    result = select_rule_by_knn(_profile(DIR_A), corpus, rules, k=7)
+    slightly_a = _unit([0.8, 0.2, 0, 0, 0, 0, 0, 0])
+    result = select_rule_by_knn(_profile(slightly_a), corpus, rules)
     assert result is not None
-    assert result.cluster_id == "B"
+    assert result.cluster_id == "A"
 
 
-def test_min_similarity_override_rejects_borderline_match():
-    corpus = [_corpus_member("ab", MID_AB, "A")]
+def test_unruled_cluster_is_ignored():
+    corpus = _corpus_around(DIR_A, "A", n=10) + _corpus_around(DIR_B, "B", n=10)
+    rules = {"B": _rule("B")}
+    near_a = _unit([0.95, 0.05, 0, 0, 0, 0, 0, 0])
+    result = select_rule_by_knn(_profile(near_a), corpus, rules)
+    assert result is None
+
+
+def test_no_corpus_or_rules_returns_none():
+    assert select_rule_by_knn(_profile(DIR_A), [], {}) is None
+    corpus = _corpus_around(DIR_A, "A", n=10)
+    assert select_rule_by_knn(_profile(DIR_A), corpus, {}) is None
+
+
+def test_profile_without_embedding_returns_none():
+    corpus = _corpus_around(DIR_A, "A", n=10)
     rules = {"A": _rule("A")}
-    prof = _profile(DIR_A)  # cosine to MID_AB ~0.707
-
-    # Default threshold (0.55) accepts the borderline neighbor.
-    assert select_rule_by_knn(prof, corpus, rules, k=7) is not None
-    # A stricter override rejects it.
-    assert select_rule_by_knn(prof, corpus, rules, k=7, min_similarity=0.9) is None
+    assert select_rule_by_knn(_profile(None), corpus, rules) is None
 
 
-def test_default_threshold_constant():
-    assert MIN_NEIGHBOR_SIMILARITY == 0.55
+def test_min_avg_similarity_override():
+    corpus = _corpus_around(DIR_A, "A", n=10) + _corpus_around(DIR_B, "B", n=10)
+    rules = {"A": _rule("A"), "B": _rule("B")}
+    mid = _unit([1.0, 1.0, 0, 0, 0, 0, 0, 0])
+    assert select_rule_by_knn(_profile(mid), corpus, rules) is not None
+    assert select_rule_by_knn(_profile(mid), corpus, rules, min_avg_similarity=0.99) is None
+
+
+def test_default_constants():
+    assert K_NEIGHBORS == 7
+    assert MIN_AVG_SIMILARITY == 0.40

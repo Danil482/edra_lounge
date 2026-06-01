@@ -97,71 +97,72 @@ def test_summarize_profile_from_archetype():
 # ── Group 2 — knn.py ─────────────────────────────────────────────────────────
 
 import math
+import numpy as np
 
 
-def _unit(x: float, y: float) -> list[float]:
-    mag = math.sqrt(x * x + y * y)
-    return [x / mag, y / mag]
+def _unit_vec(vec: list[float]) -> list[float]:
+    a = np.array(vec, dtype=np.float32)
+    return (a / np.linalg.norm(a)).tolist()
+
+
+_DIR_A_8 = _unit_vec([1, 0, 0, 0, 0, 0, 0, 0])
+_DIR_B_8 = _unit_vec([0, 1, 0, 0, 0, 0, 0, 0])
+_DIR_ORTHO_8 = _unit_vec([0, 0, 0, 0, 0, 0, 0, 1])
+
+
+def _corpus_around(direction: list[float], cluster_id: str, n: int = 10, noise: float = 0.05):
+    entries = []
+    for i in range(n):
+        perturbed = [d + (i * noise / n) * (0.5 - (j % 2)) for j, d in enumerate(direction)]
+        entries.append((f"{cluster_id}_{i}", _unit_vec(perturbed), cluster_id))
+    return entries
 
 
 def test_knn_single_cluster_dominance():
-    corpus = [
-        make_profile("p1", _unit(1.0, 0.05), "A"),
-        make_profile("p2", _unit(1.0, 0.10), "A"),
-        make_profile("p3", _unit(1.0, 0.08), "A"),
-        make_profile("p4", _unit(1.0, 0.03), "A"),
-        make_profile("p5", _unit(0.0, 1.0), "B"),
-    ]
+    corpus = _corpus_around(_DIR_A_8, "A", n=10) + _corpus_around(_DIR_B_8, "B", n=10)
     rule_a = make_rule("A", "R.01")
     rule_b = make_rule("B", "R.02")
-    query = make_profile("q", _unit(1.0, 0.0), None)
+    query = make_profile("q", _unit_vec([0.95, 0.05, 0, 0, 0, 0, 0, 0]), None)
 
-    result = select_rule_by_knn(query, corpus, {"A": rule_a, "B": rule_b}, k=7)
+    result = select_rule_by_knn(query, corpus, {"A": rule_a, "B": rule_b})
     assert result is rule_a
 
 
 def test_knn_split_vote():
-    corpus = [
-        make_profile("a1", _unit(1.0, 0.0), "A"),
-        make_profile("a2", _unit(0.99, 0.14), "A"),
-        make_profile("a3", _unit(0.98, 0.20), "A"),
-        make_profile("b1", _unit(0.0, 1.0), "B"),
-        make_profile("b2", _unit(0.14, 0.99), "B"),
-        make_profile("b3", _unit(0.20, 0.98), "B"),
-    ]
+    corpus = _corpus_around(_DIR_A_8, "A", n=10) + _corpus_around(_DIR_B_8, "B", n=10)
     rule_a = make_rule("A", "R.01")
     rule_b = make_rule("B", "R.02")
-    query = make_profile("q", _unit(0.707, 0.707), None)
+    query = make_profile("q", _unit_vec([0.707, 0.707, 0, 0, 0, 0, 0, 0]), None)
 
-    result = select_rule_by_knn(query, corpus, {"A": rule_a, "B": rule_b}, k=6)
+    result = select_rule_by_knn(query, corpus, {"A": rule_a, "B": rule_b})
     assert result is not None
     assert result in (rule_a, rule_b)
 
 
 def test_knn_all_noise():
-    corpus = [make_profile(f"p{i}", _unit(1.0, float(i) * 0.01), None) for i in range(5)]
-    query = make_profile("q", _unit(1.0, 0.0), None)
-    result = select_rule_by_knn(query, corpus, {"A": make_rule("A", "R.01")}, k=7)
+    corpus = _corpus_around(_DIR_A_8, "A", n=10)
+    query = make_profile("q", _DIR_ORTHO_8, None)
+    result = select_rule_by_knn(query, corpus, {"A": make_rule("A", "R.01")})
     assert result is None
 
 
 def test_knn_empty_corpus():
-    query = make_profile("q", _unit(1.0, 0.0), None)
-    result = select_rule_by_knn(query, [], {}, k=7)
+    query = make_profile("q", _unit_vec([1, 0, 0, 0, 0, 0, 0, 0]), None)
+    result = select_rule_by_knn(query, [], {})
     assert result is None
 
 
 def test_knn_no_active_rules():
-    corpus = [make_profile(f"p{i}", _unit(1.0, float(i) * 0.01), "A") for i in range(5)]
-    query = make_profile("q", _unit(1.0, 0.0), None)
-    result = select_rule_by_knn(query, corpus, {}, k=7)
+    corpus = _corpus_around(_DIR_A_8, "A", n=10)
+    query = make_profile("q", _unit_vec([1, 0, 0, 0, 0, 0, 0, 0]), None)
+    result = select_rule_by_knn(query, corpus, {})
     assert result is None
 
 
 def test_knn_profile_no_embedding():
-    corpus = [make_profile(f"p{i}", _unit(1.0, float(i) * 0.01), "A") for i in range(5)]
+    corpus = _corpus_around(_DIR_A_8, "A", n=10)
     query = make_profile("q", None, None)
-    result = select_rule_by_knn(query, corpus, {"A": make_rule("A", "R.01")}, k=7)
+    result = select_rule_by_knn(query, corpus, {"A": make_rule("A", "R.01")})
     assert result is None
 
 

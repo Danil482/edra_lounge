@@ -155,7 +155,7 @@ async def test_full_consistency_trigger_path_runs_green(db_factory):
         assert inject["rule_id"] == RULE_ID
         assert inject["n"] == settings.cs_window
         injected_ids = inject["injected_episode_ids"]
-        assert len(injected_ids) == settings.cs_window
+        assert len(injected_ids) == 2 * settings.cs_window
         # Route mutated the real orchestrator's tracking state.
         assert orch.injected_rule_id == RULE_ID
         assert orch.injected_episode_ids == injected_ids
@@ -189,7 +189,7 @@ async def test_full_consistency_trigger_path_runs_green(db_factory):
         reset = resp.json()
         assert reset["deleted_revision"] == revision_id
         assert reset["restored_rule"] == RULE_ID
-        assert reset["deleted_episodes"] == settings.cs_window
+        assert reset["deleted_episodes"] == 2 * settings.cs_window
 
     async with db_factory() as db:
         rule_final = await store.get_rule(db, RULE_ID)
