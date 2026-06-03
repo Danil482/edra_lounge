@@ -53,7 +53,11 @@ Constraints for the three response options:
   - each option text is 5-15 words
   - the positive option shows interest or asks to hear more
   - the skeptical option questions credibility or asks for justification
+    of what was JUST said — not about unrelated topics
   - the negative option politely declines or shows disinterest
+  - every option must be answerable by the agent using ONLY the lab facts
+    and system constraints — do NOT suggest options about pricing,
+    contracts, timelines, or capabilities not listed in the fact block
   - each option must read as a natural visitor reaction to your specific opener
 
 Respond with ONLY a JSON object, no markdown fences, no extra text:

@@ -144,7 +144,7 @@ async def test_generate_turn_static_rule_calls_llm_for_response_options(monkeypa
 
     profile = _phd_profile()
     rule = _static_rule()
-    step, used_strategy = await generate.generate_turn(
+    step, used_strategy, _cat = await generate.generate_turn(
         profile=profile,
         history=[],
         applicable_rule=rule,
@@ -169,7 +169,7 @@ async def test_generate_turn_hybrid_rule_calls_llm_for_dynamic_slot(monkeypatch)
 
     monkeypatch.setattr("backend.pitch.generate.llm.complete", _stub_complete)
 
-    step, used = await generate.generate_turn(
+    step, used, _cat = await generate.generate_turn(
         profile=_phd_profile(),
         history=[],
         applicable_rule=_hybrid_rule(),
@@ -194,7 +194,7 @@ async def test_generate_turn_no_rule_calls_llm_with_default_strategy(monkeypatch
 
     monkeypatch.setattr("backend.pitch.generate.llm.complete", _stub_complete)
 
-    step, used = await generate.generate_turn(
+    step, used, _cat = await generate.generate_turn(
         profile=_phd_profile(),
         history=[],
         applicable_rule=None,
@@ -217,7 +217,7 @@ async def test_generate_turn_llm_failure_falls_back_to_template(monkeypatch):
 
     monkeypatch.setattr("backend.pitch.generate.llm.complete", _broken_complete)
 
-    step, used = await generate.generate_turn(
+    step, used, _cat = await generate.generate_turn(
         profile=_phd_profile(),
         history=[],
         applicable_rule=None,
@@ -254,7 +254,7 @@ async def test_generate_turn_continuation_calls_llm_with_history(monkeypatch):
             rule_applied="R.07",
         )
     ]
-    step, _ = await generate.generate_turn(
+    step, _, _cat = await generate.generate_turn(
         profile=profile,
         history=history,
         applicable_rule=rule,
@@ -292,7 +292,7 @@ async def test_generate_turn_continuation_falls_back_to_template_on_llm_failure(
             rule_applied="R.07",
         )
     ]
-    step, _ = await generate.generate_turn(
+    step, _, _cat = await generate.generate_turn(
         profile=_phd_profile(),
         history=history,
         applicable_rule=_static_rule(),
@@ -307,7 +307,7 @@ async def test_generate_turn_continuation_falls_back_to_template_on_llm_failure(
 
 def test_parse_llm_json_valid():
     raw = '{"pitch": "Hello world.", "options": [{"text": "Go on.", "sentiment": "positive"}, {"text": "Prove it.", "sentiment": "skeptical"}, {"text": "No thanks.", "sentiment": "negative"}]}'
-    text, _thought, options = generate._parse_llm_json(raw)
+    text, _thought, options, _cat = generate._parse_llm_json(raw)
     assert text == "Hello world."
     assert options is not None
     assert len(options) == 3
@@ -316,34 +316,34 @@ def test_parse_llm_json_valid():
 
 def test_parse_llm_json_plain_text_fallback():
     raw = "Just a plain text response."
-    text, _thought, options = generate._parse_llm_json(raw)
+    text, _thought, options, _cat = generate._parse_llm_json(raw)
     assert text == "Just a plain text response."
     assert options is None
 
 
 def test_parse_llm_json_markdown_fences():
     raw = '```json\n{"pitch": "Fenced.", "options": [{"text": "Yes.", "sentiment": "positive"}, {"text": "Why?", "sentiment": "skeptical"}, {"text": "No.", "sentiment": "negative"}]}\n```'
-    text, _thought, options = generate._parse_llm_json(raw)
+    text, _thought, options, _cat = generate._parse_llm_json(raw)
     assert text == "Fenced."
     assert options is not None
 
 
 def test_parse_llm_json_duplicate_sentiment():
     raw = '{"pitch": "Dup.", "options": [{"text": "A.", "sentiment": "positive"}, {"text": "B.", "sentiment": "positive"}, {"text": "C.", "sentiment": "negative"}]}'
-    text, _thought, options = generate._parse_llm_json(raw)
+    text, _thought, options, _cat = generate._parse_llm_json(raw)
     assert text == "Dup."
     assert options is None
 
 
 def test_parse_llm_json_missing_options():
     raw = '{"pitch": "No opts."}'
-    text, _thought, options = generate._parse_llm_json(raw)
+    text, _thought, options, _cat = generate._parse_llm_json(raw)
     assert text == "No opts."
     assert options is None
 
 
 def test_parse_llm_json_wrong_option_count():
     raw = '{"pitch": "Two.", "options": [{"text": "A.", "sentiment": "positive"}, {"text": "B.", "sentiment": "skeptical"}]}'
-    text, _thought, options = generate._parse_llm_json(raw)
+    text, _thought, options, _cat = generate._parse_llm_json(raw)
     assert text == "Two."
     assert options is None

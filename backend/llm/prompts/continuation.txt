@@ -85,6 +85,13 @@ Constraints for the three response options:
   - exactly three options, one per sentiment (positive, skeptical, negative)
   - each option text is 5-15 words
   - do NOT reuse button text from earlier turns
+  - previously used button texts: {previous_buttons}
+  - every option must be answerable by the agent using ONLY the lab facts
+    and system constraints — do NOT suggest options that would require
+    knowledge the agent does not have (pricing, timelines, contracts,
+    team availability, product trials)
+  - the skeptical option challenges what was JUST said, not a new topic
+  - the negative option signals disinterest or wraps up, not hostility
 
 Respond with ONLY a JSON object, no markdown fences, no extra text:
-{{"thought": "<inner monologue>", "pitch": "<your next agent line>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}
+{{"thought": "<inner monologue>", "pitch": "<your next agent line>", "category": "<the ONE category you used from the list above>", "options": [{{"text": "<button label>", "sentiment": "positive"}}, {{"text": "<button label>", "sentiment": "skeptical"}}, {{"text": "<button label>", "sentiment": "negative"}}]}}

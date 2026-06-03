@@ -134,7 +134,7 @@ async def start_session(
     )
     session_store.add(sess, active=True)
 
-    first_step, used_strategy = await generate_turn(
+    first_step, used_strategy, _category = await generate_turn(
         profile=profile,
         history=[],
         applicable_rule=applicable_rule,
@@ -218,7 +218,7 @@ async def take_turn(
         )
         return sess, finalised, True
 
-    next_step, _strat = await generate_turn(
+    next_step, _strat, category = await generate_turn(
         profile=sess.profile,
         history=sess.dialogue,
         applicable_rule=None if sess.applicable_rule_id is None else _stub_rule(sess),
@@ -226,6 +226,8 @@ async def take_turn(
         used_categories=sess.used_categories,
         interest=sess.interest,
     )
+    if category:
+        sess.used_categories.append(category)
     sess.dialogue.append(next_step)
     log.info(
         "session.next-step id=%s turn=%d reply=%r",

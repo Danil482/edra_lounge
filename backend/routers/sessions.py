@@ -82,6 +82,10 @@ class ResolveOut(BaseModel):
     terminated: bool = True
 
 
+class EndIn(BaseModel):
+    visitor_email: str | None = None
+
+
 class EndOut(BaseModel):
     episode_id: str
     summary: str
@@ -216,14 +220,14 @@ async def resolve(
         orch.active_session = None
 
     if (
-        outcome == "accepted"
-        and body.visitor_email
+        body.visitor_email
         and settings.lemlist_api_key
         and settings.lemlist_campaign_id
     ):
         first_name, last_name = _split_name(profile.name) if profile else ("", "")
         asyncio.create_task(_add_lemlist_lead(
             email=body.visitor_email,
+            outcome=outcome,
             first_name=first_name,
             last_name=last_name,
             company_name=profile.domain if profile else "",
@@ -232,7 +236,7 @@ async def resolve(
             conversation_summary=episode.summary,
             archetype=episode.cluster_id or "",
         ))
-    elif outcome == "accepted" and body.visitor_email and not settings.lemlist_api_key:
+    elif body.visitor_email and not settings.lemlist_api_key:
         log.info("Lemlist not configured, skipping follow-up")
 
     return ResolveOut(
@@ -250,9 +254,50 @@ def _split_name(name: str) -> tuple[str, str]:
     return parts[0] if parts else "", ""
 
 
+_OUTCOME_SUBJECT = {
+    "accepted": "Great meeting you, {{firstName}}!",
+    "rejected": "Thanks for stopping by, {{firstName}}",
+    "exploring": "Let's continue our conversation, {{firstName}}",
+    "abandoned": "Let's continue our conversation, {{firstName}}",
+}
+
+_OUTCOME_MESSAGE = {
+    "accepted": (
+        "Thank you for stopping by the EDRA research demo and for your interest "
+        "in collaborating!<br><br>Here's a quick recap of what we discussed:<br>"
+        "<em>{{conversationSummary}}</em><br><br>I'd love to continue our conversation about "
+        "how Experience-Driven Rule Adaptation could help {{companyName}}.<br><br>"
+        "Would you have 15 minutes for a quick call this week?"
+    ),
+    "rejected": (
+        "Thank you for stopping by the EDRA research demo! I appreciate you "
+        "taking the time to explore it.<br><br>Even though the timing wasn't right "
+        "this time, I wanted to share a brief summary of what we covered:<br>"
+        "<em>{{conversationSummary}}</em><br><br>If you ever want to revisit the topic or "
+        "have questions about Experience-Driven Rule Adaptation, don't hesitate "
+        "to reach out."
+    ),
+    "exploring": (
+        "Thank you for stopping by the EDRA research demo! It was great "
+        "chatting with you.<br><br>Here's a quick recap of what we discussed:<br>"
+        "<em>{{conversationSummary}}</em><br><br>I noticed we didn't get to finish our "
+        "conversation. If you'd like to pick up where we left off or learn more "
+        "about how EDRA could help {{companyName}}, I'm happy to chat."
+    ),
+    "abandoned": (
+        "Thank you for stopping by the EDRA research demo! It was great "
+        "chatting with you.<br><br>Here's a quick recap of what we discussed:<br>"
+        "<em>{{conversationSummary}}</em><br><br>I noticed we didn't get to finish our "
+        "conversation. If you'd like to pick up where we left off or learn more "
+        "about how EDRA could help {{companyName}}, I'm happy to chat."
+    ),
+}
+
+
 async def _add_lemlist_lead(
     *,
     email: str,
+    outcome: str,
     first_name: str,
     last_name: str,
     company_name: str,
@@ -272,6 +317,8 @@ async def _add_lemlist_lead(
         linkedinUrl=linkedin_url,
         conversationSummary=conversation_summary,
         archetype=archetype,
+        outcomeSubject=_OUTCOME_SUBJECT.get(outcome, _OUTCOME_SUBJECT["accepted"]),
+        outcomeMessage=_OUTCOME_MESSAGE.get(outcome, _OUTCOME_MESSAGE["accepted"]),
     )
     if not result.success:
         log.warning("lemlist follow-up failed for %s: %s", email, result.error)
@@ -281,10 +328,14 @@ async def _add_lemlist_lead(
 async def end(
     session_id: str,
     request: Request,
+    body: EndIn | None = None,
     db: AsyncSession = Depends(get_session),
 ):
     orch = getattr(request.app.state, "orchestrator", None)
     on_new_episode = orch.on_new_episode if orch is not None else None
+
+    sess = session_store.get(session_id)
+    profile = sess.profile if sess else None
 
     try:
         episode = await lifecycle.end_session(
@@ -298,6 +349,27 @@ async def end(
     if orch is not None:
         orch.live_session_active = False
         orch.active_session = None
+
+    visitor_email = body.visitor_email if body else None
+    if (
+        visitor_email
+        and settings.lemlist_api_key
+        and settings.lemlist_campaign_id
+    ):
+        first_name, last_name = _split_name(profile.name) if profile else ("", "")
+        asyncio.create_task(_add_lemlist_lead(
+            email=visitor_email,
+            outcome=episode.outcome,
+            first_name=first_name,
+            last_name=last_name,
+            company_name=profile.domain if profile else "",
+            job_title=profile.role if profile else "",
+            linkedin_url=profile.source_identifier if profile else "",
+            conversation_summary=episode.summary,
+            archetype=episode.cluster_id or "",
+        ))
+    elif visitor_email and not settings.lemlist_api_key:
+        log.info("Lemlist not configured, skipping follow-up for auto-terminated session")
 
     return EndOut(
         episode_id=episode.id,

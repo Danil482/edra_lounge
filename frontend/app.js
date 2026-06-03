@@ -922,7 +922,7 @@ async function handleChoice(choice) {
       disableAllButtons();
       const outcome = result.outcome;
       try {
-        await postJSON(`/sessions/${state.currentSessionId}/end`, {});
+        await postJSON(`/sessions/${state.currentSessionId}/end`, { visitor_email: state.visitorEmail });
       } catch (e) {
         console.warn('end after terminate failed', e);
       }
