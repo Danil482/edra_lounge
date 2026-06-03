@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-05-31
+date: 2026-06-03
 ---
 
 # Current Priorities
@@ -34,6 +34,7 @@ Session 2026-06-01 (Demo theater + live-run fixes) → [[../sessions/2026-06-01 
 Session 2026-06-01 PM (Centroid gate + induced revision + viz palette) → [[../sessions/2026-06-01 Centroid OOD gate induced revision and viz palette]]
 Session 2026-06-01 eve (KNN rewrite + reflection fixes + paper) → [[../sessions/2026-06-01 KNN rewrite reflection fixes and demo paper update]]
 Session 2026-06-03 (KNN config + Lemlist + deployment) → [[../sessions/2026-06-03 KNN config wiring Lemlist integration and deployment research]]
+Session 2026-06-03 PM (Lemlist all-outcome + dialogue quality) → [[../sessions/2026-06-03 Lemlist all-outcome follow-up and dialogue quality fixes]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -329,13 +330,44 @@ See [[../sessions/2026-06-03 KNN config wiring Lemlist integration and deploymen
 - [x] Frontend passes `state.visitorEmail` in resolve POST body
 - [x] Personalization: firstName, lastName, companyName, jobTitle, linkedinUrl, conversationSummary, archetype
 - [x] Mock path: empty `LEMLIST_API_KEY` → logs and skips
-- [ ] **Create campaign in Lemlist UI** (API creation requires emailPro plan — returned 402)
-- [ ] **Add `LEMLIST_CAMPAIGN_ID` to `.env`** after campaign created
-- [ ] **Test full flow**: auth gate → conversation → accept → check Lemlist for lead
+- [x] **Create campaign in Lemlist UI** (API creation requires emailPro plan — returned 402) — created "Daniel Edra demo (don't touch)"
+- [x] **Add `LEMLIST_CAMPAIGN_ID` to `.env`** — done 2026-06-03
+- [x] **Test lead addition via API** — test email delivered to danial92335@mail.ru with personalization
+- [ ] **Test full flow via booth**: auth gate → conversation → accept/decline → check Lemlist for lead + email delivery
+- [ ] **Resume campaign in Lemlist UI** — campaign currently in `ended` status after test lead was processed
 
 ### Deployment research
 - [x] Analyzed free platforms — **HuggingFace Spaces (Docker)** recommended (16 GB RAM, ML-native)
 - [ ] Create Dockerfile for HuggingFace Spaces (pending deployment decision)
+
+## ✅ Phase 16 — Lemlist all-outcome follow-up + dialogue quality fixes (committed 2026-06-03)
+
+See [[../sessions/2026-06-03 Lemlist all-outcome follow-up and dialogue quality fixes]].
+
+### Lemlist all-outcome follow-up
+- [x] Follow-up fires on ALL outcomes (accepted/rejected/exploring/abandoned), not just accepted
+- [x] Outcome-specific email subject + message via `{{outcomeSubject}}` / `{{outcomeMessage}}` personalization
+- [x] `/end` endpoint accepts `visitor_email` and triggers Lemlist (was only on `/resolve`)
+- [x] Frontend passes `state.visitorEmail` to `/end` on auto-terminate (interest ±5)
+- [x] HTML-formatted email bodies with `<br>` and `<em>` for conversation summary
+- [x] Lemlist campaign template updated via API to use dynamic personalization vars
+- [x] Test + template update scripts: `scripts/test_lemlist_flow.py`, `scripts/update_lemlist_template.py`
+
+### Dialogue quality fixes
+- [x] **Category rotation fixed**: LLM returns `"category"` in JSON, tracked in `sess.used_categories`, passed to next turn
+- [x] **Previous button texts tracked**: `_collect_previous_buttons()` passes all prior button texts to prevent reuse
+- [x] **CTA constrained**: `_system.txt` ALLOWED NEXT STEPS section — only 3 safe actions, banned "Let's schedule" / "I'll set up"
+- [x] **Button options constrained**: RESPONSE OPTION CONSTRAINTS in system prompt — reactions to current statement only, no pricing/contracts/timelines
+- [x] **Opener + continuation prompts strengthened**: answerable-by-agent-only rule for all button options
+
+### Model upgrade
+- [x] `.env.example` default: `gpt-4o-mini` → `gpt-4.1`
+- [ ] User needs to update `.env` manually and restart
+
+### Follow-ups (TODO)
+- [ ] **Live quality check** with gpt-4.1: run 2-3 conversations, verify no repetition and no hallucinated CTAs
+- [ ] **Resume Lemlist campaign** in UI → test full booth flow end-to-end
+- [ ] Lemlist branding/logo removal (depends on plan tier)
 
 ## 🟡 Production deployment (updated 2026-06-03)
 
