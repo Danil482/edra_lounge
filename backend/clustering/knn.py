@@ -13,11 +13,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from backend.config import settings
+
 if TYPE_CHECKING:
     from backend.schemas import Profile, Rule
-
-K_NEIGHBORS = 7
-MIN_AVG_SIMILARITY = 0.40
 
 
 def select_rule_by_knn(
@@ -27,8 +26,8 @@ def select_rule_by_knn(
     k: int | None = None,
     min_avg_similarity: float | None = None,
 ) -> "Rule | None":
-    k_val = K_NEIGHBORS if k is None else k
-    threshold = MIN_AVG_SIMILARITY if min_avg_similarity is None else min_avg_similarity
+    k_val = settings.knn_k if k is None else k
+    threshold = settings.knn_min_avg_similarity if min_avg_similarity is None else min_avg_similarity
 
     if not profile.embedding or not corpus or not rules:
         return None

@@ -35,11 +35,9 @@ class Settings(BaseSettings):
     theta_revise: float = 0.5
     recluster_every: int = 3
     knn_k: int = 7
+    knn_min_avg_similarity: float = 0.40
     cluster_merge_threshold: float = 0.85
     cs_window: int = 5
-
-    cluster_merge_threshold: float = 0.85
-    knn_k: int = 7
 
     rng_seed: int = 42
     tick_seconds: int = 20
@@ -57,6 +55,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     outreach_from_email: str = "onboarding@resend.dev"
     outreach_from_name: str = "Daniil Onishchenko"
+
+    lemlist_api_key: str = ""
+    lemlist_campaign_id: str = ""
 
     @property
     def db_url(self) -> str:

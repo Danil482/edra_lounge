@@ -13,7 +13,8 @@ from datetime import datetime
 import numpy as np
 
 from backend import schemas
-from backend.clustering.knn import K_NEIGHBORS, MIN_AVG_SIMILARITY, select_rule_by_knn
+from backend.clustering.knn import select_rule_by_knn
+from backend.config import settings
 
 
 def _unit(vec: list[float]) -> list[float]:
@@ -119,5 +120,5 @@ def test_min_avg_similarity_override():
 
 
 def test_default_constants():
-    assert K_NEIGHBORS == 7
-    assert MIN_AVG_SIMILARITY == 0.40
+    assert settings.knn_k == 7
+    assert settings.knn_min_avg_similarity == 0.40

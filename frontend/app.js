@@ -952,7 +952,7 @@ async function handleResolve(decision) {
   disableAllButtons();
 
   try {
-    await postJSON(`/sessions/${state.currentSessionId}/resolve`, { decision });
+    await postJSON(`/sessions/${state.currentSessionId}/resolve`, { decision, visitor_email: state.visitorEmail });
   } catch (e) {
     console.warn('resolve failed', e);
   }
