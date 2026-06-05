@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-06-03
+date: 2026-06-05
 ---
 
 # Current Priorities
@@ -35,6 +35,7 @@ Session 2026-06-01 PM (Centroid gate + induced revision + viz palette) → [[../
 Session 2026-06-01 eve (KNN rewrite + reflection fixes + paper) → [[../sessions/2026-06-01 KNN rewrite reflection fixes and demo paper update]]
 Session 2026-06-03 (KNN config + Lemlist + deployment) → [[../sessions/2026-06-03 KNN config wiring Lemlist integration and deployment research]]
 Session 2026-06-03 PM (Lemlist all-outcome + dialogue quality) → [[../sessions/2026-06-03 Lemlist all-outcome follow-up and dialogue quality fixes]]
+Session 2026-06-05 (Eval full data + UMAP viz) → [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -368,6 +369,40 @@ See [[../sessions/2026-06-03 Lemlist all-outcome follow-up and dialogue quality 
 - [ ] **Live quality check** with gpt-4.1: run 2-3 conversations, verify no repetition and no hallucinated CTAs
 - [ ] **Resume Lemlist campaign** in UI → test full booth flow end-to-end
 - [ ] Lemlist branding/logo removal (depends on plan tier)
+
+## ✅ Phase 17 — Evaluation pipeline on full data + UMAP cluster viz (committed 2026-06-05)
+
+See [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]].
+
+### Evaluation pipeline
+- [x] Full pipeline run on tier1+tier2 (30K rows) — diagnosed strategy clustering degradation
+- [x] Name masking (`RECIPIENT`/`SENDER`) in `clean_snippet` to prevent TF-IDF clustering on person names
+- [x] `--tier1-only` and `--target-n` flags in prepare.py
+- [x] All eval modules updated to read `dataset_final.csv`
+- [x] Validated on original 744 rows: V_DR(EDRA)=0.672 > best_single=0.661
+- [x] HDBSCAN strategy aliases: 8 raw labels → 7 normalized strategies
+
+### Cluster visualization rewrite
+- [x] Backend: t-SNE → UMAP 2D (384d → UMAP-15d → UMAP-2d)
+- [x] Pre-computed 2D coords at seed time (`data/viz_coords_2d.json`)
+- [x] New visitors interpolated via K=7 cosine-weighted average
+- [x] Centroid-only scatter: 7 rings + visitor marker (was 744 dots)
+- [x] Percentile-based normalization for outlier handling
+
+### Frontend + backend fixes
+- [x] Inject Contradiction disabled until session active
+- [x] Poll timers cleared on session end (fixes second-session bug)
+- [x] `total_episodes` count in StateSnapshot (was capped at 20)
+- [x] Reflection parsing handles missing `slots` key
+- [x] Cluster C0: "Mixed" → "Unresolved Contacts"
+
+### CLAUDE.md workflow overhaul
+- [x] Sub-agents banned, 15 token-economy rules added
+
+### Follow-ups (TODO)
+- [ ] PCA 2D for paper figure (supervisor suggested, UMAP kept for demo)
+- [ ] Level 3 learning curve distribution shift fix
+- [ ] `data/viz_coords_2d.json` → .gitignore decision
 
 ## 🟡 Production deployment (updated 2026-06-03)
 

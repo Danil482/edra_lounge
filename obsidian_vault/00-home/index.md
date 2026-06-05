@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-06-03
+date: 2026-06-05
 ---
 
 # EDRA — Vault Home
@@ -86,9 +86,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-06-01 (eve): **KNN K=7 rewrite + reflection fixes + demo paper update** — see [[../sessions/2026-06-01 KNN rewrite reflection fixes and demo paper update]]
 - 2026-06-03: **KNN config wiring + Lemlist integration + deployment research** — see [[../sessions/2026-06-03 KNN config wiring Lemlist integration and deployment research]]
 - 2026-06-03 (PM): **Lemlist all-outcome follow-up + dialogue quality fixes** — see [[../sessions/2026-06-03 Lemlist all-outcome follow-up and dialogue quality fixes]]
+- 2026-06-05: **Evaluation pipeline on full data + UMAP cluster viz** — see [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]]
 
 ## Session log
 
+- [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]]
 - [[../sessions/2026-06-03 Lemlist all-outcome follow-up and dialogue quality fixes]]
 - [[../sessions/2026-06-03 KNN config wiring Lemlist integration and deployment research]]
 - [[../sessions/2026-06-01 KNN rewrite reflection fixes and demo paper update]]
