@@ -179,12 +179,15 @@ function applyState(s) {
 }
 
 function applyTopStats(s) {
-  const episodes = (s.recent_episodes || []).length;
+  const episodes = s.total_episodes || (s.recent_episodes || []).length;
   const activeRules = (s.rules || []).filter(r => r.status === 'active').length;
   const revising = s.active_revision ? 1 : 0;
   setText('#stat-episodes', episodes);
   setText('#stat-rules', activeRules);
   setText('#stat-revising', revising);
+
+  const injectBtn = $('#op-inject');
+  if (injectBtn) injectBtn.disabled = !s.current_session;
 
   const strip = document.querySelector('.edge-top');
   if (strip) {
@@ -1063,6 +1066,8 @@ function hideEndDialog() {
   state.thoughtPending = false;
   state.pendingReply = null;
   state.lastEmotion = null;
+  if (state.pollTimer != null) { clearInterval(state.pollTimer); state.pollTimer = null; }
+  if (state.clusterVizTimer != null) { clearInterval(state.clusterVizTimer); state.clusterVizTimer = null; }
   resetAuthGate();
 }
 
@@ -1183,42 +1188,31 @@ function drawScatterPlot(canvas, data) {
   }
 
   const current = data.current_visitor;
-  const neighborIds = new Set((data.neighbors || []).map(n => n.id));
-
-  if (current) {
-    const cx = pad + current.x * plotW;
-    const cy = pad + current.y * plotH;
-    for (const n of (data.neighbors || [])) {
-      const np = data.points.find(p => p.id === n.id);
-      if (!np) continue;
-      const nx = pad + np.x * plotW;
-      const ny = pad + np.y * plotH;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(nx, ny);
-      ctx.strokeStyle = 'rgba(204, 0, 0, 0.25)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-  }
 
   for (const pt of data.points) {
     if (pt.is_current) continue;
     const px = pad + pt.x * plotW;
     const py = pad + pt.y * plotH;
-    const isNeighbor = neighborIds.has(pt.id);
-    const radius = isNeighbor ? 4 : 3;
+    const radius = 18;
+
+    ctx.beginPath();
+    ctx.arc(px, py, radius + 6, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRGBA(pt.color, 0.1);
+    ctx.fill();
 
     ctx.beginPath();
     ctx.arc(px, py, radius, 0, Math.PI * 2);
-    ctx.fillStyle = isNeighbor ? pt.color : hexToRGBA(pt.color, 0.5);
+    ctx.fillStyle = hexToRGBA(pt.color, 0.25);
+    ctx.fill();
+    ctx.strokeStyle = pt.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fillStyle = pt.color;
     ctx.fill();
 
-    if (isNeighbor) {
-      ctx.strokeStyle = '#F3F1EC';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
   }
 
   if (current) {

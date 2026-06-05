@@ -183,6 +183,12 @@ async def list_episodes(
     return [_episode_from_row(r) for r in result.scalars()]
 
 
+async def count_episodes(session: AsyncSession) -> int:
+    from sqlalchemy import func
+    result = await session.execute(select(func.count(models.EpisodeRow.id)))
+    return result.scalar() or 0
+
+
 async def episodes_for_cluster(
     session: AsyncSession, cluster_id: str
 ) -> list[schemas.Episode]:

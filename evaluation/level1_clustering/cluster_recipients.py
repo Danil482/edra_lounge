@@ -1,8 +1,8 @@
 """
-Cluster outreach RECIPIENTS by profile (job title, org, etc.) and produce the final dataset.csv.
+Cluster outreach RECIPIENTS by profile (job title, org, etc.) and produce the final dataset_final.csv.
 
 Step 2 of the evaluation pipeline. Input: with_strategies.csv (from classify_strategies.py).
-Output: dataset.csv with cluster_id + cluster_label columns added (noise rows excluded).
+Output: dataset_final.csv with cluster_id + cluster_label columns added (noise rows excluded).
 
 Usage:
     python -m evaluation.level1_clustering.cluster_recipients
@@ -31,7 +31,7 @@ if sys.stdout.encoding != "utf-8":
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DEFAULT_INPUT = DATA_DIR / "with_strategies.csv"
-DEFAULT_OUTPUT = DATA_DIR / "dataset.csv"
+DEFAULT_OUTPUT = DATA_DIR / "dataset_final.csv"
 EMBEDDINGS_CACHE = DATA_DIR / "embeddings_profiles.npy"
 UMAP_CACHE = DATA_DIR / "umap_profiles.npy"
 DEFAULT_VIZ = DATA_DIR / "cluster_viz.html"
@@ -776,7 +776,7 @@ def save_output(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Cluster outreach recipients by profile, produce dataset.csv"
+        description="Cluster outreach recipients by profile, produce dataset_final.csv"
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

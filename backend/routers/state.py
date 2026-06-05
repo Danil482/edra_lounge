@@ -44,4 +44,5 @@ async def state(request: Request, session: AsyncSession = Depends(get_session)):
         active_revision=pending_revision,
         agents=await store.list_agents(session),
         interest_gauge=interest,
+        total_episodes=await store.count_episodes(session),
     )

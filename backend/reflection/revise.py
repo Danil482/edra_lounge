@@ -128,7 +128,10 @@ def parse_proposed_rule(
     revision_json: str,
 ) -> schemas.Rule:
     data = json.loads(_strip_fences(revision_json))
-    slots = [schemas.RuleSlot(**s) for s in data["slots"]]
+    raw_slots = data.get("slots") or data.get("rule", {}).get("slots") or data.get("proposed_slots")
+    if not raw_slots:
+        raise KeyError("slots")
+    slots = [schemas.RuleSlot(**s) for s in raw_slots]
     return schemas.Rule(
         id=original.id,  # caller decides whether to issue a new id on accept
         cluster_id=original.cluster_id,

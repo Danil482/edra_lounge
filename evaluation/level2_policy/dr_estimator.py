@@ -1,7 +1,7 @@
 """Doubly-robust policy estimator — Level 2 evaluation.
 
 Compares four outreach policies using DR estimation (Dudik et al. 2011)
-with bootstrap confidence intervals. Reads the unified dataset.csv and
+with bootstrap confidence intervals. Reads the unified dataset_final.csv and
 umap_profiles.npy produced by cluster_recipients.py.
 
 Usage:
@@ -25,7 +25,7 @@ if sys.stdout.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-DATASET_CSV = DATA_DIR / "dataset.csv"
+DATASET_CSV = DATA_DIR / "dataset_final.csv"
 UMAP_PATH = DATA_DIR / "umap_profiles.npy"
 
 N_BOOTSTRAP = 1000

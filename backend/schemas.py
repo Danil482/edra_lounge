@@ -206,3 +206,4 @@ class StateSnapshot(BaseModel):
     active_revision: Revision | None = None
     agents: list[Agent] = Field(default_factory=list)
     interest_gauge: int | None = None
+    total_episodes: int = 0

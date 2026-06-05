@@ -28,7 +28,7 @@ from backend.memory.models import (
     RuleRow,
 )
 
-DATASET_PATH = Path("evaluation/data/dataset.csv")
+DATASET_PATH = Path("evaluation/data/dataset_final.csv")
 DB_PATH = Path("edra_lounge.db")
 DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
@@ -90,6 +90,14 @@ STRATEGY_TO_RULE = {
         "word_target": "long",
         "ask_size": "chat",
     },
+}
+
+_DEFAULT_RULE = {
+    "framing": "knowledge-share",
+    "tone": "warm",
+    "opener_type": "cold",
+    "word_target": "medium",
+    "ask_size": "trial",
 }
 
 SLOT_NAMES = ["framing", "tone", "opener_type", "word_target", "ask_size"]
@@ -160,7 +168,7 @@ def _parse_timestamp(raw: str | None) -> datetime:
 
 
 def _make_slots_json(strategy_name: str) -> list[dict]:
-    rule_def = STRATEGY_TO_RULE[strategy_name]
+    rule_def = STRATEGY_TO_RULE.get(strategy_name, _DEFAULT_RULE)
     return [
         {"name": name, "kind": "static", "value": rule_def[name], "prompt": None}
         for name in SLOT_NAMES
@@ -399,6 +407,28 @@ async def seed_from_eval() -> None:
 
     print(f"\nDone: {p_count} profiles, {e_count} episodes, "
           f"{c_count} clusters, {r_count} rules, {a_count} agents")
+
+    import json as _json
+    umap_profiles_path = Path("evaluation/data/umap_profiles.npy")
+    if umap_profiles_path.exists():
+        from umap import UMAP as _UMAP
+        umap_15d = np.load(umap_profiles_path)
+        coords_2d = _UMAP(n_components=2, random_state=42, metric="euclidean", min_dist=0.5, spread=2.0).fit_transform(umap_15d)
+        x_min, x_max = coords_2d[:, 0].min(), coords_2d[:, 0].max()
+        y_min, y_max = coords_2d[:, 1].min(), coords_2d[:, 1].max()
+        x_range = x_max - x_min if x_max > x_min else 1.0
+        y_range = y_max - y_min if y_max > y_min else 1.0
+        margin = 0.08
+        coords_map = {}
+        for i, row in enumerate(all_rows):
+            pid = f"eval:{i}"
+            nx = margin + (1 - 2 * margin) * (coords_2d[i, 0] - x_min) / x_range
+            ny = margin + (1 - 2 * margin) * (coords_2d[i, 1] - y_min) / y_range
+            coords_map[pid] = [round(float(nx), 5), round(float(ny), 5)]
+        coords_path = Path("data/viz_coords_2d.json")
+        coords_path.parent.mkdir(parents=True, exist_ok=True)
+        coords_path.write_text(_json.dumps(coords_map), encoding="utf-8")
+        print(f"Saved {len(coords_map)} pre-computed 2D coords to {coords_path}")
 
     await engine.dispose()
 

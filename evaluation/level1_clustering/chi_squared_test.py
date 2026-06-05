@@ -15,7 +15,7 @@ from scipy.stats import chi2_contingency
 import numpy as np
 
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "dataset.csv"
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "dataset_final.csv"
 
 ALPHA = 0.05
 

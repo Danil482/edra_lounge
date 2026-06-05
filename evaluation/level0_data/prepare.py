@@ -275,7 +275,30 @@ SMART_REPLACEMENTS = [
 NON_ASCII_RE = re.compile(r"[^\x00-\x7F]")
 
 
-def clean_snippet(text: str) -> str:
+GREETING_RE = re.compile(
+    r"^(Hi|Hello|Hey|Dear|Good morning|Good afternoon)\s+"
+    r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s*[,!.]?\s*",
+    re.IGNORECASE,
+)
+
+SENDER_NAMES = {
+    "filipp", "philipp", "aleks", "asya", "chelsea", "shahin",
+    "farseev", "somin", "somonitor",
+}
+
+def _mask_names(text: str, recipient_name: str) -> str:
+    if recipient_name:
+        parts = recipient_name.split()
+        for part in parts:
+            if len(part) >= 2:
+                text = re.sub(re.escape(part), "RECIPIENT", text, flags=re.IGNORECASE)
+    text = GREETING_RE.sub(r"\1 RECIPIENT, ", text)
+    for sname in SENDER_NAMES:
+        text = re.sub(r"\b" + re.escape(sname) + r"\b", "SENDER", text, flags=re.IGNORECASE)
+    return text
+
+
+def clean_snippet(text: str, recipient_name: str = "") -> str:
     text = URL_RE.sub("", text)
     text = SIGNATURE_RE.sub("", text)
 
@@ -283,6 +306,7 @@ def clean_snippet(text: str) -> str:
         text = text.replace(old, new)
 
     text = NON_ASCII_RE.sub("", text)
+    text = _mask_names(text, recipient_name)
     text = " ".join(text.split())
     text = text[:200]
     return text.strip()
@@ -366,19 +390,30 @@ def main() -> None:
     )
     parser.add_argument("--tier1", type=Path, default=DEFAULT_TIER1)
     parser.add_argument("--tier2", type=Path, default=DEFAULT_TIER2)
+    parser.add_argument("--tier1-only", action="store_true", help="Skip tier2 (no-reply) data")
+    parser.add_argument("--target-n", type=int, default=0,
+                        help="Downsample to exactly N rows (balanced: all tier1, sample tier2)")
     args = parser.parse_args()
 
     tier1_path: Path = args.tier1
     tier2_path: Path = args.tier2
 
-    for label, path in [("tier1", tier1_path), ("tier2", tier2_path)]:
-        if not path.exists():
-            print(f"ERROR: {label} file not found: {path}", file=sys.stderr)
-            sys.exit(1)
+    if not tier1_path.exists():
+        print(f"ERROR: tier1 file not found: {tier1_path}", file=sys.stderr)
+        sys.exit(1)
 
     tier1_rows = load_csv(tier1_path)
-    tier2_rows = load_csv(tier2_path)
     n_tier1 = len(tier1_rows)
+
+    if args.tier1_only:
+        print(f"MODE: tier1-only (skipping tier2)")
+        tier2_rows = []
+    else:
+        if not tier2_path.exists():
+            print(f"ERROR: tier2 file not found: {tier2_path}", file=sys.stderr)
+            sys.exit(1)
+        tier2_rows = load_csv(tier2_path)
+
     n_tier2 = len(tier2_rows)
     n_combined = n_tier1 + n_tier2
 
@@ -408,7 +443,7 @@ def main() -> None:
     # Step 6: clean snippet + length filter
     before = len(rows)
     for row in rows:
-        row["clean_snippet"] = clean_snippet(val(row, "outreach_snippet"))
+        row["clean_snippet"] = clean_snippet(val(row, "outreach_snippet"), val(row, "name"))
     rows = [r for r in rows if len(r["clean_snippet"]) >= 20]
     n_short = before - len(rows)
 
@@ -416,6 +451,24 @@ def main() -> None:
     before = len(rows)
     rows = [r for r in rows if not is_junk(r["clean_snippet"])]
     n_junk = before - len(rows)
+
+    # Step 8: balanced downsample to target size
+    if args.target_n > 0 and len(rows) > args.target_n:
+        import random
+        random.seed(42)
+        replied = [r for r in rows if r.get("outcome") == "reply"]
+        no_reply = [r for r in rows if r.get("outcome") != "reply"]
+        need_no_reply = args.target_n - len(replied)
+        if need_no_reply <= 0:
+            random.shuffle(replied)
+            rows = replied[:args.target_n]
+        elif need_no_reply >= len(no_reply):
+            rows = replied + no_reply
+        else:
+            rows = replied + random.sample(no_reply, need_no_reply)
+        random.shuffle(rows)
+        print(f"\n  Downsampled: {len(rows)} rows (target={args.target_n}, "
+              f"replied={len(replied)}, no_reply sampled={min(need_no_reply, len(no_reply))})")
 
     print_report(
         n_tier1, n_tier2, n_combined, n_deduped,

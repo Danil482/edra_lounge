@@ -13,23 +13,38 @@ When discussing ideas, plans, or paper framing with the user, operate as a ruthl
 5. Push back hard. Make the user defend ideas or abandon bad ones.
 6. If the user seems to want validation more than truth, call it out.
 
-## Workflow — orchestrator model
+## Workflow — direct, no sub-agents
 
-Claude in the main conversation is the **orchestrator**. It does NOT write code, tests, or frontend changes itself. Instead it:
+**Sub-agents are banned.** Never use the Agent tool, Workflow tool, or any form of delegation. Claude does all work directly in the main conversation: code, tests, frontend, planning, research — everything.
 
-1. **Receives a task** from the user.
-2. **Picks the right agent** from `~/.claude/agents/` (or creates one ad-hoc if no existing agent fits):
-   - `developer.md` — production Python code, refactoring, bug fixes
-   - `tester.md` — writing and running tests, reporting bugs
-   - `designer.md` — frontend HTML/CSS/JS, UI polish, mockup implementation
-   - `planner.md` — discussing next steps, breaking down work, analyzing tradeoffs
-3. **Delegates the task** to the agent via the Agent tool with a clear, self-contained brief (the agent has no conversation history).
-4. **Reviews the result** — checks what the agent actually changed, verifies correctness.
-5. **Reports back** to the user with a concise summary and discusses next steps.
+This rule exists to eliminate token waste from agent context duplication and briefing overhead. Every sub-agent re-reads the codebase from scratch and burns tokens re-discovering what the main conversation already knows.
 
-The orchestrator may run multiple agents in parallel for independent tasks. It may also do lightweight actions itself (reading files, checking git status, running quick commands) — but any substantial code/test/UI work goes to an agent.
+## Token economy
 
-The user and the orchestrator stay in the main thread to plan, review, and steer the project.
+Minimize token consumption without sacrificing output quality. Every tool call, file read, and response costs tokens — treat them as a budget.
+
+### Reading files
+1. **Read only what you need.** Use `offset` + `limit` to read specific line ranges, not entire files. If you know the function is near line 200, read lines 180–230, not 1–500.
+2. **Never re-read a file you just edited.** The Edit tool confirms success; re-reading to "verify" wastes tokens.
+3. **Never re-read files already in context.** CLAUDE.md, current priorities, session notes loaded at /begin — do not read them again in the same conversation unless the user modified them.
+4. **Grep before reading.** When looking for a symbol, Grep for it first (files_with_matches mode), then read only the relevant lines. Do not read entire files hoping to find something.
+
+### Tool calls
+5. **Batch independent calls.** Multiple Grep/Glob/Read calls that don't depend on each other go in one message.
+6. **Prefer Grep over Read for discovery.** `Grep pattern -C 3` is cheaper than reading a 500-line file to find one function.
+7. **Prefer Edit over Write for existing files.** Edit sends only the diff. Write resends the entire file.
+8. **One-shot edits.** Accumulate related changes and apply them in minimal Edit calls, not one edit per line.
+
+### Responses
+9. **Terse by default.** Status updates: one sentence. Summaries: 2–3 sentences. No headers/sections for simple answers.
+10. **No narration of tool calls.** Do not explain what you are about to read or why — just do it. The user sees the tool calls.
+11. **No trailing recaps.** Do not summarize what you just did at the end of a response unless the work is complex enough to warrant it.
+12. **Skip pleasantries.** No "Sure!", "Let me...", "I'll go ahead and...", "Great question!". Start with the action or the answer.
+
+### Planning and exploration
+13. **Exhaust context before exploring.** If the information might be in CLAUDE.md, current priorities, or a file you already read — check there first, do not Grep/Read again.
+14. **Narrow searches.** Use `glob` and `type` filters on Grep. Use `path` on Glob. Do not scan the entire repo when you know the directory.
+15. **Stop when you have enough.** If the first 3 Grep results answer the question, do not keep searching for completeness.
 
 ## Project at a glance
 

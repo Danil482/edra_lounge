@@ -24,7 +24,7 @@ STEPS = [
     ),
     (
         "evaluation.level1_clustering.cluster_recipients",
-        "Embed profiles, cluster recipients, produce dataset.csv",
+        "Embed profiles, cluster recipients, produce dataset_final.csv",
         True,
     ),
     (

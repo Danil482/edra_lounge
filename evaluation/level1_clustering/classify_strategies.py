@@ -87,7 +87,7 @@ def reduce_umap(embeddings: np.ndarray, *, recompute: bool) -> np.ndarray:
 
 
 def run_hdbscan(reduced: np.ndarray) -> np.ndarray:
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=30, min_samples=10)
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=30, min_samples=5)
     return clusterer.fit_predict(reduced)
 
 

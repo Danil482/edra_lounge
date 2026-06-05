@@ -1,14 +1,17 @@
 """GET /api/cluster-viz — 2D scatter plot data + nearest neighbors for the UI.
 
-Returns t-SNE projected coordinates for all clustered profiles, the current
+Returns UMAP projected coordinates for all clustered profiles, the current
 visitor's position, and K nearest neighbors. The projection is cached and
-recomputed only when the cluster set changes.
+recomputed only when the cluster set changes. Pre-computed coordinates from
+seed_from_eval are loaded from data/viz_coords_2d.json when available.
 """
 
 from __future__ import annotations
 
+import json as _json
 import logging
 import time
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -21,6 +24,17 @@ from backend.memory import store
 from backend.sessions.store import get_active_session
 
 log = logging.getLogger(__name__)
+
+_PRECOMPUTED_COORDS: dict[str, list[float]] | None = None
+_PRECOMPUTED_PATH = Path("data/viz_coords_2d.json")
+
+
+def _load_precomputed() -> dict[str, list[float]]:
+    global _PRECOMPUTED_COORDS
+    if _PRECOMPUTED_COORDS is None and _PRECOMPUTED_PATH.exists():
+        _PRECOMPUTED_COORDS = _json.loads(_PRECOMPUTED_PATH.read_text(encoding="utf-8"))
+        log.info("Loaded %d pre-computed 2D coords from %s", len(_PRECOMPUTED_COORDS), _PRECOMPUTED_PATH)
+    return _PRECOMPUTED_COORDS or {}
 
 router = APIRouter(prefix="/api", tags=["cluster-viz"])
 
@@ -63,17 +77,18 @@ def _project_tsne(embeddings: np.ndarray) -> list[tuple[float, float]]:
     if len(embeddings) < 2:
         return [(0.5, 0.5)] * len(embeddings)
 
-    from sklearn.manifold import TSNE
+    from umap import UMAP
 
-    perplexity = min(30.0, max(2.0, float(len(embeddings) - 1)))
-    reducer = TSNE(
-        n_components=2,
-        perplexity=perplexity,
+    reduced = UMAP(
+        n_components=15,
         random_state=42,
-        max_iter=500,
-        init="pca",
-    )
-    coords = reducer.fit_transform(embeddings)
+        metric="cosine",
+    ).fit_transform(embeddings)
+    coords = UMAP(
+        n_components=2,
+        random_state=42,
+        metric="euclidean",
+    ).fit_transform(reduced)
 
     x_min, x_max = coords[:, 0].min(), coords[:, 0].max()
     y_min, y_max = coords[:, 1].min(), coords[:, 1].max()
@@ -173,47 +188,111 @@ async def cluster_viz(
     )
 
     if need_reproject:
-        t0 = time.monotonic()
-        embeddings_matrix = np.array([p.embedding for p in embedded_profiles])
-        coords = _project_tsne(embeddings_matrix)
+        precomputed = _load_precomputed()
+        profile_ids = [p.id for p in embedded_profiles]
+        embeddings_by_id = {p.id: p.embedding for p in embedded_profiles}
+
+        coords: list[tuple[float, float]] = []
+        missing_ids: list[int] = []
+        for i, pid in enumerate(profile_ids):
+            if pid in precomputed:
+                c = precomputed[pid]
+                coords.append((c[0], c[1]))
+            else:
+                coords.append((0.5, 0.5))
+                missing_ids.append(i)
+
+        if missing_ids and precomputed:
+            known_embeddings = []
+            known_coords = []
+            for i, pid in enumerate(profile_ids):
+                if pid in precomputed and embeddings_by_id.get(pid) is not None:
+                    known_embeddings.append(embeddings_by_id[pid])
+                    known_coords.append(coords[i])
+            if known_embeddings:
+                known_matrix = np.array(known_embeddings)
+                known_coords_arr = np.array(known_coords)
+                for idx in missing_ids:
+                    emb = np.array(embeddings_by_id[profile_ids[idx]])
+                    sims = known_matrix @ emb
+                    top_k = np.argsort(sims)[-7:]
+                    weights = sims[top_k]
+                    weights = weights / (weights.sum() + 1e-9)
+                    pos = (known_coords_arr[top_k] * weights[:, None]).sum(axis=0)
+                    coords[idx] = (float(pos[0]), float(pos[1]))
+            log.info("Pre-computed coords for %d profiles, interpolated %d new",
+                     len(profile_ids) - len(missing_ids), len(missing_ids))
+        elif not precomputed:
+            t0 = time.monotonic()
+            embeddings_matrix = np.array([p.embedding for p in embedded_profiles])
+            coords = _project_tsne(embeddings_matrix)
+            log.info("UMAP projection computed in %.1fms for %d profiles",
+                     (time.monotonic() - t0) * 1000, len(embedded_profiles))
+        else:
+            log.info("Loaded pre-computed 2D coords for all %d profiles", len(profile_ids))
+
+        arr = np.array(coords)
+        margin = 0.05
+        for dim in range(2):
+            lo = np.percentile(arr[:, dim], 2)
+            hi = np.percentile(arr[:, dim], 98)
+            span = hi - lo if hi > lo else 1.0
+            arr[:, dim] = margin + (1 - 2 * margin) * np.clip((arr[:, dim] - lo) / span, 0, 1)
+        coords = [(float(arr[i, 0]), float(arr[i, 1])) for i in range(len(arr))]
+
         _cache["fingerprint"] = fingerprint
         _cache["coords_2d"] = coords
-        _cache["profile_ids"] = [p.id for p in embedded_profiles]
+        _cache["profile_ids"] = profile_ids
         _cache["cluster_ids"] = [profile_cluster_map.get(p.id, "") for p in embedded_profiles]
-        log.info("t-SNE projection computed in %.1fms for %d profiles",
-                 (time.monotonic() - t0) * 1000, len(embedded_profiles))
+
+    cluster_coords: dict[str, list[tuple[float, float]]] = {}
+    for i, pid in enumerate(_cache["profile_ids"]):
+        cid = _cache["cluster_ids"][i]
+        cluster_coords.setdefault(cid, []).append(_cache["coords_2d"][i])
 
     points = []
-    current_visitor_point = None
-    current_cluster_id = None
-    for i, pid in enumerate(_cache["profile_ids"]):
-        p = profiles_by_id.get(pid)
-        cid = _cache["cluster_ids"][i]
-        x, y = _cache["coords_2d"][i]
-        is_current = pid == current_profile_id
-
-        point = {
-            "id": pid,
-            "x": x,
-            "y": y,
+    for cid, coord_list in cluster_coords.items():
+        arr = np.array(coord_list)
+        cx, cy = float(arr[:, 0].mean()), float(arr[:, 1].mean())
+        points.append({
+            "id": f"centroid:{cid}",
+            "x": cx,
+            "y": cy,
             "cluster_id": cid,
             "color": cluster_color_map.get(cid, "#777777"),
-            "name": p.name if p else pid,
-            "role": p.role if p else "",
-            "is_current": is_current,
-        }
-        points.append(point)
-        if is_current:
-            current_visitor_point = point
-            current_cluster_id = cid
+            "name": cluster_label_map.get(cid, cid),
+            "role": f"n={len(coord_list)}",
+            "is_current": False,
+        })
 
-    if active_session and current_profile_id and not current_visitor_point and current_has_embedding:
+    current_visitor_point = None
+    current_cluster_id = None
+    if active_session and current_profile_id and current_has_embedding:
         current_p = profiles_by_id[current_profile_id]
         cid = active_session.cluster_id or profile_cluster_map.get(current_profile_id, "")
+        vx, vy = 0.5, 0.5
+        if current_p.embedding and _cache["coords_2d"]:
+            cur_vec = np.array(current_p.embedding)
+            known_embs = []
+            known_xy = []
+            for i, pid in enumerate(_cache["profile_ids"]):
+                p = profiles_by_id.get(pid)
+                if p and p.embedding:
+                    known_embs.append(p.embedding)
+                    known_xy.append(_cache["coords_2d"][i])
+            if known_embs:
+                mat = np.array(known_embs)
+                sims = mat @ cur_vec
+                top_k = np.argsort(sims)[-7:]
+                w = sims[top_k]
+                w = w / (w.sum() + 1e-9)
+                xy_arr = np.array(known_xy)
+                pos = (xy_arr[top_k] * w[:, None]).sum(axis=0)
+                vx, vy = float(pos[0]), float(pos[1])
         current_visitor_point = {
             "id": current_profile_id,
-            "x": 0.5,
-            "y": 0.5,
+            "x": vx,
+            "y": vy,
             "cluster_id": cid,
             "color": "#CC0000",
             "name": current_p.name,
@@ -237,7 +316,6 @@ async def cluster_viz(
                 ))
                 distances.append((p, similarity))
             distances.sort(key=lambda x: x[1], reverse=True)
-
             for p, sim in distances[:k]:
                 neighbors.append({
                     "id": p.id,
