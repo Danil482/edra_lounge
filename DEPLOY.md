@@ -108,39 +108,27 @@ m.save('backend/models/all-MiniLM-L6-v2')"
 python -m backend.seed_from_eval
 ```
 
-## 11. Run as a systemd service
+## 11. Run with screen + uvicorn
 
-Create a service so uvicorn starts automatically and survives SSH disconnect:
+Start uvicorn in a detached screen session so it survives SSH disconnect:
 
 ```bash
-sudo tee /etc/systemd/system/edra.service << EOF
-[Unit]
-Description=EDRA Demo
-After=network.target
+screen -dmS edra sudo .venv/bin/python -m uvicorn backend.app:api --host 0.0.0.0 --port 80
+```
 
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$HOME/edra_lounge
-Environment=PATH=$HOME/edra_lounge/.venv/bin:/usr/bin
-ExecStart=$HOME/edra_lounge/.venv/bin/python -m uvicorn backend.app:api --host 0.0.0.0 --port 80
-Restart=always
-RestartSec=5
+Useful screen commands:
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable edra
-sudo systemctl start edra
+```bash
+screen -r edra          # attach to see logs
+# Ctrl+A, D             # detach (leave running)
+screen -ls              # list sessions
+screen -X -S edra quit  # stop the server
 ```
 
 ## 12. Verify
 
 ```bash
 # On the VM
-sudo systemctl status edra
 curl -s http://localhost/health
 
 # From local machine
@@ -152,13 +140,6 @@ Open `http://<EXTERNAL_IP>/` in a browser.
 ## Useful commands
 
 ```bash
-# View logs
-sudo journalctl -u edra -f
-
-# Restart after code changes
-cd ~/edra_lounge && git pull
-sudo systemctl restart edra
-
 # Get VM external IP
 gcloud compute instances describe edra-demo --zone=europe-west1-b \
   --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
@@ -181,7 +162,10 @@ cd ~/edra_lounge
 git pull
 source .venv/bin/activate
 pip install .  # only if dependencies changed
-sudo systemctl restart edra
+
+# Restart uvicorn
+screen -X -S edra quit
+screen -dmS edra sudo .venv/bin/python -m uvicorn backend.app:api --host 0.0.0.0 --port 80
 ```
 
 ## Cost
