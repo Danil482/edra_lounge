@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-06-08
+date: 2026-06-09
 ---
 
 # EDRA — Vault Home
@@ -89,9 +89,11 @@ Mockup: [`../../frontend/edra_pitch_mockup.html`](../../frontend/edra_pitch_mock
 - 2026-06-08 (eve): **GCP deploy — IAM unblocked, firewall + VM created** — see [[../sessions/2026-06-08 GCP deploy IAM unblocked and firewall-VM created]]
 - 2026-06-08 (PM): **GCP deploy guide + VM setup attempt** — see [[../sessions/2026-06-08 GCP deploy guide and VM setup attempt]]
 - 2026-06-05: **Evaluation pipeline on full data + UMAP cluster viz** — see [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]]
+- 2026-06-09: **Pre-deploy hardening + GCP deployment live** — see [[../sessions/2026-06-09 Pre-deploy hardening and GCP deployment]]
 
 ## Session log
 
+- [[../sessions/2026-06-09 Pre-deploy hardening and GCP deployment]]
 - [[../sessions/2026-06-08 GCP deploy IAM unblocked and firewall-VM created]]
 - [[../sessions/2026-06-08 GCP deploy guide and VM setup attempt]]
 - [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]]

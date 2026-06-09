@@ -1,6 +1,6 @@
 ---
 tags: [home, priorities, status]
-date: 2026-06-05
+date: 2026-06-09
 ---
 
 # Current Priorities
@@ -39,6 +39,7 @@ Session 2026-06-05 (Eval full data + UMAP viz) → [[../sessions/2026-06-05 Eval
 Session 2026-06-08 (Pyproject audit + GCP) → [[../sessions/2026-06-08 Pyproject audit and GCP deployment decision]]
 Session 2026-06-08 PM (Deploy guide + VM setup) → [[../sessions/2026-06-08 GCP deploy guide and VM setup attempt]]
 Session 2026-06-08 eve (IAM unblocked + VM created) → [[../sessions/2026-06-08 GCP deploy IAM unblocked and firewall-VM created]]
+Session 2026-06-09 (Pre-deploy + GCP deploy) → [[../sessions/2026-06-09 Pre-deploy hardening and GCP deployment]]
 
 The 2026-04-21 skeleton was built for a café metaphor. After the 2026-04-28 pivot we drove through Phase 1B → 2 → 3 in a single session (booth ready in synthetic + live-mock). On 2026-04-29 we shipped Phase 4.1 → 4.4 in one session: new RapidAPI provider after two sunset events, OpenAI as a third LLM mode, rewritten prompts to match the 3-button UX, LLM-driven continuations with full history, visible logging, avatar plumbing. **Booth is fully functional with real LinkedIn fetch + OpenAI generation, 71/71 tests green, end-to-end session validated against the author's real profile.** On 2026-04-30 we ran an analytical session: prompt audit, research on the real Defy, discovered an architectural mismatch (EDRA vocab vs Defy ICP), drafted a founder questionnaire. On 2026-05-13 we expanded `research_profiles_master.csv` from 253 → 502 verified rows as the candidate pool for Phase 5 outreach testing. On 2026-05-14 (AM) we built the outreach module through Phase O.2: CSV-to-Profile mapper, state machine, episode builder, message generation via GPT-4o-mini, Resend email integration, full CLI pipeline. **First real test emails sent and delivered via Resend. 139 tests green.** Also established an orchestrator workflow with 4 specialized agents, created Farseev academic writing skill, prepared presentation speech notes. On 2026-05-14 (PM) we rewrote `edra_demo.tex` for MM '26 demo track (2-page limit), fixed the clustering description (profiles not episodes), verified novelty claim against 25+ systems (narrowed to cluster-conditional adaptation), enriched 502-profile dataset with 64 public emails, and installed the humanizer anti-AI-slop skill. On 2026-05-15 we installed the UI/UX Pro Max skill suite (7 skills), audited the frontend against Defy brand guidelines, and shipped three visual polish items: editorial idle hero screen, gauge terminal-state animations, and smooth panel transitions. Also discussed evaluation methodology for the demo paper (decision deferred) and banked a cluster visualization idea. On 2026-05-18 we shipped Phase 8 — eight frontend overhaul commits (dynamic response buttons, cluster visualization, email auth gate, end-of-dialog popup, avatar integration, 12-state avatar emotion system with crossfade, speech bubble dialog mode), decided to switch outreach delivery from Resend to Lemlist, designed multi-batch EDRA outreach architecture with factorial seed + control groups. Full E2E verification: auth -> session -> 6 turns -> acceptance. **204 tests green, 0 regressions.** On 2026-05-19 we regenerated all 12 avatar PNGs via a chroma key pipeline (`scripts/chromakey_avatars.py`), overhauled avatar CSS (aspect ratio, positioning, removed blend mode), made speech bubble the default dialog mode, lowered clustering `n_min` from 5 to 3 so rules appear in early demos, and implemented Phase 5.1-5.3: lab fact sheet from 5 papers, ~450-word system prompt with anti-hallucination boundaries, 6-category response rotation, refusal rules, rewritten opener/continuation prompts and templates. Also extracted 10 Farseev publications from Google Scholar and started Lemlist warm-up on user's own account (ready ~2026-05-26). **206 tests green.** On 2026-05-20 we rewrote the demo paper Section 3 as dual-modality validation (booth primary + 502-profile longitudinal), ran humanizer pass, implemented KNN classification for live profiles (K=7 weighted cosine vote), created `seed_demo.py` for pre-populated demos with top-strategy rules, cached MiniLM locally, and polished the rulebook UI (slot-grid layout, archetype labels in legend/profile). Evaluated 4 HuggingFace datasets for validation — none suitable. **206 tests green.**
 On 2026-05-20 (PM session) we had a methodology discussion with the PhD supervisor about evaluation. Key outcome: no existing dataset fits EDRA (expected for novel work), the correct evaluation protocol is prequential (test-then-train) from online learning, and EDRA maps to contextual bandit framework. User will request historical outreach data from colleague Philipp. Literature review confirms no published evaluation framework for adaptive closed-loop outreach — this is the gap.
@@ -407,25 +408,32 @@ See [[../sessions/2026-06-05 Evaluation pipeline full data and UMAP cluster viz]
 - [ ] Level 3 learning curve distribution shift fix
 - [ ] `data/viz_coords_2d.json` → .gitignore decision
 
-## 🟡 Production deployment (updated 2026-06-08 PM)
+## 🟡 Production deployment (updated 2026-06-09)
 
-**GCP path unblocked**: Aleks offered $300 Google Cloud trial credits (valid until September 2026). Recommended Compute Engine e2-medium (~$28/mo). Cloud Run rejected (SQLite incompatible with stateless containers). HuggingFace Spaces deprioritized. **Docker scrapped** — bare-metal deploy via systemd (simpler for single demo server).
+**App deployed and running** on GCP Compute Engine e2-medium (`edra-demo`, europe-west1-b, Ubuntu 24.04). uvicorn via screen on port 80. Health check verified. Swagger docs disabled. LinkedIn cache TTL 24h. TASK.md and TASK_refactor_clustering.md removed from repo (public-facing for reviewers).
 
 - [x] ~~Send CTO deployment request (message drafted 2026-05-28)~~ — Aleks proactively offered GCP credits 2026-06-08
 - [x] gcloud CLI installed, authenticated as daniel@defygroup.ai, Compute Engine API enabled
-- [x] `DEPLOY.md` written — full CLI bare-metal deploy guide (Python 3.13 + venv + systemd)
+- [x] `DEPLOY.md` written — rewritten for Python 3.12 + screen+uvicorn (2026-06-09)
 - [x] ~~Dockerize the app~~ — scrapped, bare-metal simpler for demo
 - [x] ~~BLOCKED: Aleks grants Editor role~~ — granted `roles/editor` on 2026-06-08
 - [x] Create firewall rule (`allow-http` tcp:80) + VM (`edra-demo`, e2-medium, europe-west1-b, Ubuntu 24.04)
-- [ ] **SSH into VM** (Plink issue on Windows — switch to OpenSSH or use `ssh` directly)
-- [ ] Upload gitignored data files (dataset_final.csv, umap_profiles.npy, viz_coords_2d.json)
-- [ ] Install Python 3.13, clone, seed DB, create systemd service
-- [ ] Upload .env with OPENAI_API_KEY
-- [ ] Decision: `demo.defygroup.ai` (needs DNS) or bare IP
+- [x] SSH into VM — disabled OS Login, switched gcloud to OpenSSH (`putty_force_connect false`)
+- [x] Upload gitignored data files (dataset_final.csv, umap_profiles.npy, viz_coords_2d.json)
+- [x] Clone repo, Python 3.12 venv, `pip install .`, MiniLM downloaded
+- [x] Upload .env with OPENAI_API_KEY + Lemlist keys
+- [x] Seed DB (anonymized) + start uvicorn via screen
+- [x] Health check verified (`http://<EXTERNAL_IP>/health`)
+- [x] Swagger docs disabled (`docs_url=None, redoc_url=None, openapi_url=None`)
+- [x] LinkedIn cache TTL set to 24h (was infinite)
+- [x] End-dialog email copy fixed (accepted: "will send shortly", reject: mentions follow-up)
+- [x] pyproject.toml: fixed flat-layout package discovery
+- [x] TASK.md + TASK_refactor_clustering.md removed from repo
+- [ ] **DNS**: `demo.defygroup.ai` — requested access from Ian (2026-06-09)
+- [ ] **HTTPS**: Let's Encrypt via certbot or caddy reverse proxy
 - [ ] Prompt injection defence (visitor LinkedIn headline/summary goes into LLM prompt)
 - [ ] GDPR consent for email storage (checkbox or text at email gate)
 - [ ] Rate limiter on RapidAPI calls (per IP/email)
-- [ ] Seed state from real outreach data (clusters + rules)
 - [ ] Deploy as microservice (iframe/popup on defygroup.ai)
 
 ### Key decisions (2026-05-26)
