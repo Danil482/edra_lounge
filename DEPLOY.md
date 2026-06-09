@@ -38,77 +38,74 @@ gcloud compute instances create edra-demo \
 
 Note the EXTERNAL_IP in the output.
 
-## 4. Upload gitignored data files
+## 4. Disable OS Login (if needed)
 
-From the repo root on your local machine:
+If `gcloud compute ssh` fails with "Permission denied (publickey)" and shows
+your full email as the username, OS Login is on. Disable it for this VM:
 
 ```bash
-gcloud compute scp evaluation/data/dataset_final.csv edra-demo:~ --zone=europe-west1-b
-gcloud compute scp evaluation/data/umap_profiles.npy edra-demo:~ --zone=europe-west1-b
-gcloud compute scp data/viz_coords_2d.json edra-demo:~ --zone=europe-west1-b
+gcloud compute instances add-metadata edra-demo --zone=europe-west1-b \
+  --metadata=enable-oslogin=FALSE
 ```
 
 ## 5. SSH into VM
 
 ```bash
+gcloud config set ssh/putty_force_connect false   # Windows: use OpenSSH, not Plink
 gcloud compute ssh edra-demo --zone=europe-west1-b
 ```
 
-## 6. Install Python 3.13 and system deps
+When prompted "Are you sure you want to continue connecting" — type `yes` (full word).
+
+## 6. Install system deps (on VM)
+
+Ubuntu 24.04 ships Python 3.12 — that's sufficient, no PPA needed.
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get update
-sudo apt-get install -y python3.13 python3.13-venv python3.13-dev build-essential
+sudo apt-get install -y python3.12-venv build-essential
 ```
 
 ## 7. Clone repo and set up
 
 ```bash
-git clone https://github.com/defy-group/edra-lounge.git
-cd edra-lounge
+git clone https://github.com/Danil482/edra_lounge.git
+cd edra_lounge
 
-# Move gitignored data files into place
-mkdir -p evaluation/data data
-cp ~/dataset_final.csv evaluation/data/
-cp ~/umap_profiles.npy evaluation/data/
-cp ~/viz_coords_2d.json data/
-
-# Create venv and install
-python3.13 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install .
 ```
 
-## 8. Download MiniLM model
+## 8. Upload .env and gitignored data files
+
+From your **local machine** (PowerShell), after the repo is cloned on the VM:
+
+```powershell
+# .env with API keys
+gcloud compute scp .env edra-demo:~/edra_lounge/.env --zone=europe-west1-b
+
+# Gitignored data files
+gcloud compute scp evaluation/data/dataset_final.csv edra-demo:~/edra_lounge/evaluation/data/ --zone=europe-west1-b
+gcloud compute scp evaluation/data/umap_profiles.npy edra-demo:~/edra_lounge/evaluation/data/ --zone=europe-west1-b
+gcloud compute scp data/viz_coords_2d.json edra-demo:~/edra_lounge/data/ --zone=europe-west1-b
+```
+
+## 9. Download MiniLM model (on VM)
 
 ```bash
+cd ~/edra_lounge
+source .venv/bin/activate
 python -c "\
 from sentence_transformers import SentenceTransformer; \
 m = SentenceTransformer('all-MiniLM-L6-v2'); \
 m.save('backend/models/all-MiniLM-L6-v2')"
 ```
 
-## 9. Seed the database
+## 10. Seed the database
 
 ```bash
 python -m backend.seed_from_eval
-```
-
-## 10. Create .env
-
-```bash
-cat > .env << 'EOF'
-LLM_MODE=openai
-OPENAI_API_KEY=<your-key>
-OPENAI_MODEL=gpt-4.1
-LIVE_MODE=true
-RAPIDAPI_KEY=mock
-LEMLIST_API_KEY=
-LEMLIST_CAMPAIGN_ID=
-EOF
 ```
 
 ## 11. Run as a systemd service
@@ -124,9 +121,9 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
-WorkingDirectory=$HOME/edra-lounge
-Environment=PATH=$HOME/edra-lounge/.venv/bin:/usr/bin
-ExecStart=$HOME/edra-lounge/.venv/bin/python -m uvicorn backend.app:api --host 0.0.0.0 --port 80
+WorkingDirectory=$HOME/edra_lounge
+Environment=PATH=$HOME/edra_lounge/.venv/bin:/usr/bin
+ExecStart=$HOME/edra_lounge/.venv/bin/python -m uvicorn backend.app:api --host 0.0.0.0 --port 80
 Restart=always
 RestartSec=5
 
@@ -159,7 +156,7 @@ Open `http://<EXTERNAL_IP>/` in a browser.
 sudo journalctl -u edra -f
 
 # Restart after code changes
-cd ~/edra-lounge && git pull
+cd ~/edra_lounge && git pull
 sudo systemctl restart edra
 
 # Get VM external IP
@@ -180,7 +177,7 @@ gcloud compute firewall-rules delete allow-http
 ```bash
 gcloud compute ssh edra-demo --zone=europe-west1-b
 
-cd ~/edra-lounge
+cd ~/edra_lounge
 git pull
 source .venv/bin/activate
 pip install .  # only if dependencies changed

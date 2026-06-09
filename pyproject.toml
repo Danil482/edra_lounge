@@ -30,6 +30,9 @@ dev = [
     "pillow>=10.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["backend*"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
