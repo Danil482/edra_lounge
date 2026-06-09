@@ -1044,12 +1044,12 @@ function showEndDialog(outcome) {
     card.classList.add('-success');
     setText('#end-headline', 'Collaboration Initiated');
     setText('#end-body',
-      'We\'ve sent a personalized proposal to your email based on our conversation. Looking forward to working together.');
+      'We\'ll send a personalized follow-up to your email shortly based on our conversation. Looking forward to working together.');
   } else {
     card.classList.add('-failure');
     setText('#end-headline', 'Until Next Time');
     setText('#end-body',
-      'We appreciate your time. If you\'d like to explore collaboration in the future, you know where to find us.');
+      'We appreciate your time. We\'ll send a brief summary of our conversation to your email. If you\'d like to explore collaboration in the future, you know where to find us.');
   }
 
   overlay.classList.remove('-hidden');

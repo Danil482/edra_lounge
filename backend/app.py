@@ -60,6 +60,7 @@ def _build_profile_source() -> ProfileSource:
         return LinkedInRapidAPISource(
             api_key=settings.rapidapi_key,
             cache_dir=PROJECT_ROOT / "data" / "linkedin_cache",
+            cache_ttl_seconds=86400,
         )
     return SyntheticProfileSource()
 
@@ -89,7 +90,14 @@ async def lifespan(app: FastAPI):
         await orch.stop()
 
 
-api = FastAPI(title="EDRA", version="0.1.0", lifespan=lifespan)
+api = FastAPI(
+    title="EDRA",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 api.add_middleware(
     CORSMiddleware,
